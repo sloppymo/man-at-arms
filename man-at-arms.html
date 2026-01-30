@@ -6234,6 +6234,11 @@
                 }
             }
             
+            // Call onChoose callback if present (for kit granting, etc.)
+            if (choice.onChoose && typeof choice.onChoose === 'function') {
+                choice.onChoose();
+            }
+            
             // Apply effects with clamping
             if (choice.effects) {
                 const effects = [];
