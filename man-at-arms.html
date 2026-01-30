@@ -1588,10 +1588,17 @@
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     const region = gameState.culture || "";
-                    const age = gameState.age || 18;
-                    const ageText = age >= 16 && age <= 19 ? "young" : age >= 31 && age <= 40 ? "veteran" : "";
+                    const ageRange = gameState.ageRange || 'prime';
+                    const ageLabels = {
+                        'youth': 'young',
+                        'young_adult': 'young',
+                        'prime': '',
+                        'veteran': 'veteran',
+                        'old_hand': 'veteran'
+                    };
+                    const ageText = ageLabels[ageRange] || '';
                     return `<p>It is the year 1337. The war between England and France has just begun.</p>
-                           <p><strong>${name}</strong>, you are a ${ageText ? ageText + " " : ""}${culture} man, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
+                           <p><strong>${name}</strong>, you are a ${ageText ? ageText + " " : ""}${region} man, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
                            <p>Your training begins now...</p>`;
                 },
                 choices: [
