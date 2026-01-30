@@ -6204,11 +6204,17 @@
             
             tooltip.style.display = 'block';
             
-            // Position tooltip near mouse, but keep it in view
-            const rect = event.target.getBoundingClientRect();
-            const svgRect = event.target.closest('svg').getBoundingClientRect();
+            // Position tooltip near the button marker
+            const marker = document.getElementById('region-marker-' + regionName);
+            if (!marker) {
+                tooltip.style.display = 'none';
+                return;
+            }
+            
+            const rect = marker.getBoundingClientRect();
             const tooltipRect = tooltip.getBoundingClientRect();
             
+            // Position tooltip above the marker, centered
             let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
             let top = rect.top - tooltipRect.height - 10;
             
