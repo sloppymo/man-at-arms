@@ -5143,8 +5143,11 @@
             if (typeof choice.nextScene === 'function') {
                 try {
                     nextSceneName = choice.nextScene();
+                    console.log("nextScene function returned:", nextSceneName);
+                    console.log("gameState.background:", gameState.background);
                 } catch (error) {
                     console.error("Error executing nextScene function:", error);
+                    console.error("Error stack:", error.stack);
                     showNotification('Error', 'Failed to determine next scene. Please refresh the page.');
                     return;
                 }
@@ -5155,12 +5158,15 @@
             // Validate that the next scene exists
             if (!nextSceneName || typeof nextSceneName !== 'string') {
                 console.error("Invalid nextScene value:", nextSceneName);
+                console.error("Type:", typeof nextSceneName);
+                console.error("Choice:", choice);
                 showNotification('Error', 'Invalid scene transition. Please refresh the page.');
                 return;
             }
             
             if (!scenes[nextSceneName]) {
                 console.error("Scene not found:", nextSceneName);
+                console.error("Available scenes:", Object.keys(scenes).slice(0, 20));
                 showNotification('Error', `Scene "${nextSceneName}" not found. Please refresh the page.`);
                 return;
             }
@@ -5307,11 +5313,18 @@
             // Ensure strings
             base.location = typeof base.location === "string" ? base.location : "England";
             base.region = typeof base.region === "string" ? base.region : (base.location ? normalizeRegion(base.location) : "England");
-            base.currentScene = typeof base.currentScene === "string" ? base.currentScene : "character_creation";
+            // Don't reset currentScene to character_creation if we have a valid saved scene
+            base.currentScene = typeof base.currentScene === "string" && base.currentScene !== "" ? base.currentScene : "character_creation";
             base.characterName = typeof base.characterName === "string" ? base.characterName : "";
+            // Preserve background if it exists (don't reset to null)
             base.background = base.background || null;
             base.rank = typeof base.rank === "string" ? base.rank : "Common Soldier";
             base.faction = typeof base.faction === "string" ? base.faction : "English";
+            
+            // Ensure inventory is an array
+            if (!Array.isArray(base.inventory)) {
+                base.inventory = [];
+            }
             
             return base;
         }
@@ -5371,15 +5384,29 @@
             
             const hydrated = hydrateLoadedState(loaded);
             
+            console.log("Loaded state hydrated:", hydrated);
+            console.log("Current scene:", hydrated.currentScene);
+            console.log("Background:", hydrated.background);
+            
             // Overwrite the existing live state safely
             Object.keys(gameState).forEach(k => delete gameState[k]);
             Object.assign(gameState, hydrated);
             
-            // Reinitialize equipment manager if it exists (will migrate old format)
-            if (typeof EquipmentManager !== 'undefined') {
-                const equipmentManager = new EquipmentManager(gameState);
+            // Ensure enteredScenes is a Set (hydrateLoadedState should handle this, but double-check)
+            if (!(gameState.enteredScenes instanceof Set)) {
+                gameState.enteredScenes = new Set(Array.isArray(gameState.enteredScenes) ? gameState.enteredScenes : []);
             }
             
+            // Reinitialize equipment manager if it exists (will migrate old format)
+            if (typeof EquipmentManager !== 'undefined') {
+                try {
+                    window.equipmentManager = new EquipmentManager(gameState);
+                } catch (e) {
+                    console.error("Error reinitializing equipment manager:", e);
+                }
+            }
+            
+            // Force update display to ensure UI reflects loaded state
             updateDisplay();
             showNotification("Game Loaded", "Your progress has been restored!");
         }
@@ -5393,21 +5420,46 @@
         
         // Show full stats
         function showStats() {
-            const stats = Object.entries(gameState.stats)
-                .map(([key, value]) => {
-                    const effective = getEffectiveStat(key);
-                    return effective !== value 
-                        ? `${key}: ${value} (Effective: ${effective})`
-                        : `${key}: ${value}`;
-                })
-                .join('\n');
-            const conditions = gameState.conditions.length > 0 
-                ? gameState.conditions.map(c => c.name).join(', ')
-                : 'None';
-            const career = `Battles: ${gameState.career.battles}, Wounds: ${gameState.career.wounds}, Promotions: ${gameState.career.promotions}`;
-            const equipment = `Weapon: ${gameState.equipment.weapon.name} (+${gameState.equipment.weapon.quality}), Armor: ${gameState.equipment.armor.name} (+${gameState.equipment.armor.quality})`;
-            
-            alert(`Full Game Stats:\n\n${stats}\n\nAge: ${gameState.age}\nYear: ${gameState.year}\nLocation: ${gameState.location}\nRank: ${gameState.rank}\n\nEquipment:\n${equipment}\n\nConditions: ${conditions}\n\nCareer: ${career}`);
+            try {
+                const stats = Object.entries(gameState.stats)
+                    .map(([key, value]) => {
+                        const effective = getEffectiveStat(key);
+                        return effective !== value 
+                            ? `${key}: ${value} (Effective: ${effective})`
+                            : `${key}: ${value}`;
+                    })
+                    .join('\n');
+                const conditions = gameState.conditions.length > 0 
+                    ? gameState.conditions.map(c => c.name).join(', ')
+                    : 'None';
+                const career = `Battles: ${gameState.career.battles}, Wounds: ${gameState.career.wounds}, Promotions: ${gameState.career.promotions}`;
+                
+                // Handle equipment display for both old and new format
+                let equipment = 'None equipped';
+                try {
+                    if (gameState.equipment && gameState.equipment.weapon && gameState.equipment.weapon.name) {
+                        // Old format
+                        equipment = `Weapon: ${gameState.equipment.weapon.name} (+${gameState.equipment.weapon.quality || 0}), Armor: ${gameState.equipment.armor?.name || 'None'} (+${gameState.equipment.armor?.quality || 0})`;
+                    } else if (gameState.equipment && (gameState.equipment.weapon?.item || gameState.equipment.torso?.plate?.item)) {
+                        // New layered format
+                        const equipped = [];
+                        if (gameState.equipment.weapon?.item) equipped.push(`Weapon: ${gameState.equipment.weapon.item.id}`);
+                        if (gameState.equipment.torso?.plate?.item) equipped.push(`Torso: ${gameState.equipment.torso.plate.item.id}`);
+                        if (gameState.equipment.head?.plate?.item) equipped.push(`Head: ${gameState.equipment.head.plate.item.id}`);
+                        equipment = equipped.length > 0 ? equipped.join(', ') : 'None equipped';
+                    }
+                } catch (e) {
+                    console.error("Error formatting equipment:", e);
+                    equipment = 'Error loading equipment';
+                }
+                
+                const inventoryCount = gameState.inventory ? gameState.inventory.length : 0;
+                
+                alert(`Full Game Stats:\n\n${stats}\n\nAge: ${gameState.age}\nYear: ${gameState.year}\nLocation: ${gameState.location}\nRegion: ${gameState.region || 'Unknown'}\nRank: ${gameState.rank}\n\nEquipment:\n${equipment}\n\nInventory Items: ${inventoryCount}\n\nConditions: ${conditions}\n\nCareer: ${career}`);
+            } catch (error) {
+                console.error("Error in showStats:", error);
+                alert(`Error displaying stats: ${error.message}\n\nCheck console for details.`);
+            }
         }
         
         // Reset game
