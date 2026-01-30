@@ -1,0 +1,1 @@
+Please add your UK map image as 'artwork/uk-map.png' or 'artwork/uk-map.jpg'. The map should show the United Kingdom (England, Scotland, Wales, Northern Ireland).

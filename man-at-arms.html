@@ -6241,9 +6241,10 @@
             tooltip.style.top = top + 'px';
             
             // Highlight region on hover
-            const regionPath = document.getElementById('region-' + regionName);
-            if (regionPath && gameState.culture !== regionName) {
-                regionPath.style.fill = '#8b6914';
+            const regionMarker = document.getElementById('region-marker-' + regionName);
+            if (regionMarker && gameState.culture !== regionName) {
+                regionMarker.style.borderColor = '#8b6914';
+                regionMarker.style.background = 'rgba(139, 105, 20, 0.7)';
             }
         }
         
