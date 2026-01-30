@@ -1433,7 +1433,7 @@
                 location: "England",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
-                    const culture = gameState.culture || "English";
+                    const region = gameState.culture || "";
                     const age = gameState.age || 18;
                     const ageText = age >= 16 && age <= 19 ? "young" : age >= 31 && age <= 40 ? "veteran" : "";
                     return `<p>It is the year 1337. The war between England and France has just begun.</p>
