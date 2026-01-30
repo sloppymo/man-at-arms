@@ -716,7 +716,7 @@
     <div class="game-container">
         <div class="header">
             <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v1.2.1</div>
+            <div id="version-display">v1.2.2</div>
             <div class="status-bar">
                 <div class="status-item">
                     <span>📅</span>
@@ -1076,7 +1076,7 @@
                     }
                     
                     const currentStep = gameState.characterCreationStep || 1;
-                    const nameDisplay = gameState.characterName || "";
+                    const nameDisplay = gameState.characterName || "William Thatcher";
                     const currentAgeRange = gameState.ageRange || null;
                     const currentCulture = gameState.culture || "";
                     
@@ -1129,8 +1129,7 @@
                             
                             // Validate required fields
                             if (!gameState.characterName || gameState.characterName.trim() === '') {
-                                showNotification('Character Creation', 'Please enter your name.');
-                                return false;
+                                gameState.characterName = "William Thatcher";
                             }
                             if (!gameState.culture) {
                                 showNotification('Character Creation', 'Please select your region.');
@@ -5805,8 +5804,7 @@
         function completeCharacterCreation() {
             // Validate required fields
             if (!gameState.characterName || gameState.characterName.trim() === '') {
-                showNotification('Character Creation', 'Please enter your name.');
-                return;
+                gameState.characterName = "William Thatcher";
             }
             if (!gameState.culture) {
                 showNotification('Character Creation', 'Please select your region.');
@@ -5919,10 +5917,12 @@
                 '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
                     '<label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Your Name:</label>' +
                     '<input type="text" id="character-name-input" placeholder="Enter your name" ' +
-                           'value="' + nameDisplay + '" ' +
+                           'value="' + (nameDisplay || "William Thatcher") + '" ' +
                            'list="name-suggestions" ' +
                            'style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: \'Crimson Text\', serif; margin-bottom: 15px;" ' +
-                           'onchange="gameState.characterName = this.value; updateDisplay();">' +
+                           'onfocus="if(this.value === \'William Thatcher\') { this.value = \'\'; }" ' +
+                           'onblur="if(this.value.trim() === \'\') { this.value = \'William Thatcher\'; }" ' +
+                           'onchange="gameState.characterName = this.value.trim() || \'William Thatcher\'; updateDisplay();">' +
                     '<datalist id="name-suggestions">' +
                         (currentCulture && nameSuggestions[currentCulture] ? nameSuggestions[currentCulture].map(function(n) { return '<option value="' + n + '">'; }).join('') : '') +
                     '</datalist>' +
@@ -6479,11 +6479,11 @@
                 }
                 const nameInput = document.getElementById('character-name-input');
                 if (nameInput) {
-                    gameState.characterName = nameInput.value.trim();
+                    const trimmedName = nameInput.value.trim();
+                    gameState.characterName = trimmedName || "William Thatcher";
                 }
                 if (!gameState.characterName || gameState.characterName === '') {
-                    showNotification('Character Creation', 'Please enter your name.');
-                    return;
+                    gameState.characterName = "William Thatcher";
                 }
                 
                 // Validate priorities
