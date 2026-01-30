@@ -652,7 +652,6 @@
             <button class="control-button" onclick="loadGame()">📂 Load Game</button>
             <button class="control-button" onclick="showStats()">📊 Full Stats</button>
             <button class="control-button" onclick="openEquipmentScreen()">🛡️ Equipment</button>
-            <button class="control-button" onclick="toggleEffectsPreview()">👁️ <span id="effects-toggle">Show</span> Effects</button>
         </div>
     </div>
     
@@ -715,7 +714,8 @@
 
     <script>
         // Settings
-        let showEffectsPreview = false;
+        // Effects are always shown by default
+        const showEffectsPreview = true;
         
         // Game State
         const gameState = {
@@ -3826,7 +3826,7 @@
             
             choicesContainer.innerHTML = scene.choices.map((choice, index) => {
                 let effectsText = '';
-                if (showEffectsPreview && choice.effects) {
+                if (choice.effects) {
                     effectsText = Object.entries(choice.effects)
                         .map(([key, value]) => {
                             const sign = value > 0 ? '+' : '';
@@ -5254,7 +5254,7 @@
                     }
                 });
                 
-                if (effects.length > 0 && showEffectsPreview) {
+                if (effects.length > 0) {
                     showNotification('Stat Changes', effects.join(', '));
                 }
             }
@@ -5545,13 +5545,6 @@
             // Force update display to ensure UI reflects loaded state
             updateDisplay();
             showNotification("Game Loaded", "Your progress has been restored!");
-        }
-        
-        // Toggle effects preview
-        function toggleEffectsPreview() {
-            showEffectsPreview = !showEffectsPreview;
-            document.getElementById('effects-toggle').textContent = showEffectsPreview ? 'Hide' : 'Show';
-            updateChoices();
         }
         
         // Show full stats
