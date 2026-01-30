@@ -3461,18 +3461,31 @@
         function initGame() {
             console.log("initGame called");
             console.log("gameState.currentScene:", gameState.currentScene);
+            console.log("scenes object exists:", typeof scenes !== 'undefined');
             
             // Ensure we start at character creation if no save exists or if scene is invalid
-            if (!gameState.currentScene || gameState.currentScene === 'start' || (typeof scenes !== 'undefined' && !scenes[gameState.currentScene])) {
-                console.log("Forcing character creation scene");
+            if (!gameState.currentScene || gameState.currentScene === 'start') {
+                console.log("Forcing character creation scene (no scene or start)");
+                gameState.currentScene = 'character_creation';
+                gameState.characterName = gameState.characterName || "";
+                gameState.background = gameState.background || null;
+            } else if (typeof scenes !== 'undefined' && !scenes[gameState.currentScene]) {
+                console.log("Forcing character creation scene (invalid scene:", gameState.currentScene + ")");
                 gameState.currentScene = 'character_creation';
                 gameState.characterName = gameState.characterName || "";
                 gameState.background = gameState.background || null;
             }
             
+            console.log("Final currentScene:", gameState.currentScene);
+            console.log("Scene exists:", typeof scenes !== 'undefined' && scenes[gameState.currentScene] ? 'YES' : 'NO');
+            
             // Initialize equipment manager if not already done
-            if (typeof EquipmentManager !== 'undefined' && !window.equipmentManager) {
-                window.equipmentManager = new EquipmentManager(gameState);
+            try {
+                if (typeof EquipmentManager !== 'undefined' && !window.equipmentManager) {
+                    window.equipmentManager = new EquipmentManager(gameState);
+                }
+            } catch (e) {
+                console.error("Error initializing equipment manager:", e);
             }
             
             console.log("Calling updateDisplay");
@@ -3572,12 +3585,26 @@
             }
             
             // Get story text (handle function-based text)
-            let storyText;
+            let storyText = '';
             try {
-                storyText = typeof scene.text === 'function' ? scene.text() : scene.text;
+                if (typeof scene.text === 'function') {
+                    storyText = scene.text();
+                } else if (typeof scene.text === 'string') {
+                    storyText = scene.text;
+                } else {
+                    console.error("Scene text is neither function nor string:", typeof scene.text);
+                    storyText = '<p>Error: Scene text format invalid.</p>';
+                }
             } catch (error) {
                 console.error("Error rendering scene text:", error);
-                storyText = `<p>Error loading scene content. Please refresh the page.</p><p>Error: ${error.message}</p>`;
+                console.error("Error stack:", error.stack);
+                storyText = `<p>Error loading scene content. Please refresh the page.</p><p>Error: ${error.message}</p><p>Check console for details.</p>`;
+            }
+            
+            // Ensure we have some text to display
+            if (!storyText || storyText.trim() === '') {
+                console.error("storyText is empty after rendering!");
+                storyText = '<p>Error: Scene rendered empty content.</p>';
             }
             
             // Add rank display
@@ -3617,15 +3644,22 @@
                 conditionsDisplay += '</div>';
             }
             
-            // Render the story
-            storyElement.innerHTML = 
-                `<h2 style="margin-bottom: 15px; color: #f4d03f;">${scene.title}</h2>
-                 ${rankDisplay}
-                 ${favorDisplay}
-                 ${equipmentDisplay}
-                 ${storyText}
-                 ${conditionsDisplay}`;
-            storyElement.classList.add('fade-in');
+            // Render the story - ensure we always set innerHTML even if something is undefined
+            try {
+                const title = scene.title || 'Untitled Scene';
+                storyElement.innerHTML = 
+                    `<h2 style="margin-bottom: 15px; color: #f4d03f;">${title}</h2>
+                     ${rankDisplay || ''}
+                     ${favorDisplay || ''}
+                     ${equipmentDisplay || ''}
+                     ${storyText || '<p>No content available.</p>'}
+                     ${conditionsDisplay || ''}`;
+                storyElement.classList.add('fade-in');
+                console.log("Successfully rendered story for scene:", gameState.currentScene);
+            } catch (error) {
+                console.error("Error setting storyElement.innerHTML:", error);
+                storyElement.innerHTML = `<p>Error rendering scene: ${error.message}</p><p>Scene: ${gameState.currentScene}</p>`;
+            }
         }
         
         // Update stats display
