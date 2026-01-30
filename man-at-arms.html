@@ -2999,16 +2999,42 @@
                     }
                 },
                 onEnter: function() {
-                    const result = gameState.lastResolution;
-                    if (result && result.success) {
-                        const gearRoll = Math.random();
-                        if (gearRoll < 0.5) {
-                            gameState.equipment.weapon.quality = Math.min(3, gameState.equipment.weapon.quality + 1);
-                        } else {
-                            applyStatChange('wealth', 8);
+                    const sceneKey = `crecy_night_gear_${gameState.year}`;
+                    if (!gameState.enteredScenes.has(sceneKey)) {
+                        const result = gameState.lastResolution;
+                        if (result && result.success) {
+                            // Add equipment to inventory
+                            if (!gameState.inventory) gameState.inventory = [];
+                            
+                            // Chance to find various equipment
+                            const equipmentChance = Math.random();
+                            if (equipmentChance < 0.5) {
+                                // Find a better weapon or armor piece
+                                const items = ['arming_sword', 'padded_jack', 'kettle_hat'];
+                                const foundItem = items[Math.floor(Math.random() * items.length)];
+                                if (!gameState.inventory.find(i => i.id === foundItem)) {
+                                    gameState.inventory.push({
+                                        id: foundItem,
+                                        condition: 60 + Math.floor(Math.random() * 30),
+                                        fit: 'salvage',
+                                        stackCount: 1
+                                    });
+                                    const itemName = foundItem.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    showNotification('Equipment Found', `You salvaged a ${itemName} from the battlefield!`);
+                                }
+                            }
+                            
+                            // Old format compatibility
+                            const gearRoll = Math.random();
+                            if (gearRoll < 0.5 && gameState.equipment && gameState.equipment.weapon) {
+                                gameState.equipment.weapon.quality = Math.min(3, (gameState.equipment.weapon.quality || 0) + 1);
+                            } else {
+                                applyStatChange('wealth', 8);
+                            }
+                        } else if (result) {
+                            applyStatChange('patronFavor', -1);
                         }
-                    } else if (result) {
-                        applyStatChange('patronFavor', -1);
+                        gameState.enteredScenes.add(sceneKey);
                     }
                 },
                 choices: [
