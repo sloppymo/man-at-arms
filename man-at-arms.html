@@ -5945,35 +5945,25 @@
                 '</div>' +
                 '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
                     '<label style="display: block; color: #d4af37; margin-bottom: 10px; font-weight: bold;">Your Region:</label>' +
-                    '<div style="position: relative; margin-bottom: 15px;">' +
-                        '<svg id="england-map" viewBox="0 0 400 500" style="width: 100%; max-width: 600px; height: auto; border: 2px solid #d4af37; border-radius: 5px; background: rgba(26, 15, 8, 0.8); display: block; margin: 0 auto;">' +
-                            // England outline (simplified vector path)
-                            '<path d="M 50 80 L 350 80 L 350 420 L 50 420 L 50 80 Z" fill="#1a0f08" stroke="#8b6914" stroke-width="1" opacity="0.3"/>' +
-                            // Yorkshire (North)
-                            '<path id="region-Yorkshire" d="M 120 100 L 280 100 L 280 180 L 200 200 L 120 180 Z" fill="' + (currentCulture === 'Yorkshire' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Yorkshire\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Yorkshire\')"/>' +
-                            '<text x="200" y="145" text-anchor="middle" fill="#d4af37" font-size="14" font-weight="bold" pointer-events="none">Yorkshire</text>' +
-                            // Lancashire (Northwest)
-                            '<path id="region-Lancashire" d="M 80 120 L 140 120 L 140 200 L 110 220 L 80 200 Z" fill="' + (currentCulture === 'Lancashire' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Lancashire\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Lancashire\')"/>' +
-                            '<text x="110" y="170" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Lancashire</text>' +
-                            // Norfolk (East)
-                            '<path id="region-Norfolk" d="M 300 180 L 340 180 L 340 260 L 320 280 L 300 260 Z" fill="' + (currentCulture === 'Norfolk' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Norfolk\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Norfolk\')"/>' +
-                            '<text x="320" y="225" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Norfolk</text>' +
-                            // Essex (Southeast)
-                            '<path id="region-Essex" d="M 270 240 L 320 240 L 320 300 L 290 320 L 270 300 Z" fill="' + (currentCulture === 'Essex' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Essex\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Essex\')"/>' +
-                            '<text x="295" y="275" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Essex</text>' +
-                            // London (Central-South)
-                            '<circle id="region-London" cx="220" cy="280" r="30" fill="' + (currentCulture === 'London' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'London\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'London\')"/>' +
-                            '<text x="220" y="288" text-anchor="middle" fill="' + (currentCulture === 'London' ? '#1a0f08' : '#d4af37') + '" font-size="12" font-weight="bold" pointer-events="none">London</text>' +
-                            // Kent (Southeast)
-                            '<path id="region-Kent" d="M 320 280 L 360 280 L 360 350 L 340 370 L 320 350 Z" fill="' + (currentCulture === 'Kent' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Kent\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Kent\')"/>' +
-                            '<text x="340" y="320" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Kent</text>' +
-                            // Somerset (Southwest)
-                            '<path id="region-Somerset" d="M 100 320 L 180 320 L 180 400 L 150 420 L 100 400 Z" fill="' + (currentCulture === 'Somerset' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Somerset\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Somerset\')"/>' +
-                            '<text x="140" y="370" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Somerset</text>' +
-                            // Cornwall (Far Southwest)
-                            '<path id="region-Cornwall" d="M 30 380 L 100 380 L 100 450 L 70 470 L 30 450 Z" fill="' + (currentCulture === 'Cornwall' ? '#d4af37' : '#3a2a1a') + '" stroke="#d4af37" stroke-width="2" style="cursor: pointer; transition: all 0.2s;" onmouseover="showRegionTooltip(event, \'Cornwall\')" onmouseout="hideRegionTooltip()" onclick="selectCulture(\'Cornwall\')"/>' +
-                            '<text x="65" y="425" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Cornwall</text>' +
-                        '</svg>' +
+                    '<div style="position: relative; margin-bottom: 15px; display: inline-block; width: 100%; max-width: 800px;">' +
+                        '<img id="uk-map-image" src="artwork/uk-map.png" alt="Map of England" style="width: 100%; max-width: 800px; height: auto; border: 2px solid #d4af37; border-radius: 5px; display: block; margin: 0 auto; background: rgba(26, 15, 8, 0.8);" />' +
+                        // Region markers positioned absolutely over the map
+                        // Yorkshire (North England) - approximately 50% from left, 25% from top
+                        '<button id="region-marker-Yorkshire" onclick="selectCulture(\'Yorkshire\')" onmouseover="showRegionTooltip(event, \'Yorkshire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 50%; top: 25%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Yorkshire' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Yorkshire' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Yorkshire"></button>' +
+                        // Lancashire (Northwest) - approximately 40% from left, 30% from top
+                        '<button id="region-marker-Lancashire" onclick="selectCulture(\'Lancashire\')" onmouseover="showRegionTooltip(event, \'Lancashire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 40%; top: 30%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Lancashire' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Lancashire' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Lancashire"></button>' +
+                        // Norfolk (East) - approximately 65% from left, 40% from top
+                        '<button id="region-marker-Norfolk" onclick="selectCulture(\'Norfolk\')" onmouseover="showRegionTooltip(event, \'Norfolk\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 65%; top: 40%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Norfolk' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Norfolk' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Norfolk"></button>' +
+                        // Essex (Southeast) - approximately 60% from left, 55% from top
+                        '<button id="region-marker-Essex" onclick="selectCulture(\'Essex\')" onmouseover="showRegionTooltip(event, \'Essex\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 60%; top: 55%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Essex' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Essex' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Essex"></button>' +
+                        // London (Central-South) - approximately 52% from left, 60% from top
+                        '<button id="region-marker-London" onclick="selectCulture(\'London\')" onmouseover="showRegionTooltip(event, \'London\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 52%; top: 60%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'London' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'London' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 10px rgba(212, 175, 55, 1); transition: all 0.3s; font-weight: bold;" title="London">⚔</button>' +
+                        // Kent (Southeast) - approximately 65% from left, 65% from top
+                        '<button id="region-marker-Kent" onclick="selectCulture(\'Kent\')" onmouseover="showRegionTooltip(event, \'Kent\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 65%; top: 65%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Kent' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Kent' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Kent"></button>' +
+                        // Somerset (Southwest) - approximately 35% from left, 70% from top
+                        '<button id="region-marker-Somerset" onclick="selectCulture(\'Somerset\')" onmouseover="showRegionTooltip(event, \'Somerset\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 35%; top: 70%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Somerset' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Somerset' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Somerset"></button>' +
+                        // Cornwall (Far Southwest) - approximately 20% from left, 80% from top
+                        '<button id="region-marker-Cornwall" onclick="selectCulture(\'Cornwall\')" onmouseover="showRegionTooltip(event, \'Cornwall\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 20%; top: 80%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Cornwall' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Cornwall' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Cornwall"></button>' +
                         '<div id="region-tooltip" style="position: absolute; display: none; background: rgba(0, 0, 0, 0.95); border: 2px solid #d4af37; border-radius: 5px; padding: 12px; max-width: 300px; z-index: 1000; pointer-events: none; color: #d4af37; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.8);"></div>' +
                     '</div>' +
                     (currentCulture && regionFlavor[currentCulture] ? 
@@ -6270,14 +6260,18 @@
         function updateRegionMapHighlight() {
             const regions = ['Yorkshire', 'Kent', 'London', 'Cornwall', 'Lancashire', 'Essex', 'Norfolk', 'Somerset'];
             regions.forEach(function(region) {
-                const element = document.getElementById('region-' + region);
-                if (element) {
+                const marker = document.getElementById('region-marker-' + region);
+                if (marker) {
                     if (gameState.culture === region) {
-                        element.style.fill = '#d4af37';
-                        element.style.strokeWidth = '3';
+                        marker.style.borderColor = '#f4d03f';
+                        marker.style.background = 'rgba(244, 208, 63, 0.8)';
+                        marker.style.boxShadow = '0 0 12px rgba(244, 208, 63, 1)';
+                        marker.style.transform = 'translate(-50%, -50%) scale(1.2)';
                     } else {
-                        element.style.fill = '#3a2a1a';
-                        element.style.strokeWidth = '2';
+                        marker.style.borderColor = '#d4af37';
+                        marker.style.background = 'rgba(212, 175, 55, 0.6)';
+                        marker.style.boxShadow = '0 0 8px rgba(212, 175, 55, 0.8)';
+                        marker.style.transform = 'translate(-50%, -50%) scale(1)';
                     }
                 }
             });
