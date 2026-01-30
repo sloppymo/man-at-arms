@@ -1129,27 +1129,123 @@
                                 </datalist>
                                 
                                 <div>
-                                    <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Your Region:</label>
-                                    <select id="culture-select" 
-                                            onchange="selectCulture(this.value);"
-                                            style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
-                                        <option value="">Select Your Region</option>
-                                        <option value="Yorkshire" ${currentCulture === "Yorkshire" ? "selected" : ""}>Yorkshire</option>
-                                        <option value="Kent" ${currentCulture === "Kent" ? "selected" : ""}>Kent</option>
-                                        <option value="London" ${currentCulture === "London" ? "selected" : ""}>London</option>
-                                        <option value="Cornwall" ${currentCulture === "Cornwall" ? "selected" : ""}>Cornwall</option>
-                                        <option value="Lancashire" ${currentCulture === "Lancashire" ? "selected" : ""}>Lancashire</option>
-                                        <option value="Essex" ${currentCulture === "Essex" ? "selected" : ""}>Essex</option>
-                                        <option value="Norfolk" ${currentCulture === "Norfolk" ? "selected" : ""}>Norfolk</option>
-                                        <option value="Somerset" ${currentCulture === "Somerset" ? "selected" : ""}>Somerset</option>
-                                    </select>
+                                    <label style="display: block; color: #d4af37; margin-bottom: 10px; font-weight: bold;">Your Region:</label>
+                                    
+                                    <!-- Interactive Map of England -->
+                                    <div style="position: relative; margin-bottom: 15px;">
+                                        <svg id="england-map" viewBox="0 0 400 500" style="width: 100%; max-width: 500px; height: auto; border: 2px solid #d4af37; border-radius: 5px; background: rgba(26, 15, 8, 0.8);">
+                                            <!-- Yorkshire (North) -->
+                                            <path id="region-Yorkshire" 
+                                                  d="M 150 50 L 250 50 L 250 120 L 200 150 L 150 120 Z" 
+                                                  fill="${currentCulture === 'Yorkshire' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Yorkshire')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Yorkshire')"/>
+                                            <text x="200" y="90" text-anchor="middle" fill="#d4af37" font-size="12" font-weight="bold" pointer-events="none">Yorkshire</text>
+                                            
+                                            <!-- Lancashire (Northwest) -->
+                                            <path id="region-Lancashire" 
+                                                  d="M 100 100 L 150 100 L 150 180 L 120 200 L 100 180 Z" 
+                                                  fill="${currentCulture === 'Lancashire' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Lancashire')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Lancashire')"/>
+                                            <text x="125" y="140" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Lancashire</text>
+                                            
+                                            <!-- Norfolk (East) -->
+                                            <path id="region-Norfolk" 
+                                                  d="M 280 150 L 320 150 L 320 220 L 300 240 L 280 220 Z" 
+                                                  fill="${currentCulture === 'Norfolk' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Norfolk')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Norfolk')"/>
+                                            <text x="300" y="190" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Norfolk</text>
+                                            
+                                            <!-- Essex (Southeast) -->
+                                            <path id="region-Essex" 
+                                                  d="M 250 200 L 300 200 L 300 260 L 280 280 L 250 260 Z" 
+                                                  fill="${currentCulture === 'Essex' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Essex')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Essex')"/>
+                                            <text x="275" y="240" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Essex</text>
+                                            
+                                            <!-- London (Central-South) -->
+                                            <circle id="region-London" 
+                                                    cx="220" cy="250" r="25" 
+                                                    fill="${currentCulture === 'London' ? '#d4af37' : '#3a2a1a'}" 
+                                                    stroke="#d4af37" 
+                                                    stroke-width="2"
+                                                    style="cursor: pointer; transition: all 0.2s;"
+                                                    onmouseover="showRegionTooltip(event, 'London')"
+                                                    onmouseout="hideRegionTooltip()"
+                                                    onclick="selectCulture('London')"/>
+                                            <text x="220" y="255" text-anchor="middle" fill="#1a0f08" font-size="10" font-weight="bold" pointer-events="none">London</text>
+                                            
+                                            <!-- Kent (Southeast) -->
+                                            <path id="region-Kent" 
+                                                  d="M 300 250 L 350 250 L 350 320 L 320 340 L 300 320 Z" 
+                                                  fill="${currentCulture === 'Kent' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Kent')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Kent')"/>
+                                            <text x="325" y="290" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Kent</text>
+                                            
+                                            <!-- Somerset (Southwest) -->
+                                            <path id="region-Somerset" 
+                                                  d="M 120 280 L 180 280 L 180 360 L 150 380 L 120 360 Z" 
+                                                  fill="${currentCulture === 'Somerset' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Somerset')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Somerset')"/>
+                                            <text x="150" y="330" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Somerset</text>
+                                            
+                                            <!-- Cornwall (Far Southwest) -->
+                                            <path id="region-Cornwall" 
+                                                  d="M 50 350 L 120 350 L 120 420 L 80 440 L 50 420 Z" 
+                                                  fill="${currentCulture === 'Cornwall' ? '#d4af37' : '#3a2a1a'}" 
+                                                  stroke="#d4af37" 
+                                                  stroke-width="2"
+                                                  style="cursor: pointer; transition: all 0.2s;"
+                                                  onmouseover="showRegionTooltip(event, 'Cornwall')"
+                                                  onmouseout="hideRegionTooltip()"
+                                                  onclick="selectCulture('Cornwall')"/>
+                                            <text x="85" y="395" text-anchor="middle" fill="#d4af37" font-size="11" font-weight="bold" pointer-events="none">Cornwall</text>
+                                        </svg>
+                                        
+                                        <!-- Tooltip for region information -->
+                                        <div id="region-tooltip" style="position: absolute; display: none; background: rgba(0, 0, 0, 0.95); border: 2px solid #d4af37; border-radius: 5px; padding: 12px; max-width: 300px; z-index: 1000; pointer-events: none; color: #d4af37; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.8);"></div>
+                                    </div>
+                                    
+                                    <!-- Selected Region Display -->
                                     ${currentCulture && regionFlavor[currentCulture] ? 
-                                        '<div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;">' +
+                                        '<div style="padding: 12px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 5px; margin-top: 10px;">' +
+                                            '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 8px;">Selected: ' + currentCulture + '</div>' +
                                             '<div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">' +
                                                 regionFlavor[currentCulture] +
                                             '</div>' +
                                         '</div>' :
-                                        '<small style="color: #888; font-size: 12px; display: block; margin-top: 5px;">Select a region to see its description. Affects dialogue options and social interactions.</small>'}
+                                        '<div style="padding: 10px; background: rgba(139, 105, 20, 0.1); border: 1px dashed #8b6914; border-radius: 5px; margin-top: 10px; text-align: center; color: #888; font-size: 12px;">' +
+                                            'Click a region on the map above to select your origin' +
+                                        '</div>'}
                                 </div>
                             </div>
                             
