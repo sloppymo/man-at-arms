@@ -3875,12 +3875,12 @@
             if (!gameState.currentScene || gameState.currentScene === 'start') {
                 console.log("Forcing character creation scene (no scene or start)");
                 gameState.currentScene = 'character_creation';
-                gameState.characterName = gameState.characterName || "";
+                gameState.characterName = gameState.characterName || "William Thatcher";
                 gameState.background = gameState.background || null;
             } else if (typeof scenes !== 'undefined' && !scenes[gameState.currentScene]) {
                 console.log("Forcing character creation scene (invalid scene:", gameState.currentScene + ")");
                 gameState.currentScene = 'character_creation';
-                gameState.characterName = gameState.characterName || "";
+                gameState.characterName = gameState.characterName || "William Thatcher";
                 gameState.background = gameState.background || null;
             }
             
@@ -6824,7 +6824,7 @@
             base.region = typeof base.region === "string" ? base.region : (base.location ? normalizeRegion(base.location) : "England");
             // Don't reset currentScene to character_creation if we have a valid saved scene
             base.currentScene = typeof base.currentScene === "string" && base.currentScene !== "" ? base.currentScene : "character_creation";
-            base.characterName = typeof base.characterName === "string" ? base.characterName : "";
+            base.characterName = typeof base.characterName === "string" && base.characterName !== "" ? base.characterName : "William Thatcher";
             base.culture = typeof base.culture === "string" ? base.culture : "";
             base.origin = base.origin || null;
             // Preserve background if it exists (don't reset to null) - backward compatibility
