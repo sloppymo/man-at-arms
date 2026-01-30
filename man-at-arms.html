@@ -5138,8 +5138,34 @@
             // Track scene visited (before moving)
             gameState.scenesVisited.push(gameState.currentScene);
             
-            // Move to next scene
-            gameState.currentScene = choice.nextScene;
+            // Move to next scene - handle both function and string nextScene
+            let nextSceneName;
+            if (typeof choice.nextScene === 'function') {
+                try {
+                    nextSceneName = choice.nextScene();
+                } catch (error) {
+                    console.error("Error executing nextScene function:", error);
+                    showNotification('Error', 'Failed to determine next scene. Please refresh the page.');
+                    return;
+                }
+            } else {
+                nextSceneName = choice.nextScene;
+            }
+            
+            // Validate that the next scene exists
+            if (!nextSceneName || typeof nextSceneName !== 'string') {
+                console.error("Invalid nextScene value:", nextSceneName);
+                showNotification('Error', 'Invalid scene transition. Please refresh the page.');
+                return;
+            }
+            
+            if (!scenes[nextSceneName]) {
+                console.error("Scene not found:", nextSceneName);
+                showNotification('Error', `Scene "${nextSceneName}" not found. Please refresh the page.`);
+                return;
+            }
+            
+            gameState.currentScene = nextSceneName;
             
             // Remove fade-in class and re-add for animation
             document.getElementById('story').classList.remove('fade-in');
