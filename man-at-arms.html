@@ -5918,8 +5918,8 @@
                 }
             };
             
-            const origin = origin || 'rural_peasant';
-            const kit = originKits[origin] && originKits[origin][tier] ? originKits[origin][tier] : originKits.rural_peasant[tier] || originKits.rural_peasant.Standard;
+            const selectedOrigin = origin || 'rural_peasant';
+            const kit = originKits[selectedOrigin] && originKits[selectedOrigin][tier] ? originKits[selectedOrigin][tier] : originKits.rural_peasant[tier] || originKits.rural_peasant.Standard;
             
             // Add items to inventory
             kit.forEach(function(item) {
