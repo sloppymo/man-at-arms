@@ -3481,37 +3481,59 @@
         
         // Update all displays
         function updateDisplay() {
-            updateStory();
-            updateStats();
-            updateChoices();
-            updateStatusBar();
+            // Isolate each renderer so one failure doesn't block others
+            try {
+                updateStory();
+            } catch (e) {
+                console.error('updateStory failed:', e);
+            }
+            try {
+                updateStats();
+            } catch (e) {
+                console.error('updateStats failed:', e);
+            }
+            try {
+                updateChoices();
+            } catch (e) {
+                console.error('updateChoices failed:', e);
+            }
+            try {
+                updateStatusBar();
+            } catch (e) {
+                console.error('updateStatusBar failed:', e);
+            }
         }
         
         // Update story text
         function updateStory() {
+            // Get story element once at the start
+            const storyElement = document.getElementById('story');
+            if (!storyElement) {
+                console.error("Story element not found!");
+                return;
+            }
+            
+            // Declare scene in function scope so it's accessible throughout
+            let scene;
+            
             try {
                 console.log("updateStory called, currentScene:", gameState.currentScene);
                 console.log("scenes object exists:", typeof scenes !== 'undefined');
                 
                 if (typeof scenes === 'undefined') {
                     console.error("scenes object is not defined!");
-                    const storyEl = document.getElementById('story');
-                    if (storyEl) {
-                        storyEl.innerHTML = '<p>Error: Scenes not loaded. Please refresh the page.</p>';
-                    }
+                    storyElement.innerHTML = '<p>Error: Scenes not loaded. Please refresh the page.</p>';
                     return;
                 }
                 
                 console.log("scenes keys:", Object.keys(scenes).slice(0, 5));
                 
-                const scene = scenes[gameState.currentScene];
+                // Assign scene (not const, so it's accessible outside try block)
+                scene = scenes[gameState.currentScene];
                 if (!scene) {
                     console.error("Scene not found:", gameState.currentScene);
                     console.log("Available scenes:", Object.keys(scenes));
-                    const storyEl = document.getElementById('story');
-                    if (storyEl) {
-                        storyEl.innerHTML = `<p>Error: Scene "${gameState.currentScene}" not found. Available scenes: ${Object.keys(scenes).slice(0, 10).join(', ')}...</p>`;
-                    }
+                    storyElement.innerHTML = `<p>Error: Scene "${gameState.currentScene}" not found. Available scenes: ${Object.keys(scenes).slice(0, 10).join(', ')}...</p>`;
                     return;
                 }
                 
@@ -3521,13 +3543,11 @@
                 }
             } catch (error) {
                 console.error("Error in updateStory:", error);
-                const storyEl = document.getElementById('story');
-                if (storyEl) {
-                    storyEl.innerHTML = `<p>Error loading scene: ${error.message}</p><p>Please check the console for details.</p>`;
-                }
+                storyElement.innerHTML = `<p>Error loading scene: ${error.message}</p><p>Please check the console for details.</p>`;
                 return;
             }
             
+            // Now scene is guaranteed to be defined (or we've returned)
             // Update timeline if scene specifies it
             if (scene.year !== undefined && scene.year !== null) {
                 gameState.year = scene.year;
@@ -3597,12 +3617,7 @@
                 conditionsDisplay += '</div>';
             }
             
-            const storyElement = document.getElementById('story');
-            if (!storyElement) {
-                console.error("Story element not found!");
-                return;
-            }
-            
+            // Render the story
             storyElement.innerHTML = 
                 `<h2 style="margin-bottom: 15px; color: #f4d03f;">${scene.title}</h2>
                  ${rankDisplay}
@@ -4968,49 +4983,6 @@
             updateDisplay();
         }
         
-        // Character creation helpers
-        function adjustStat(stat, delta) {
-            const currentValue = gameState.stats[stat];
-            const totalPointsSpent = Object.keys(gameState.stats).reduce((sum, s) => {
-                if (['strength', 'agility', 'endurance', 'charisma', 'wits'].includes(s)) {
-                    return sum + Math.max(0, gameState.stats[s] - 5);
-                }
-                return sum;
-            }, 0);
-            
-            if (delta > 0) {
-                // Increasing stat
-                if (currentValue >= 10) return; // Already at max
-                if (totalPointsSpent >= 20) return; // No points left
-                gameState.stats[stat] = Math.min(10, currentValue + 1);
-            } else {
-                // Decreasing stat
-                if (currentValue <= 5) return; // Already at minimum
-                gameState.stats[stat] = Math.max(5, currentValue - 1);
-            }
-            
-            gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
-            updateDisplay();
-        }
-        
-        function selectBackground(bg) {
-            gameState.background = bg;
-            // Update button styles
-            ['peasant', 'merchant', 'noble'].forEach(b => {
-                const btn = document.getElementById(`bg-${b}`);
-                if (btn) {
-                    if (b === bg) {
-                        btn.style.background = '#d4af37';
-                        btn.style.color = '#1a0f08';
-                    } else {
-                        btn.style.background = '#2a2a2a';
-                        btn.style.color = '#d4af37';
-                    }
-                }
-            });
-            updateDisplay();
-        }
-        
         // Make a choice
         function makeChoice(choiceIndex) {
             const scene = scenes[gameState.currentScene];
@@ -5420,6 +5392,15 @@
                 equipmentUI.close();
             }
         }
+        
+        // Global error handlers for debugging
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error || e.message, e.filename, e.lineno);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+        });
         
         // Initialize on load
         window.addEventListener('load', function() {
