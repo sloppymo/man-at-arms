@@ -1049,12 +1049,7 @@
                     
                     // Medieval name suggestions by culture
                     const nameSuggestions = {
-                        "English": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger"],
-                        "French": ["Pierre", "Jean", "Philippe", "Louis", "Henri", "Charles", "Guillaume", "Robert"],
-                        "Occitan": ["Raimond", "Bernat", "Guilhem", "Peire", "Arnaut", "Bertran", "Jaufre"],
-                        "Welsh": ["Llywelyn", "Dafydd", "Rhys", "Owain", "Gruffydd", "Madog", "Iorwerth"],
-                        "Flemish": ["Willem", "Jan", "Pieter", "Hendrik", "Karel", "Filip", "Dirk"],
-                        "Norman": ["Guillaume", "Henri", "Robert", "Richard", "Roger", "Hugues", "Geoffroi"]
+                        "English": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"]
                     };
                     
                     // Background questions data structure
@@ -1120,25 +1115,13 @@
                                     <select id="culture-select" 
                                             onchange="selectCulture(this.value);"
                                             style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
-                                        <option value="">Select Culture</option>
-                                        <option value="English" ${currentCulture === "English" ? "selected" : ""}>English</option>
-                                        <option value="French" ${currentCulture === "French" ? "selected" : ""}>French</option>
-                                        <option value="Occitan" ${currentCulture === "Occitan" ? "selected" : ""}>Occitan</option>
-                                        <option value="Welsh" ${currentCulture === "Welsh" ? "selected" : ""}>Welsh</option>
-                                        <option value="Flemish" ${currentCulture === "Flemish" ? "selected" : ""}>Flemish</option>
-                                        <option value="Norman" ${currentCulture === "Norman" ? "selected" : ""}>Norman</option>
+                                        <option value="English" ${currentCulture === "English" || !currentCulture ? "selected" : ""}>English</option>
                                     </select>
-                                    ${currentCulture ? (function() {
-                                        const cultureFlavor = {
-                                            "English": "You hail from the green hills and bustling ports of England. The longbow is your birthright, and you know the weight of a shilling. Your accent marks you among the French, but your loyalty to the Crown is unquestioned.",
-                                            "French": "You are a son of France—whether from the rich fields of Normandy, the vineyards of Gascony, or the stone walls of Paris. The fleur-de-lis runs in your blood, and you fight to defend your homeland from the English invaders.",
-                                            "Occitan": "You come from the sun-baked lands of the south, where the langue d'oc flows like wine. Your people have known both French rule and independence, and you carry that complex heritage into battle.",
-                                            "Welsh": "You are a son of the mountains and valleys of Wales. The English may claim your land, but they do not claim your heart. Your longbow skills are legendary, and your loyalty must be earned, not assumed.",
-                                            "Flemish": "You hail from the wealthy trading cities of Flanders. Your people know the value of coin and the cost of war. Your allegiances shift with the winds of commerce, but your skill with arms is never in doubt.",
-                                            "Norman": "You are Norman—descended from the conquerors who once ruled both sides of the Channel. Your bloodline carries the weight of history, and you know that loyalty is a currency that must be carefully spent."
-                                        };
-                                        return '<div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;"><div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">' + (cultureFlavor[currentCulture] || '') + '</div></div>';
-                                    })() : '<small style="color: #888; font-size: 12px; display: block; margin-top: 5px;">Select a culture to see its description. Affects dialogue options and social interactions.</small>')}
+                                    <div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;">
+                                        <div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">
+                                            You hail from the green hills and bustling ports of England. The longbow is your birthright, and you know the weight of a shilling. Your accent marks you among the French, but your loyalty to the Crown is unquestioned. You are an Englishman, and you will fight for King Edward and the realm.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -5689,7 +5672,7 @@
         }
         
         function selectCulture(culture) {
-            gameState.culture = culture;
+            gameState.culture = "English"; // Always English
             updateDisplay();
         }
         
@@ -5877,9 +5860,9 @@
                     showNotification('Character Creation', 'Please enter your name.');
                     return;
                 }
-                if (!gameState.culture || gameState.culture === '') {
-                    showNotification('Character Creation', 'Please select your culture.');
-                    return;
+                // Culture is always English, ensure it's set
+                if (!gameState.culture) {
+                    gameState.culture = 'English';
                 }
                 if (!gameState.age || gameState.age < 16 || gameState.age > 40) {
                     showNotification('Character Creation', 'Please set your age (16-40).');
@@ -6085,7 +6068,7 @@
                 region: "England", // Add region for equipment system
                 currentScene: "character_creation",
                 characterName: "",
-                culture: "",
+                culture: "English",
                 origin: null,
                 background: null, // Keep for backward compatibility
                 backgroundQuestionsAnswered: [],
