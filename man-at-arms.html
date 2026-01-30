@@ -5765,6 +5765,16 @@
         
         /** Recalculate stats from priorities */
         function recalculateFromPriorities() {
+            // Safety check: ensure gameState and stats exist
+            if (!gameState) {
+                console.error("recalculateFromPriorities: gameState is not defined");
+                return;
+            }
+            if (!gameState.stats) {
+                console.error("recalculateFromPriorities: gameState.stats is not defined");
+                return;
+            }
+            
             if (!gameState.priorities) {
                 gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
             }
