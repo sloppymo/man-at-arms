@@ -1418,6 +1418,13 @@
                 onEnter: function() {
                     const sceneKey = `start_${gameState.year}`;
                     if (!gameState.enteredScenes.has(sceneKey)) {
+                        // Grant starting kit if not already granted (backward compatibility)
+                        if (!gameState.startingKitGranted) {
+                            const origin = gameState.origin || 'rural_peasant';
+                            const kitTier = gameState.kitTier || "Standard";
+                            grantStartingKit(origin, kitTier);
+                        }
+                        
                         // Apply origin bonuses if not already applied
                         if (!gameState.flags.originApplied) {
                             const origin = gameState.origin || 'rural_peasant';
@@ -6143,6 +6150,13 @@
                     showNotification('Character Creation', 'Please enter your name.');
                     return;
                 }
+                
+                // Validate priorities
+                const priorityValidation = validatePrioritiesCompleteAndUnique();
+                if (!priorityValidation.ok) {
+                    showNotification('Character Creation', priorityValidation.message);
+                    return;
+                }
                 // Culture is always English, ensure it's set
                 if (!gameState.culture) {
                     gameState.culture = 'English';
@@ -6357,13 +6371,7 @@
                 backgroundQuestionsAnswered: [],
         scenesVisited: [],
         enteredScenes: new Set(),
-        inventory: [
-            { id: 'arming_sword', condition: 100, fit: 'off-the-rack', stackCount: 1 },
-            { id: 'padded_jack', condition: 100, fit: 'off-the-rack', stackCount: 1 },
-            { id: 'kettle_hat', condition: 100, fit: 'off-the-rack', stackCount: 1 },
-            { id: 'buckler', condition: 100, fit: 'off-the-rack', stackCount: 1 },
-            { id: 'rondel_dagger', condition: 100, fit: 'off-the-rack', stackCount: 1 }
-        ],
+        inventory: [], // Starting kit will be granted by priority system
                 equipment: {
                     head: {},
                     torso: {},
@@ -6445,6 +6453,32 @@
             base.inventory = Array.isArray(loaded.inventory) ? loaded.inventory : [];
             base.conditions = Array.isArray(loaded.conditions) ? loaded.conditions : [];
             base.backgroundQuestionsAnswered = Array.isArray(loaded.backgroundQuestionsAnswered) ? loaded.backgroundQuestionsAnswered : [];
+            
+            // Priorities system
+            base.priorities = base.priorities || { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            if (typeof base.priorities !== "object") {
+                base.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            }
+            // Ensure all priority keys exist
+            ['might', 'finesse', 'wits', 'presence', 'fortune'].forEach(function(key) {
+                if (!(key in base.priorities)) {
+                    base.priorities[key] = null;
+                }
+            });
+            
+            base.kitTier = typeof base.kitTier === "string" ? base.kitTier : "Standard";
+            base.startingKitGranted = typeof base.startingKitGranted === "boolean" ? base.startingKitGranted : false;
+            
+            // Recalculate stats from priorities if priorities are set (for loaded saves)
+            if (base.priorities && Object.values(base.priorities).some(function(p) { return p !== null && p !== ''; })) {
+                // Temporarily set gameState to base for recalculation
+                const tempGameState = gameState;
+                gameState = base;
+                recalculateFromPriorities();
+                // Restore gameState
+                gameState = tempGameState;
+                // Stats are now updated in base
+            }
             
             // Clamp + coerce numeric stats
             for (const key of Object.keys(base.stats)) {
