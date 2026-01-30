@@ -3530,12 +3530,14 @@
         
         // Update story text
         function updateStory() {
+            console.log("=== UPDATE STORY START ===");
             // Get story element once at the start
             const storyElement = document.getElementById('story');
             if (!storyElement) {
                 console.error("Story element not found!");
                 return;
             }
+            console.log("Story element found:", storyElement);
             
             // Declare scene in function scope so it's accessible throughout
             let scene;
