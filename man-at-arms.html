@@ -6390,14 +6390,11 @@
                     showNotification('Character Creation', 'Please set your age (16-40).');
                     return;
                 }
-                const totalPointsSpent = Object.keys(gameState.stats).reduce((sum, s) => {
-                    if (['strength', 'agility', 'endurance', 'charisma', 'wits'].includes(s)) {
-                        return sum + Math.max(0, gameState.stats[s] - 5);
-                    }
-                    return sum;
-                }, 0);
-                if (totalPointsSpent !== 20) {
-                    showNotification('Character Creation', `You must spend exactly 20 points. You have spent ${totalPointsSpent}.`);
+                
+                // Validate priorities (replaces old point system)
+                const priorityValidation = validatePrioritiesCompleteAndUnique();
+                if (!priorityValidation.ok) {
+                    showNotification('Character Creation', priorityValidation.message);
                     return;
                 }
             }
