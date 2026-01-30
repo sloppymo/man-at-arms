@@ -1035,7 +1035,6 @@
                     );
                     const nameDisplay = gameState.characterName || "";
                     const currentAge = gameState.age || 18;
-                    const currentPronouns = gameState.pronouns || "he";
                     const currentCulture = gameState.culture || "";
                     
                     // Age-based stat modifiers (display only, applied on selection)
@@ -1104,45 +1103,42 @@
                         <div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">
                             <h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Section 1 — Identity</h3>
                             
-                            <!-- Name & Pronouns -->
+                            <!-- Name & Culture -->
                             <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
                                 <label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Your Name:</label>
                                 <input type="text" id="character-name-input" placeholder="Enter your name" 
                                        value="${nameDisplay}" 
                                        list="name-suggestions"
-                                       style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif; margin-bottom: 10px;"
+                                       style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif; margin-bottom: 15px;"
                                        onchange="gameState.characterName = this.value; updateDisplay();">
                                 <datalist id="name-suggestions">
                                     ${(currentCulture && nameSuggestions[currentCulture] ? nameSuggestions[currentCulture].map(function(n) { return '<option value="' + n + '">'; }).join('') : '')}
                                 </datalist>
                                 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                                    <div>
-                                        <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Pronouns:</label>
-                                        <select id="pronouns-select" 
-                                                onchange="selectPronouns(this.value);"
-                                                style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
-                                            <option value="he" ${currentPronouns === "he" ? "selected" : ""}>He/Him</option>
-                                            <option value="she" ${currentPronouns === "she" ? "selected" : ""}>She/Her</option>
-                                            <option value="they" ${currentPronouns === "they" ? "selected" : ""}>They/Them</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div>
-                                        <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Culture:</label>
-                                        <select id="culture-select" 
-                                                onchange="selectCulture(this.value);"
-                                                style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
-                                            <option value="">Select Culture</option>
-                                            <option value="English" ${currentCulture === "English" ? "selected" : ""}>English</option>
-                                            <option value="French" ${currentCulture === "French" ? "selected" : ""}>French</option>
-                                            <option value="Occitan" ${currentCulture === "Occitan" ? "selected" : ""}>Occitan</option>
-                                            <option value="Welsh" ${currentCulture === "Welsh" ? "selected" : ""}>Welsh</option>
-                                            <option value="Flemish" ${currentCulture === "Flemish" ? "selected" : ""}>Flemish</option>
-                                            <option value="Norman" ${currentCulture === "Norman" ? "selected" : ""}>Norman</option>
-                                        </select>
-                                        <small style="color: #888; font-size: 12px;">Affects dialogue options and social interactions</small>
-                                    </div>
+                                <div>
+                                    <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Your Culture:</label>
+                                    <select id="culture-select" 
+                                            onchange="selectCulture(this.value);"
+                                            style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
+                                        <option value="">Select Culture</option>
+                                        <option value="English" ${currentCulture === "English" ? "selected" : ""}>English</option>
+                                        <option value="French" ${currentCulture === "French" ? "selected" : ""}>French</option>
+                                        <option value="Occitan" ${currentCulture === "Occitan" ? "selected" : ""}>Occitan</option>
+                                        <option value="Welsh" ${currentCulture === "Welsh" ? "selected" : ""}>Welsh</option>
+                                        <option value="Flemish" ${currentCulture === "Flemish" ? "selected" : ""}>Flemish</option>
+                                        <option value="Norman" ${currentCulture === "Norman" ? "selected" : ""}>Norman</option>
+                                    </select>
+                                    ${currentCulture ? (function() {
+                                        const cultureFlavor = {
+                                            "English": "You hail from the green hills and bustling ports of England. The longbow is your birthright, and you know the weight of a shilling. Your accent marks you among the French, but your loyalty to the Crown is unquestioned.",
+                                            "French": "You are a son of France—whether from the rich fields of Normandy, the vineyards of Gascony, or the stone walls of Paris. The fleur-de-lis runs in your blood, and you fight to defend your homeland from the English invaders.",
+                                            "Occitan": "You come from the sun-baked lands of the south, where the langue d'oc flows like wine. Your people have known both French rule and independence, and you carry that complex heritage into battle.",
+                                            "Welsh": "You are a son of the mountains and valleys of Wales. The English may claim your land, but they do not claim your heart. Your longbow skills are legendary, and your loyalty must be earned, not assumed.",
+                                            "Flemish": "You hail from the wealthy trading cities of Flanders. Your people know the value of coin and the cost of war. Your allegiances shift with the winds of commerce, but your skill with arms is never in doubt.",
+                                            "Norman": "You are Norman—descended from the conquerors who once ruled both sides of the Channel. Your bloodline carries the weight of history, and you know that loyalty is a currency that must be carefully spent."
+                                        };
+                                        return '<div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;"><div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">' + (cultureFlavor[currentCulture] || '') + '</div></div>';
+                                    })() : '<small style="color: #888; font-size: 12px; display: block; margin-top: 5px;">Select a culture to see its description. Affects dialogue options and social interactions.</small>')}
                                 </div>
                             </div>
                             
@@ -1341,13 +1337,11 @@
                 location: "England",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
-                    const pronouns = gameState.pronouns || "he";
                     const culture = gameState.culture || "English";
                     const age = gameState.age || 18;
-                    const pronounText = pronouns === "she" ? "woman" : pronouns === "they" ? "person" : "man";
                     const ageText = age >= 16 && age <= 19 ? "young" : age >= 31 && age <= 40 ? "veteran" : "";
                     return `<p>It is the year 1337. The war between England and France has just begun.</p>
-                           <p><strong>${name}</strong>, you are a ${ageText ? ageText + " " : ""}${culture} ${pronounText}, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
+                           <p><strong>${name}</strong>, you are a ${ageText ? ageText + " " : ""}${culture} man, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
                            <p>Your training begins now...</p>`;
                 },
                 choices: [
@@ -5694,11 +5688,6 @@
             updateDisplay();
         }
         
-        function selectPronouns(pronouns) {
-            gameState.pronouns = pronouns;
-            updateDisplay();
-        }
-        
         function selectCulture(culture) {
             gameState.culture = culture;
             updateDisplay();
@@ -6096,7 +6085,6 @@
                 region: "England", // Add region for equipment system
                 currentScene: "character_creation",
                 characterName: "",
-                pronouns: "he",
                 culture: "",
                 origin: null,
                 background: null, // Keep for backward compatibility
@@ -6198,7 +6186,6 @@
             // Don't reset currentScene to character_creation if we have a valid saved scene
             base.currentScene = typeof base.currentScene === "string" && base.currentScene !== "" ? base.currentScene : "character_creation";
             base.characterName = typeof base.characterName === "string" ? base.characterName : "";
-            base.pronouns = typeof base.pronouns === "string" ? base.pronouns : "he";
             base.culture = typeof base.culture === "string" ? base.culture : "";
             base.origin = base.origin || null;
             // Preserve background if it exists (don't reset to null) - backward compatibility
