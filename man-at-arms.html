@@ -1033,18 +1033,8 @@
                     }
                     
                     const nameDisplay = gameState.characterName || "";
-                    const currentAge = gameState.age || 18;
+                    const currentAgeRange = gameState.ageRange || null;
                     const currentCulture = gameState.culture || "";
-                    
-                    // Age-based stat modifiers (display only, applied on selection)
-                    let ageModifiers = "";
-                    if (currentAge >= 16 && currentAge <= 19) {
-                        ageModifiers = "+Initiative, -Endurance";
-                    } else if (currentAge >= 20 && currentAge <= 30) {
-                        ageModifiers = "Balanced";
-                    } else if (currentAge >= 31 && currentAge <= 40) {
-                        ageModifiers = "+Endurance, -Agility";
-                    }
                     
                     // Medieval name suggestions by region
                     const nameSuggestions = {
