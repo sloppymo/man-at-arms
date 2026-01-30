@@ -6476,8 +6476,8 @@
                     showNotification('Character Creation', 'Please select your region.');
                     return;
                 }
-                if (!gameState.age || gameState.age < 16 || gameState.age > 40) {
-                    showNotification('Character Creation', 'Please set your age (16-40).');
+                if (!gameState.ageRange) {
+                    showNotification('Character Creation', 'Please select your age range.');
                     return;
                 }
                 
