@@ -1280,6 +1280,18 @@
                             <p style="color: #888; margin-bottom: 15px;">You have <strong style="color: ${pointsRemaining > 0 ? '#0f0' : pointsRemaining < 0 ? '#f00' : '#f4d03f'}">${pointsRemaining}</strong> points remaining.</p>
                             <p style="color: #888; font-size: 14px; margin-bottom: 15px;">All stats start at 5. You have 20 points to distribute. Each stat can go up to 10.</p>
                             
+                            <!-- PRESET BUILD TEMPLATES -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">
+                                <div style="color: #d4af37; font-weight: bold; margin-bottom: 8px; font-size: 13px;">Quick Presets:</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                    <button onclick="applyPresetBuild('balanced')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">⚖️ Balanced Warrior</button>
+                                    <button onclick="applyPresetBuild('strong')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">💪 Mighty Champion</button>
+                                    <button onclick="applyPresetBuild('clever')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🧠 Cunning Scout</button>
+                                    <button onclick="applyPresetBuild('leader')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">👑 Charismatic Leader</button>
+                                </div>
+                                <div style="color: #888; font-size: 11px; margin-top: 5px; font-style: italic;">Select a preset to auto-allocate points, then customize as needed</div>
+                            </div>
+                            
                             ${(function() {
                                 const statLabels = {
                                     strength: '⚔️ Strength',
@@ -1361,6 +1373,47 @@
                         // Apply origin bonuses if not already applied
                         if (!gameState.flags.originApplied) {
                             const origin = gameState.origin || 'rural_peasant';
+                            
+                            // Starting equipment by origin
+                            const startingEquipment = {
+                                rural_peasant: [
+                                    { id: 'rusty_sword', condition: 80, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'padded_jack', condition: 75, fit: 'off-the-rack', stackCount: 1 }
+                                ],
+                                manor_retainer: [
+                                    { id: 'spear', condition: 85, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'padded_jack', condition: 80, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'kettle_hat', condition: 80, fit: 'off-the-rack', stackCount: 1 }
+                                ],
+                                craftsman_apprentice: [
+                                    { id: 'arming_sword', condition: 90, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'padded_jack', condition: 85, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'rondel_dagger', condition: 90, fit: 'off-the-rack', stackCount: 1 }
+                                ],
+                                squire: [
+                                    { id: 'arming_sword', condition: 95, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'padded_jack', condition: 90, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'kettle_hat', condition: 90, fit: 'off-the-rack', stackCount: 1 },
+                                    { id: 'buckler', condition: 85, fit: 'off-the-rack', stackCount: 1 }
+                                ],
+                                minor_noble: [
+                                    { id: 'arming_sword', condition: 100, fit: 'tailored', stackCount: 1 },
+                                    { id: 'padded_jack', condition: 95, fit: 'tailored', stackCount: 1 },
+                                    { id: 'kettle_hat', condition: 95, fit: 'tailored', stackCount: 1 },
+                                    { id: 'buckler', condition: 90, fit: 'tailored', stackCount: 1 }
+                                ]
+                            };
+                            
+                            // Give starting equipment
+                            if (!gameState.inventory) gameState.inventory = [];
+                            const equipment = startingEquipment[origin] || [];
+                            equipment.forEach(function(item) {
+                                if (!gameState.inventory.find(function(i) { return i.id === item.id; })) {
+                                    gameState.inventory.push(item);
+                                }
+                            });
+                            
+                            // Apply stat bonuses
                             switch(origin) {
                                 case 'rural_peasant':
                                     applyStatChange('endurance', 2);
@@ -1377,11 +1430,6 @@
                                 case 'squire':
                                     applyStatChange('strength', 1);
                                     applyStatChange('wits', 1);
-                                    // Add basic gear
-                                    if (!gameState.inventory) gameState.inventory = [];
-                                    if (!gameState.inventory.find(function(i) { return i.id === 'arming_sword'; })) {
-                                        gameState.inventory.push({id: 'arming_sword', condition: 100, fit: 'off-the-rack', stackCount: 1});
-                                    }
                                     break;
                                 case 'minor_noble':
                                     applyStatChange('charisma', 1);
@@ -4257,6 +4305,37 @@
                         .join(', ');
                 }
                 
+                // Consequence tags
+                let consequenceTags = '';
+                if (choice.consequences) {
+                    const tags = [];
+                    
+                    if (choice.consequences.risk) {
+                        const riskColors = { 
+                            low: { bg: '#4CAF50', text: 'SAFE' }, 
+                            medium: { bg: '#FF9800', text: 'MODERATE RISK' }, 
+                            high: { bg: '#f44336', text: 'HIGH RISK' } 
+                        };
+                        const risk = riskColors[choice.consequences.risk] || riskColors.medium;
+                        tags.push(`<span style="background: ${risk.bg}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: bold; margin-left: 5px;">[${risk.text}]</span>`);
+                    }
+                    
+                    if (choice.consequences.reward) {
+                        tags.push(`<span style="background: #d4af37; color: #1a0f08; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; font-weight: bold; margin-left: 5px;">[${choice.consequences.reward}]</span>`);
+                    }
+                    
+                    if (choice.consequences.statChanges) {
+                        const statText = Object.entries(choice.consequences.statChanges)
+                            .map(([stat, val]) => `${val > 0 ? '+' : ''}${val} ${stat}`)
+                            .join(', ');
+                        tags.push(`<span style="background: #2a2a2a; color: #d4af37; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; margin-left: 5px;">[${statText}]</span>`);
+                    }
+                    
+                    if (tags.length > 0) {
+                        consequenceTags = `<div style="margin-top: 5px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">${tags.join('')}</div>`;
+                    }
+                }
+                
                 // Check requirements
                 let disabled = false;
                 let disabledReason = '';
@@ -4272,12 +4351,25 @@
                 
                 return `
                     <button class="choice-button" onclick="makeChoice(${index})" ${disabled ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-                        ${choice.text}
-                        ${effectsText ? `<span class="choice-effects">${effectsText}</span>` : ''}
-                        ${disabledReason ? `<span class="choice-effects" style="color: #8b0000;">${disabledReason}</span>` : ''}
+                        <div style="text-align: left;">
+                            <div>${choice.text}</div>
+                            ${consequenceTags}
+                            ${effectsText ? `<span class="choice-effects">${effectsText}</span>` : ''}
+                            ${disabledReason ? `<span class="choice-effects" style="color: #8b0000;">${disabledReason}</span>` : ''}
+                        </div>
                     </button>
                 `;
             }).join('');
+        }
+        
+        // Calculate rank based on experience
+        function calculateRank() {
+            const xp = gameState.stats.experience || 0;
+            if (xp >= 500) return "Knight";
+            if (xp >= 301) return "Sergeant";
+            if (xp >= 151) return "Veteran";
+            if (xp >= 51) return "Common Soldier";
+            return "Raw Recruit";
         }
         
         // Update status bar
@@ -4285,6 +4377,32 @@
             document.getElementById('year').textContent = gameState.year;
             document.getElementById('age').textContent = gameState.age;
             document.getElementById('location').textContent = gameState.location;
+            
+            // Update rank display
+            const currentRank = calculateRank();
+            if (gameState.rank !== currentRank) {
+                const oldRank = gameState.rank;
+                gameState.rank = currentRank;
+                if (oldRank && oldRank !== "Common Soldier") {
+                    showNotification("Rank Advancement", `You have been promoted to ${currentRank}!`, "success");
+                }
+            }
+            
+            // Display rank in status bar if element exists
+            let rankElement = document.getElementById('status-rank');
+            if (!rankElement) {
+                const statusBar = document.querySelector('.status-bar');
+                if (statusBar) {
+                    rankElement = document.createElement('div');
+                    rankElement.id = 'status-rank';
+                    rankElement.className = 'status-item';
+                    rankElement.style.cssText = 'color: #d4af37; font-weight: bold;';
+                    statusBar.insertBefore(rankElement, statusBar.firstChild);
+                }
+            }
+            if (rankElement) {
+                rankElement.textContent = currentRank;
+            }
             
             // Add conditions display
             const statusBar = document.querySelector('.status-bar');
@@ -5709,6 +5827,46 @@
             updateDisplay();
         }
         
+        // Preset build templates for quick stat allocation
+        function applyPresetBuild(presetKey) {
+            const buildPresets = {
+                balanced: {
+                    name: "Balanced Warrior",
+                    description: "All-around capable fighter",
+                    stats: { strength: 7, agility: 7, endurance: 7, charisma: 6, wits: 6 }
+                },
+                strong: {
+                    name: "Mighty Champion",
+                    description: "Unmatched strength and endurance",
+                    stats: { strength: 10, agility: 5, endurance: 9, charisma: 5, wits: 5 }
+                },
+                clever: {
+                    name: "Cunning Scout",
+                    description: "Quick and perceptive",
+                    stats: { strength: 5, agility: 9, endurance: 6, charisma: 6, wits: 9 }
+                },
+                leader: {
+                    name: "Charismatic Leader",
+                    description: "Inspires and commands",
+                    stats: { strength: 6, agility: 6, endurance: 6, charisma: 10, wits: 7 }
+                }
+            };
+            
+            const preset = buildPresets[presetKey];
+            if (!preset) return;
+            
+            // Apply stats (all start at 5, so we add the difference)
+            Object.keys(preset.stats).forEach(function(stat) {
+                if (['strength', 'agility', 'endurance', 'charisma', 'wits'].includes(stat)) {
+                    gameState.stats[stat] = preset.stats[stat];
+                    gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
+                }
+            });
+            
+            showNotification('Preset Applied', preset.name + ': ' + preset.description, 'success');
+            updateDisplay();
+        }
+        
         // Make a choice
         function makeChoice(choiceIndex) {
             const scene = scenes[gameState.currentScene];
@@ -5868,14 +6026,27 @@
         }
         
         // Show notification
-        function showNotification(title, message) {
+        // Enhanced toast notification system with types
+        function showNotification(title, message, type = 'info') {
             const notification = document.getElementById('notification');
             if (!notification) {
                 console.warn('Notification element not found');
                 return;
             }
             
-            notification.innerHTML = `<h3>${title}</h3><p>${message}</p>`;
+            // Type-based styling
+            const typeColors = {
+                success: { bg: '#4CAF50', border: '#2e7d32', icon: '✓' },
+                error: { bg: '#f44336', border: '#c62828', icon: '✗' },
+                info: { bg: '#2196F3', border: '#1565C0', icon: 'ℹ' },
+                warning: { bg: '#FF9800', border: '#E65100', icon: '⚠' }
+            };
+            
+            const colors = typeColors[type] || typeColors.info;
+            
+            notification.innerHTML = `<h3 style="color: white; margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.2em;">${colors.icon}</span> ${title}</h3><p style="color: #e0e0e0; margin: 0;">${message}</p>`;
+            notification.style.backgroundColor = colors.bg;
+            notification.style.borderColor = colors.border;
             notification.classList.remove('hidden');
             
             // Make it more prominent
@@ -5883,11 +6054,17 @@
             notification.style.opacity = '1';
             notification.style.zIndex = '10000';
             
-            // Auto-hide after 4 seconds (increased from 3)
+            // Auto-hide after 3 seconds with fade
             setTimeout(() => {
-                notification.classList.add('hidden');
-                notification.style.display = 'none';
-            }, 4000);
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                    notification.style.display = 'none';
+                    notification.style.opacity = '1';
+                    notification.style.transform = 'translateX(0)';
+                }, 300);
+            }, 3000);
         }
         
         // Save/Load System Constants
@@ -6059,10 +6236,10 @@
                 };
                 
                 localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-                showNotification("Game Saved", "Your progress has been saved!");
+                showNotification("Game Saved", "Your progress has been saved!", "success");
             } catch (err) {
                 console.error("Save failed:", err);
-                showNotification("Save Failed", "Could not save (storage full or blocked).");
+                showNotification("Save Failed", "Could not save (storage full or blocked).", "error");
             }
         }
         
@@ -6070,7 +6247,7 @@
         function loadGame() {
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) {
-                showNotification("No Save Found", "No saved game found.");
+                showNotification("No Save Found", "No saved game found.", "error");
                 return;
             }
             
@@ -6079,14 +6256,14 @@
                 loaded = JSON.parse(raw);
             } catch (err) {
                 console.error("Corrupt save:", err);
-                showNotification("Load Failed", "Save data is corrupted.");
+                showNotification("Load Failed", "Save data is corrupted.", "error");
                 return;
             }
             
             // Optional: handle future migrations here
             const version = asNumber(loaded.saveVersion, 0);
             if (version > SAVE_VERSION) {
-                showNotification("Load Failed", "Save was made by a newer version of the game.");
+                showNotification("Load Failed", "Save was made by a newer version of the game.", "error");
                 return;
             }
             
@@ -6116,7 +6293,7 @@
             
             // Force update display to ensure UI reflects loaded state
             updateDisplay();
-            showNotification("Game Loaded", "Your progress has been restored!");
+            showNotification("Game Loaded", "Your progress has been restored!", "success");
         }
         
         // Show full stats
