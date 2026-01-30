@@ -6090,6 +6090,10 @@
         }
         
         function selectCulture(culture) {
+            gameState.culture = culture;
+            updateRegionMapHighlight();
+            updateDisplay();
+        }
         
         // Show tooltip on hover
         function showRegionTooltip(event, regionName) {
