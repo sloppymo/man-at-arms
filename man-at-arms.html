@@ -6488,13 +6488,6 @@
                     showNotification('Character Creation', 'Please select your age range.');
                     return;
                 }
-                
-                // Validate priorities (replaces old point system)
-                const priorityValidation = validatePrioritiesCompleteAndUnique();
-                if (!priorityValidation.ok) {
-                    showNotification('Character Creation', priorityValidation.message);
-                    return;
-                }
             }
             
             // Handle reset as direct action
