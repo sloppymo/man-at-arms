@@ -615,6 +615,23 @@
             </div>
         </div>
         
+        <div class="stats-summary" id="stats-summary" style="
+            background: rgba(139, 105, 20, 0.15);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            cursor: pointer;
+        " onclick="toggleStatsSummary()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: #f4d03f;">⚔️ Quick Stats</strong>
+                <span id="stats-summary-toggle" style="color: #888;">▼</span>
+            </div>
+            <div id="stats-summary-content" style="display: none; margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+        
         <div class="story-text" id="story">
             <p id="loading-message">Loading...</p>
         </div>
@@ -1150,7 +1167,7 @@
                         nextScene: "first_battle_brave_resolve",
                         requiresResolution: true,
                         resolutionStat: "strength",
-                        resolutionDifficulty: 6
+                        resolutionDifficulty: 8
                     }
                 ]
             },
@@ -1322,8 +1339,32 @@
                     }
                 ],
                 onEnter: function() {
-                    gameState.equipment.weapon.quality = 1;
-                    gameState.equipment.armor.quality = 1;
+                    const sceneKey = `equipment_upgrade_1340_${gameState.year}`;
+                    if (!gameState.enteredScenes.has(sceneKey)) {
+                        // Add equipment to inventory
+                        if (!gameState.inventory) gameState.inventory = [];
+                        
+                        // Add mail haubergeon if not already in inventory
+                        if (!gameState.inventory.find(i => i.id === 'mail_haubergeon')) {
+                            gameState.inventory.push({
+                                id: 'mail_haubergeon',
+                                condition: 85,
+                                fit: 'off-the-rack',
+                                stackCount: 1
+                            });
+                            showNotification('Equipment Acquired', 'You purchased a Mail Haubergeon!');
+                        }
+                        
+                        // Old format compatibility
+                        if (gameState.equipment && gameState.equipment.weapon) {
+                            gameState.equipment.weapon.quality = 1;
+                        }
+                        if (gameState.equipment && gameState.equipment.armor) {
+                            gameState.equipment.armor.quality = 1;
+                        }
+                        
+                        gameState.enteredScenes.add(sceneKey);
+                    }
                 }
             },
             between_years_1341: {
@@ -1470,7 +1511,7 @@
                         nextScene: "indenture_negotiate",
                         requiresResolution: true,
                         resolutionStat: "charisma",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Ask what happens to prisoners",
@@ -1478,7 +1519,7 @@
                         nextScene: "indenture_prisoners",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Sign fast and shut up",
@@ -1486,7 +1527,7 @@
                         nextScene: "indenture_sign",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -1600,7 +1641,7 @@
                         nextScene: "purveyance_fair",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Take what's needed, quickly",
@@ -1608,7 +1649,7 @@
                         nextScene: "purveyance_take",
                         requiresResolution: true,
                         resolutionStat: "strength",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Refuse and let others do it",
@@ -1616,7 +1657,7 @@
                         nextScene: "purveyance_refuse",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -1734,7 +1775,7 @@
                         nextScene: "channel_horses",
                         requiresResolution: true,
                         resolutionStat: "endurance",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Secure your gear against salt",
@@ -1742,7 +1783,7 @@
                         nextScene: "channel_gear",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Help the sick and keep order",
@@ -1750,7 +1791,7 @@
                         nextScene: "channel_help",
                         requiresResolution: true,
                         resolutionStat: "charisma",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -1867,7 +1908,7 @@
                         nextScene: "landing_scout",
                         requiresResolution: true,
                         resolutionStat: "agility",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Join the first raid party",
@@ -1875,7 +1916,7 @@
                         nextScene: "landing_raid",
                         requiresResolution: true,
                         resolutionStat: "strength",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Stay with the banner",
@@ -1883,7 +1924,7 @@
                         nextScene: "landing_banner",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -1940,14 +1981,32 @@
                     }
                 },
                 onEnter: function() {
-                    const result = gameState.lastResolution;
-                    if (result && result.success) {
-                        applyStatChange('wealth', 5);
-                        setFlag('Resentment', true);
-                        applyStatChange('stress', 1);
-                    } else if (result) {
-                        addCondition('Shaken', 'negative', 1);
-                        applyStatChange('stress', 1);
+                    const sceneKey = `landing_raid_${gameState.year}`;
+                    if (!gameState.enteredScenes.has(sceneKey)) {
+                        const result = gameState.lastResolution;
+                        if (result && result.success) {
+                            applyStatChange('wealth', 5);
+                            setFlag('Resentment', true);
+                            applyStatChange('stress', 1);
+                            
+                            // Small chance to find equipment
+                            if (Math.random() < 0.3) {
+                                if (!gameState.inventory) gameState.inventory = [];
+                                if (!gameState.inventory.find(i => i.id === 'buckler')) {
+                                    gameState.inventory.push({
+                                        id: 'buckler',
+                                        condition: 70,
+                                        fit: 'salvage',
+                                        stackCount: 1
+                                    });
+                                    showNotification('Equipment Found', 'You salvaged a Buckler from the raid!');
+                                }
+                            }
+                        } else if (result) {
+                            addCondition('Shaken', 'negative', 1);
+                            applyStatChange('stress', 1);
+                        }
+                        gameState.enteredScenes.add(sceneKey);
                     }
                 },
                 choices: [
@@ -2004,7 +2063,7 @@
                         nextScene: "chevauchée_torch",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Take hostages for safe passage",
@@ -2020,7 +2079,7 @@
                         nextScene: "chevauchée_spare",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -2148,7 +2207,7 @@
                         nextScene: "caen_bridge_loot",
                         requiresResolution: true,
                         resolutionStat: "agility",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Take a noble prisoner instead of killing",
@@ -2284,7 +2343,7 @@
                         nextScene: "prisoner_formal",
                         requiresResolution: true,
                         resolutionStat: "charisma",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Split the claim",
@@ -2292,7 +2351,7 @@
                         nextScene: "prisoner_split",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Steal the purse and walk away",
@@ -2418,7 +2477,7 @@
                         nextScene: "denuded_forage",
                         requiresResolution: true,
                         resolutionStat: "charisma",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Slaughter a horse for the pot",
@@ -2426,7 +2485,7 @@
                         nextScene: "denuded_horse",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Make an example of a thief",
@@ -2562,7 +2621,7 @@
                         nextScene: "blanchetaque_cover",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Drag a drowning man out",
@@ -2868,7 +2927,7 @@
                         nextScene: "crecy_night_wounded",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Strip gear carefully (not greedily)",
@@ -2876,7 +2935,7 @@
                         nextScene: "crecy_night_gear",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Hunt for captives worth ransom",
@@ -3008,7 +3067,7 @@
                         nextScene: "calais_latrines",
                         requiresResolution: true,
                         resolutionStat: "wits",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Volunteer for dangerous night duty",
@@ -3156,7 +3215,7 @@
                         nextScene: "flux_survive",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     }
                 ]
             },
@@ -3276,7 +3335,7 @@
                         nextScene: "keys_disciplined",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 7
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Offer water to a citizen",
@@ -3284,7 +3343,7 @@
                         nextScene: "keys_water",
                         requiresResolution: true,
                         resolutionStat: "morale",
-                        resolutionDifficulty: 5
+                        resolutionDifficulty: 9
                     },
                     {
                         text: "Grab a souvenir (keys/cloth/coin)",
@@ -3778,6 +3837,45 @@
             document.getElementById('year').textContent = gameState.year;
             document.getElementById('age').textContent = gameState.age;
             document.getElementById('location').textContent = gameState.location;
+            
+            // Add conditions display
+            const statusBar = document.querySelector('.status-bar');
+            if (!statusBar) return;
+            
+            let conditionsElement = document.getElementById('status-conditions');
+            
+            if (!conditionsElement) {
+                conditionsElement = document.createElement('div');
+                conditionsElement.id = 'status-conditions';
+                conditionsElement.className = 'status-item';
+                conditionsElement.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap; align-items: center;';
+                statusBar.appendChild(conditionsElement);
+            }
+            
+            if (gameState.conditions && gameState.conditions.length > 0) {
+                conditionsElement.innerHTML = '<span style="color: #d4af37; font-weight: bold;">Status:</span>' +
+                    gameState.conditions.map(c => {
+                        const colors = {
+                            'Wounded': '#8b0000',
+                            'Seriously Wounded': '#ff0000',
+                            'Fatigued': '#8b6914',
+                            'Shaken': '#8b4513',
+                            'Sick': '#6b8e23',
+                            'Exhausted': '#4b0082'
+                        };
+                        const color = colors[c.name] || '#d4af37';
+                        return `<span style="
+                            background: ${color}33;
+                            border: 1px solid ${color};
+                            padding: 2px 8px;
+                            border-radius: 3px;
+                            font-size: 0.9em;
+                        ">${c.name}${c.duration ? ` (${c.duration})` : ''}</span>`;
+                    }).join('');
+                conditionsElement.style.display = 'flex';
+            } else {
+                conditionsElement.style.display = 'none';
+            }
         }
         
         // ===== COMBAT SYSTEM FUNCTIONS =====
@@ -5183,12 +5281,24 @@
         // Show notification
         function showNotification(title, message) {
             const notification = document.getElementById('notification');
+            if (!notification) {
+                console.warn('Notification element not found');
+                return;
+            }
+            
             notification.innerHTML = `<h3>${title}</h3><p>${message}</p>`;
             notification.classList.remove('hidden');
             
+            // Make it more prominent
+            notification.style.display = 'block';
+            notification.style.opacity = '1';
+            notification.style.zIndex = '10000';
+            
+            // Auto-hide after 4 seconds (increased from 3)
             setTimeout(() => {
                 notification.classList.add('hidden');
-            }, 3000);
+                notification.style.display = 'none';
+            }, 4000);
         }
         
         // Save/Load System Constants
@@ -5421,32 +5531,50 @@
         // Show full stats
         function showStats() {
             try {
+                const statLabels = {
+                    strength: '⚔️ Strength',
+                    agility: '🏃 Agility',
+                    endurance: '❤️ Endurance',
+                    charisma: '💬 Charisma',
+                    wits: '🧠 Wits',
+                    luck: '🍀 Luck',
+                    wealth: '💰 Wealth',
+                    reputation: '⭐ Reputation',
+                    morale: '💪 Morale',
+                    stress: '😰 Stress',
+                    experience: '📜 Experience',
+                    patronFavor: '👑 Patron Favor'
+                };
+                
                 const stats = Object.entries(gameState.stats)
                     .map(([key, value]) => {
                         const effective = getEffectiveStat(key);
+                        const label = statLabels[key] || key;
                         return effective !== value 
-                            ? `${key}: ${value} (Effective: ${effective})`
-                            : `${key}: ${value}`;
+                            ? `${label}: ${value} (Effective: ${effective})`
+                            : `${label}: ${value}`;
                     })
                     .join('\n');
+                
                 const conditions = gameState.conditions.length > 0 
-                    ? gameState.conditions.map(c => c.name).join(', ')
+                    ? gameState.conditions.map(c => `• ${c.name}${c.duration ? ` (${c.duration} turns remaining)` : ''}`).join('\n')
                     : 'None';
-                const career = `Battles: ${gameState.career.battles}, Wounds: ${gameState.career.wounds}, Promotions: ${gameState.career.promotions}`;
+                
+                const career = `Battles: ${gameState.career.battles}\nWounds: ${gameState.career.wounds}\nPromotions: ${gameState.career.promotions}`;
                 
                 // Handle equipment display for both old and new format
                 let equipment = 'None equipped';
                 try {
                     if (gameState.equipment && gameState.equipment.weapon && gameState.equipment.weapon.name) {
                         // Old format
-                        equipment = `Weapon: ${gameState.equipment.weapon.name} (+${gameState.equipment.weapon.quality || 0}), Armor: ${gameState.equipment.armor?.name || 'None'} (+${gameState.equipment.armor?.quality || 0})`;
+                        equipment = `Weapon: ${gameState.equipment.weapon.name} (+${gameState.equipment.weapon.quality || 0})\nArmor: ${gameState.equipment.armor?.name || 'None'} (+${gameState.equipment.armor?.quality || 0})`;
                     } else if (gameState.equipment && (gameState.equipment.weapon?.item || gameState.equipment.torso?.plate?.item)) {
                         // New layered format
                         const equipped = [];
                         if (gameState.equipment.weapon?.item) equipped.push(`Weapon: ${gameState.equipment.weapon.item.id}`);
                         if (gameState.equipment.torso?.plate?.item) equipped.push(`Torso: ${gameState.equipment.torso.plate.item.id}`);
                         if (gameState.equipment.head?.plate?.item) equipped.push(`Head: ${gameState.equipment.head.plate.item.id}`);
-                        equipment = equipped.length > 0 ? equipped.join(', ') : 'None equipped';
+                        equipment = equipped.length > 0 ? equipped.join('\n') : 'None equipped';
                     }
                 } catch (e) {
                     console.error("Error formatting equipment:", e);
@@ -5455,10 +5583,95 @@
                 
                 const inventoryCount = gameState.inventory ? gameState.inventory.length : 0;
                 
-                alert(`Full Game Stats:\n\n${stats}\n\nAge: ${gameState.age}\nYear: ${gameState.year}\nLocation: ${gameState.location}\nRegion: ${gameState.region || 'Unknown'}\nRank: ${gameState.rank}\n\nEquipment:\n${equipment}\n\nInventory Items: ${inventoryCount}\n\nConditions: ${conditions}\n\nCareer: ${career}`);
+                // Create modal instead of alert
+                const modal = document.createElement('div');
+                modal.className = 'stats-modal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="
+                        background: #1a0f08;
+                        border: 3px solid #d4af37;
+                        border-radius: 10px;
+                        padding: 30px;
+                        max-width: 600px;
+                        max-height: 80vh;
+                        overflow-y: auto;
+                        color: #d4af37;
+                        font-family: 'Crimson Text', serif;
+                    ">
+                        <h2 style="color: #f4d03f; margin-bottom: 20px; text-align: center;">📊 Full Character Stats</h2>
+                        <div style="line-height: 1.8; font-size: 1.1em;">
+                            <h3 style="color: #f4d03f; margin-top: 15px;">Stats:</h3>
+                            <pre style="color: #d4af37; white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">${stats}</pre>
+                            
+                            <h3 style="color: #f4d03f; margin-top: 15px;">Character Info:</h3>
+                            <p>Name: ${gameState.characterName || 'Unnamed'}</p>
+                            <p>Age: ${gameState.age}</p>
+                            <p>Year: ${gameState.year}</p>
+                            <p>Location: ${gameState.location}</p>
+                            <p>Region: ${gameState.region || 'Unknown'}</p>
+                            <p>Rank: ${gameState.rank || 'Common Soldier'}</p>
+                            <p>Background: ${gameState.background ? gameState.background.charAt(0).toUpperCase() + gameState.background.slice(1) : 'None'}</p>
+                            
+                            <h3 style="color: #f4d03f; margin-top: 15px;">Equipment:</h3>
+                            <pre style="color: #d4af37; white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">${equipment}</pre>
+                            <p>Inventory Items: ${inventoryCount}</p>
+                            
+                            <h3 style="color: #f4d03f; margin-top: 15px;">Conditions:</h3>
+                            <pre style="color: #d4af37; white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">${conditions}</pre>
+                            
+                            <h3 style="color: #f4d03f; margin-top: 15px;">Career:</h3>
+                            <pre style="color: #d4af37; white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">${career}</pre>
+                        </div>
+                        <button onclick="this.closest('.stats-modal').remove()" 
+                                style="
+                                    margin-top: 20px;
+                                    padding: 10px 20px;
+                                    background: #8b0000;
+                                    border: 2px solid #d4af37;
+                                    color: #d4af37;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                    font-family: inherit;
+                                    width: 100%;
+                                ">
+                            Close
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Close on background click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.remove();
+                });
+                
+                // Close on Escape key
+                const closeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        modal.remove();
+                        document.removeEventListener('keydown', closeHandler);
+                    }
+                };
+                document.addEventListener('keydown', closeHandler);
+                
             } catch (error) {
                 console.error("Error in showStats:", error);
-                alert(`Error displaying stats: ${error.message}\n\nCheck console for details.`);
+                showNotification('Error', `Error displaying stats: ${error.message}`);
             }
         }
         
