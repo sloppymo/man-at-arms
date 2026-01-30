@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Man-at-Arms Combat System Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #d4af37;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(26, 26, 26, 0.9);
+            border: 2px solid #d4af37;
+            border-radius: 10px;
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #f4d03f;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .combat-setup {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .setup-panel {
+            background: #2a2a2a;
+            border: 1px solid #d4af37;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .setup-panel h3 {
+            color: #f4d03f;
+            margin-bottom: 15px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 4px;
+        }
+        
+        .stat-label {
+            color: #d4af37;
+        }
+        
+        .stat-value {
+            color: #f4d03f;
+            font-weight: bold;
+        }
+        
+        .modifier {
+            font-size: 0.9em;
+            color: #888;
+            margin-left: 10px;
+        }
+        
+        .modifier.positive {
+            color: #0f0;
+        }
+        
+        .modifier.negative {
+            color: #f00;
+        }
+        
+        .start-button {
+            width: 100%;
+            padding: 20px;
+            background: #8b0000;
+            border: 2px solid #d4af37;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 24px;
+            font-family: 'Georgia', serif;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        .start-button:hover {
+            background: #a00000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+        }
+        
+        .action-selection {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .action-button {
+            padding: 20px;
+            background: #2a2a2a;
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-family: 'Georgia', serif;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .action-button:hover:not(:disabled) {
+            background: #3a3a3a;
+            border-color: #f4d03f;
+            color: #f4d03f;
+            transform: translateY(-2px);
+        }
+        
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .action-button.selected {
+            background: #d4af37;
+            color: #1a1a1a;
+            font-weight: bold;
+        }
+        
+        .action-button.flurry {
+            border-color: #f00;
+            color: #f00;
+        }
+        
+        .action-button.flurry:hover:not(:disabled) {
+            border-color: #f80;
+            color: #f80;
+        }
+        
+        .action-button.flurry.selected {
+            background: #f00;
+            color: white;
+        }
+        
+        .action-details {
+            font-size: 14px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .actions-remaining {
+            text-align: center;
+            color: #f4d03f;
+            font-size: 20px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 5px;
+        }
+        
+        .attack-count-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .count-button {
+            width: 60px;
+            height: 60px;
+            background: #2a2a2a;
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .count-button:hover {
+            background: #3a3a3a;
+            border-color: #f4d03f;
+            color: #f4d03f;
+        }
+        
+        .count-button.selected {
+            background: #d4af37;
+            color: #1a1a1a;
+        }
+        
+        .count-button.flurry {
+            border-color: #f00;
+            color: #f00;
+        }
+        
+        .count-button.flurry.selected {
+            background: #f00;
+            color: white;
+        }
+        
+        .combat-log {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid #d4af37;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .combat-log h3 {
+            color: #f4d03f;
+            margin-bottom: 15px;
+        }
+        
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .log-entry.success {
+            border-left: 3px solid #0f0;
+        }
+        
+        .log-entry.failure {
+            border-left: 3px solid #f00;
+        }
+        
+        .log-entry.info {
+            border-left: 3px solid #d4af37;
+        }
+        
+        /* Minigame Overlay */
+        #minigame-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #minigame-content {
+            background: #1a1a1a;
+            border: 3px solid #d4af37;
+            padding: 40px;
+            border-radius: 10px;
+            max-width: 700px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+        }
+        
+        #minigame-title {
+            color: #f4d03f;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        #minigame-subtitle {
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        
+        #minigame-display {
+            margin: 20px 0;
+        }
+        
+        #minigame-instructions {
+            color: #d4af37;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        
+        .combat-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 5px;
+        }
+        
+        .progress-item {
+            text-align: center;
+        }
+        
+        .progress-item.active {
+            color: #f4d03f;
+            font-weight: bold;
+        }
+        
+        /* QTE Styles */
+        .qte-bar-container {
+            width: 600px;
+            height: 50px;
+            background: #333;
+            border: 3px solid #666;
+            position: relative;
+            margin: 30px auto;
+            border-radius: 5px;
+        }
+        
+        .qte-green-zone {
+            position: absolute;
+            height: 100%;
+            background: rgba(0, 255, 0, 0.4);
+            border: 2px solid #0f0;
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            transition: left 0.05s linear;
+        }
+        
+        .qte-indicator {
+            position: absolute;
+            top: 0;
+            width: 8px;
+            height: 100%;
+            background: #f4d03f;
+            box-shadow: 0 0 15px #f4d03f;
+        }
+        
+        .health-bars {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        
+        .health-bar-container {
+            width: 200px;
+        }
+        
+        .health-bar-label {
+            color: #d4af37;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .health-bar {
+            width: 100%;
+            height: 30px;
+            background: #333;
+            border: 2px solid #666;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f0, #0a0);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .health-fill.low {
+            background: linear-gradient(90deg, #f00, #a00);
+        }
+        
+        .health-fill.medium {
+            background: linear-gradient(90deg, #fa0, #a50);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Combat System Demo</h1>
+        
+        <div class="combat-setup">
+            <div class="setup-panel">
+                <h3>Your Stats</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Strength:</span>
+                    <span class="stat-value" id="player-strength">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Agility:</span>
+                    <span class="stat-value" id="player-agility">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Initiative:</span>
+                    <span class="stat-value" id="player-initiative">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Weapon Quality:</span>
+                    <span class="stat-value" id="weapon-quality">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Health:</span>
+                    <span class="stat-value" id="player-health">100</span>
+                </div>
+            </div>
+            
+            <div class="setup-panel">
+                <h3>Enemy Stats</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Initiative:</span>
+                    <span class="stat-value" id="enemy-initiative">4</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Defense:</span>
+                    <span class="stat-value" id="enemy-defense">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Health:</span>
+                    <span class="stat-value" id="enemy-health">100</span>
+                </div>
+            </div>
+            
+            <div class="setup-panel">
+                <h3>Combat Conditions</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Terrain:</span>
+                    <span class="stat-value" id="terrain">Open Field</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Positioning:</span>
+                    <span class="stat-value" id="positioning">Neutral</span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin: 20px 0; text-align: center;">
+            <div style="color: #d4af37; margin-bottom: 10px;">Enemy Type:</div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="setEnemyType('aggressive')" id="enemy-aggressive" class="demo-button" style="max-width: 200px;">
+                    Aggressive<br><small>Heavy attacks, vulnerable to tricks</small>
+                </button>
+                <button onclick="setEnemyType('cautious')" id="enemy-cautious" class="demo-button" style="max-width: 200px;">
+                    Cautious<br><small>Defends often, punishes flurries</small>
+                </button>
+                <button onclick="setEnemyType('skilled')" id="enemy-skilled" class="demo-button" style="max-width: 200px;">
+                    Skilled<br><small>High defense, balanced</small>
+                </button>
+            </div>
+        </div>
+        
+        <button class="start-button" onclick="startCombat()">⚔️ Start Combat</button>
+        
+        <div class="combat-log" id="combat-log">
+            <h3>Combat Log</h3>
+            <p style="color: #888;">Click "Start Combat" to begin...</p>
+        </div>
+    </div>
+    
+    <!-- Minigame Overlay -->
+    <div id="minigame-overlay">
+        <div id="minigame-content">
+            <h3 id="minigame-title"></h3>
+            <div id="minigame-subtitle"></div>
+            <div class="health-bars">
+                <div class="health-bar-container">
+                    <div class="health-bar-label">Your Health</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="player-health-bar" style="width: 100%;">100</div>
+                    </div>
+                </div>
+                <div class="health-bar-container">
+                    <div class="health-bar-label">Enemy Health</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="enemy-health-bar" style="width: 100%;">100</div>
+                    </div>
+                </div>
+            </div>
+            <div class="combat-progress" id="combat-progress"></div>
+            <div id="minigame-display"></div>
+            <div id="minigame-instructions"></div>
+        </div>
+    </div>
+    
+    <script>
+        let combatState = {
+            playerHealth: 100,
+            enemyHealth: 100,
+            currentRound: 1,
+            actionsRemaining: 2,
+            playerStats: {
+                strength: 5,
+                agility: 5,
+                weaponQuality: 0,
+                shield: true,
+                initiative: 5
+            },
+            enemyStats: {
+                initiative: 4,
+                strength: 5,
+                agility: 4,
+                archetype: 'aggressive' // aggressive, cautious, skilled
+            },
+            playerState: {
+                stance: 'balanced', // aggressive, balanced, guarded
+                fatigue: 0, // 0-100
+                counterReady: false, // Set by perfect defend
+                nextActionBonus: 0 // Bonus from perfect defend
+            },
+            enemyState: {
+                nextIntent: null, // 'heavy', 'quick', 'defend'
+                intentTelegraphed: false,
+                defenseReduced: 0, // Rounds remaining
+                positioning: 'neutral'
+            },
+            initiative: {
+                playerWon: false,
+                margin: 0,
+                playerActions: 2
+            },
+            conditions: {
+                terrain: 'open',
+                enemyDefense: 5,
+                positioning: 'neutral',
+                enemyStunned: 0,
+                playerStunned: 0
+            },
+            combatHistory: [],
+            turnOrder: 'player'
+        };
+        
+        function updateHealthBars() {
+            const playerBar = document.getElementById('player-health-bar');
+            const enemyBar = document.getElementById('enemy-health-bar');
+            
+            playerBar.style.width = combatState.playerHealth + '%';
+            playerBar.textContent = Math.max(0, Math.floor(combatState.playerHealth));
+            playerBar.className = 'health-fill' + 
+                (combatState.playerHealth < 30 ? ' low' : 
+                 combatState.playerHealth < 60 ? ' medium' : '');
+            
+            enemyBar.style.width = combatState.enemyHealth + '%';
+            enemyBar.textContent = Math.max(0, Math.floor(combatState.enemyHealth));
+            enemyBar.className = 'health-fill' + 
+                (combatState.enemyHealth < 30 ? ' low' : 
+                 combatState.enemyHealth < 60 ? ' medium' : '');
+        }
+        
+        function addLogEntry(message, type = 'info') {
+            const log = document.getElementById('combat-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = message;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function calculateZoneSize(actionType, baseStat, modifiers) {
+            // Base zone size from stats
+            let zoneSize = 60 + (baseStat * 12);
+            
+            // Stance effects
+            if (combatState.playerState.stance === 'aggressive') {
+                zoneSize += 10; // Easier to hit
+            } else if (combatState.playerState.stance === 'guarded') {
+                zoneSize -= 5; // Harder to hit
+            }
+            
+            // Fatigue penalty (major impact)
+            const fatiguePenalty = Math.floor(combatState.playerState.fatigue / 10);
+            zoneSize -= fatiguePenalty * 3;
+            
+            // Apply modifiers
+            if (modifiers.weaponQuality) {
+                zoneSize += modifiers.weaponQuality * 8;
+            }
+            if (modifiers.terrain === 'mud') {
+                zoneSize -= 20;
+            } else if (modifiers.terrain === 'high_ground') {
+                zoneSize += 15;
+            }
+            if (modifiers.positioning === 'advantage') {
+                zoneSize += 15;
+            } else if (modifiers.positioning === 'disadvantage') {
+                zoneSize -= 20;
+            }
+            
+            // Enemy defense makes it harder
+            zoneSize -= (modifiers.enemyDefense - combatState.enemyState.defenseReduced) * 3;
+            
+            // Attack style effects
+            if (actionType === 'measured') {
+                zoneSize += 20; // Bigger zone for measured
+            } else if (actionType === 'press') {
+                zoneSize += 5; // Slightly bigger
+            } else if (actionType === 'flurry') {
+                zoneSize -= 15; // Smaller zone for flurry
+            }
+            
+            // Counter bonus
+            if (combatState.playerState.counterReady) {
+                zoneSize += 15;
+            }
+            
+            return Math.max(25, Math.min(150, zoneSize));
+        }
+        
+        function calculateFatigueGain(actionType, stance) {
+            let fatigue = 0;
+            
+            if (actionType === 'measured') {
+                fatigue = 5;
+            } else if (actionType === 'press') {
+                fatigue = 12;
+            } else if (actionType === 'flurry') {
+                fatigue = 25; // High fatigue for flurry
+            } else if (actionType === 'defend') {
+                fatigue = 3;
+            } else if (actionType === 'shield_bash') {
+                fatigue = 15;
+            } else if (actionType === 'dirty_trick') {
+                fatigue = 8;
+            }
+            
+            // Stance modifies fatigue
+            if (stance === 'aggressive') {
+                fatigue = Math.floor(fatigue * 1.3);
+            } else if (stance === 'guarded') {
+                fatigue = Math.floor(fatigue * 0.7);
+            }
+            
+            // Terrain adds fatigue
+            if (combatState.conditions.terrain === 'mud') {
+                fatigue += 5;
+            }
+            
+            return fatigue;
+        }
+        
+        
+        function showInitiativeCheck(callback) {
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            
+            title.textContent = '⚡ Initiative Check';
+            subtitle.textContent = 'Who acts first?';
+            instructions.textContent = 'Press SPACE when the bar is in the green zone!';
+            
+            const barWidth = 600;
+            const playerInitiative = combatState.playerStats.initiative;
+            const enemyInitiative = combatState.enemyStats.initiative;
+            
+            // Zone size based on initiative difference
+            const initiativeDiff = playerInitiative - enemyInitiative;
+            const baseZoneSize = 80;
+            const zoneSize = baseZoneSize + (initiativeDiff * 12);
+            const greenZoneStart = (barWidth - zoneSize) / 2;
+            const difficulty = 7 - Math.floor(initiativeDiff / 2);
+            const speed = 2.0;
+            
+            display.innerHTML = `
+                <div class="qte-bar-container">
+                    <div class="qte-green-zone" id="green-zone" style="left: ${greenZoneStart}px; width: ${zoneSize}px;"></div>
+                    <div class="qte-indicator" id="qte-indicator" style="left: 0;"></div>
+                </div>
+                <div style="color: #d4af37; margin-top: 20px; font-size: 18px;">
+                    <small style="color: #888;">
+                        Your Initiative: ${playerInitiative} | Enemy Initiative: ${enemyInitiative}
+                        ${initiativeDiff > 0 ? '<br><span style="color: #0f0;">You have the advantage!</span>' : 
+                          initiativeDiff < 0 ? '<br><span style="color: #f00;">Enemy is faster!</span>' : 
+                          '<br>Equal speed!'}
+                    </small>
+                </div>
+            `;
+            
+            const indicator = document.getElementById('qte-indicator');
+            const greenZone = document.getElementById('green-zone');
+            let position = 0;
+            let direction = 1;
+            let pressed = false;
+            let animationId;
+            
+            const moveIndicator = () => {
+                position += speed * direction;
+                if (position >= barWidth - 8) {
+                    direction = -1;
+                    position = barWidth - 8;
+                } else if (position <= 0) {
+                    direction = 1;
+                    position = 0;
+                }
+                indicator.style.left = position + 'px';
+                
+                if (!pressed) {
+                    animationId = requestAnimationFrame(moveIndicator);
+                }
+            };
+            
+            const handlePress = (e) => {
+                if (e.code === 'Space' && !pressed) {
+                    e.preventDefault();
+                    pressed = true;
+                    cancelAnimationFrame(animationId);
+                    
+                    const zoneStart = greenZoneStart;
+                    const zoneEnd = zoneStart + zoneSize;
+                    const inZone = position >= zoneStart && position <= zoneEnd;
+                    const distance = inZone ? 0 : Math.min(
+                        Math.abs(position - zoneStart),
+                        Math.abs(position - zoneEnd)
+                    );
+                    
+                    let roll = 10;
+                    if (!inZone) {
+                        roll = Math.max(1, 10 - Math.floor(distance / 20));
+                    } else {
+                        const center = zoneStart + zoneSize / 2;
+                        const distanceFromCenter = Math.abs(position - center);
+                        const centerBonus = distanceFromCenter < zoneSize / 4 ? 1 : 0;
+                        roll = Math.min(10, 9 + centerBonus);
+                    }
+                    
+                    const finalRoll = roll + playerInitiative;
+                    const enemyRollDie = Math.floor(Math.random() * 10) + 1;
+                    const enemyRoll = enemyRollDie + enemyInitiative;
+                    const playerWon = finalRoll > enemyRoll;
+                    const margin = Math.abs(finalRoll - enemyRoll);
+                    
+                    // Calculate bonus actions from initiative margin
+                    let bonusActions = 0;
+                    if (playerWon && margin >= 5) {
+                        bonusActions = 1; // Big margin = extra action
+                    }
+                    
+                    display.innerHTML = `
+                        <div style="color: ${playerWon ? '#0f0' : '#f00'}; font-size: 32px; margin: 30px 0;">
+                            ${playerWon ? '✓ You Act First!' : '✗ Enemy Acts First!'}
+                        </div>
+                        <div style="color: #d4af37; font-size: 18px;">
+                            Your Roll: ${roll} + ${playerInitiative} = ${finalRoll}
+                            <br>Enemy Roll: ${enemyRollDie} + ${enemyInitiative} = ${enemyRoll}
+                            ${bonusActions > 0 ? `<br><span style="color: #0f0;">Bonus action gained from superior speed!</span>` : ''}
+                        </div>
+                    `;
+                    
+                    window.removeEventListener('keydown', handlePress);
+                    setTimeout(() => {
+                        callback({ 
+                            playerWon, 
+                            margin,
+                            playerRoll: finalRoll,
+                            enemyRoll: enemyRoll,
+                            bonusActions 
+                        });
+                    }, 2000);
+                }
+            };
+            
+            window.addEventListener('keydown', handlePress);
+            moveIndicator();
+        }
+        
+        function showCombatQTE(actionType, attackStyle, stat, modifiers, callback) {
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            
+            const actionNames = {
+                'attack': '⚔️ Attack',
+                'defend': '🛡️ Defend',
+                'shield_bash': '🛡️ Shield Bash',
+                'dirty_trick': '🎯 Dirty Trick',
+                'flee': '🏃 Flee',
+                'parry': '🛡️ Parry',
+                'dodge': '💨 Dodge',
+                'interrupt': '⚔️ Interrupt'
+            };
+            
+            const styleNames = {
+                'measured': 'Measured Strike',
+                'press': 'Press Attack',
+                'flurry': 'Flurry'
+            };
+            
+            title.textContent = actionNames[actionType] || '⚔️ Action';
+            if (actionType === 'attack') {
+                subtitle.textContent = styleNames[attackStyle] || 'Attack';
+            } else {
+                subtitle.textContent = actionNames[actionType];
+            }
+            
+            instructions.textContent = 'Press SPACE when the bar is in the green zone!';
+            
+            const barWidth = 600;
+            
+            // Different zone sizes for different actions
+            let baseZoneSize;
+            if (actionType === 'attack') {
+                baseZoneSize = calculateZoneSize(attackStyle, stat, modifiers);
+            } else if (actionType === 'defend' || actionType === 'parry') {
+                // Defense zone affected by stance and fatigue
+                baseZoneSize = 80 + (combatState.playerStats.agility * 10);
+                if (combatState.playerState.stance === 'guarded') {
+                    baseZoneSize += 20;
+                } else if (combatState.playerState.stance === 'aggressive') {
+                    baseZoneSize -= 15;
+                }
+                // Fatigue affects defense too
+                const fatiguePenalty = Math.floor(combatState.playerState.fatigue / 10);
+                baseZoneSize -= fatiguePenalty * 2;
+            } else if (actionType === 'dodge') {
+                baseZoneSize = 70 + (combatState.playerStats.agility * 12);
+                // Fatigue heavily affects dodging
+                const fatiguePenalty = Math.floor(combatState.playerState.fatigue / 8);
+                baseZoneSize -= fatiguePenalty * 3;
+            } else if (actionType === 'interrupt') {
+                baseZoneSize = 60 + (combatState.playerStats.strength * 10);
+                const fatiguePenalty = Math.floor(combatState.playerState.fatigue / 10);
+                baseZoneSize -= fatiguePenalty * 2;
+            } else if (actionType === 'shield_bash') {
+                baseZoneSize = 70 + (combatState.playerStats.strength * 8);
+            } else if (actionType === 'dirty_trick') {
+                baseZoneSize = 60 + (combatState.playerStats.agility * 12);
+            } else { // flee
+                baseZoneSize = 90 + (combatState.playerStats.agility * 15);
+                // Fatigue makes fleeing harder
+                baseZoneSize -= Math.floor(combatState.playerState.fatigue / 5);
+            }
+            
+            const greenZoneStart = (barWidth - baseZoneSize) / 2;
+            const difficulty = actionType === 'flee' ? 5 : (7 - Math.floor((baseZoneSize - 60) / 20));
+            const speed = 2.0 + (combatState.playerState.fatigue > 50 ? 0.3 : 0);
+            
+            // Moving zone for flurry or dirty trick
+            const useMovingZone = (actionType === 'attack' && attackStyle === 'flurry') || 
+                                  actionType === 'dirty_trick';
+            const zoneSpeed = 0.5;
+            
+            display.innerHTML = `
+                <div class="qte-bar-container">
+                    <div class="qte-green-zone" id="green-zone" style="left: ${greenZoneStart}px; width: ${baseZoneSize}px;"></div>
+                    <div class="qte-indicator" id="qte-indicator" style="left: 0;"></div>
+                </div>
+                <div style="color: #d4af37; margin-top: 20px; font-size: 18px;">
+                    ${useMovingZone ? '<span style="color: #f00;">⚠️ The green zone is moving!</span><br>' : ''}
+                    <small style="color: #888;">
+                        ${actionType === 'attack' ? `Zone size: ${Math.floor(baseZoneSize)}px` : ''} |
+                        ${modifiers.terrain === 'mud' ? 'Mud slows you down' : 
+                          modifiers.terrain === 'high_ground' ? 'High ground advantage' : 
+                          'Normal terrain'} |
+                        ${modifiers.positioning === 'advantage' ? 'You have the advantage' : 
+                          modifiers.positioning === 'disadvantage' ? 'You are at a disadvantage' : 
+                          'Neutral positioning'}
+                        ${combatState.conditions.enemyStunned > 0 ? ' | Enemy is stunned!' : ''}
+                    </small>
+                </div>
+            `;
+            
+            const indicator = document.getElementById('qte-indicator');
+            const greenZone = document.getElementById('green-zone');
+            let position = 0;
+            let direction = 1;
+            let pressed = false;
+            let animationId;
+            let greenZonePosition = greenZoneStart;
+            let greenZoneDirection = useMovingZone ? (Math.random() > 0.5 ? 1 : -1) : 0;
+            
+            const moveIndicator = () => {
+                // Move indicator
+                position += speed * direction;
+                if (position >= barWidth - 8) {
+                    direction = -1;
+                    position = barWidth - 8;
+                } else if (position <= 0) {
+                    direction = 1;
+                    position = 0;
+                }
+                indicator.style.left = position + 'px';
+                
+                // Move green zone if enabled
+                if (useMovingZone) {
+                    greenZonePosition += zoneSpeed * greenZoneDirection;
+                    if (greenZonePosition + baseZoneSize >= barWidth) {
+                        greenZoneDirection = -1;
+                        greenZonePosition = barWidth - baseZoneSize;
+                    } else if (greenZonePosition <= 0) {
+                        greenZoneDirection = 1;
+                        greenZonePosition = 0;
+                    }
+                    greenZone.style.left = greenZonePosition + 'px';
+                }
+                
+                if (!pressed) {
+                    animationId = requestAnimationFrame(moveIndicator);
+                }
+            };
+            
+            const handlePress = (e) => {
+                if (e.code === 'Space' && !pressed) {
+                    e.preventDefault();
+                    pressed = true;
+                    cancelAnimationFrame(animationId);
+                    
+                    const zoneStart = useMovingZone ? greenZonePosition : greenZoneStart;
+                    const zoneEnd = zoneStart + baseZoneSize;
+                    const inZone = position >= zoneStart && position <= zoneEnd;
+                    const distance = inZone ? 0 : Math.min(
+                        Math.abs(position - zoneStart),
+                        Math.abs(position - zoneEnd)
+                    );
+                    
+                    // Calculate roll and quality
+                    let roll = 10;
+                    let quality = 'miss'; // perfect, good, glancing, miss
+                    
+                    if (!inZone) {
+                        roll = Math.max(1, 10 - Math.floor(distance / 20));
+                        quality = 'miss';
+                    } else {
+                        const center = zoneStart + baseZoneSize / 2;
+                        const distanceFromCenter = Math.abs(position - center);
+                        if (distanceFromCenter < baseZoneSize / 6) {
+                            roll = 10;
+                            quality = 'perfect';
+                        } else if (distanceFromCenter < baseZoneSize / 3) {
+                            roll = 9;
+                            quality = 'good';
+                        } else {
+                            roll = 7;
+                            quality = 'glancing';
+                        }
+                    }
+                    
+                    const finalRoll = roll + stat + combatState.playerState.nextActionBonus;
+                    const success = finalRoll >= difficulty;
+                    const margin = finalRoll - difficulty;
+                    
+                    const resultText = {
+                        'attack': quality === 'perfect' ? '✓ PERFECT HIT!' : 
+                                 quality === 'good' ? '✓ SOLID HIT!' :
+                                 quality === 'glancing' ? '✓ GLANCING BLOW!' : '✗ MISS!',
+                        'defend': quality === 'perfect' ? '✓ PERFECT BLOCK!' :
+                                 quality === 'good' ? '✓ BLOCKED!' : '✗ FAILED!',
+                        'parry': quality === 'perfect' ? '✓ PERFECT PARRY!' :
+                                quality === 'good' ? '✓ PARRY!' : '✗ FAILED!',
+                        'dodge': quality === 'perfect' ? '✓ PERFECT DODGE!' :
+                                quality === 'good' ? '✓ DODGED!' : '✗ HIT!',
+                        'interrupt': success ? '✓ INTERRUPTED!' : '✗ FAILED!',
+                        'shield_bash': success ? '✓ BASHED!' : '✗ MISSED!',
+                        'dirty_trick': success ? '✓ TRICKED!' : '✗ FAILED!',
+                        'flee': success ? '✓ ESCAPED!' : '✗ TRAPPED!'
+                    };
+                    
+                    display.innerHTML = `
+                        <div style="color: ${success ? '#0f0' : '#f00'}; font-size: 32px; margin: 30px 0;">
+                            ${resultText[actionType] || (success ? '✓ SUCCESS!' : '✗ FAILURE!')}
+                        </div>
+                        <div style="color: #d4af37; font-size: 18px;">
+                            Roll: 1d10 (${roll}) + ${stat}${combatState.playerState.nextActionBonus > 0 ? ` + ${combatState.playerState.nextActionBonus} (counter)` : ''} = ${finalRoll} vs ${difficulty}
+                            <br>Quality: ${quality.toUpperCase()}
+                        </div>
+                    `;
+                    
+                    window.removeEventListener('keydown', handlePress);
+                    setTimeout(() => {
+                        callback({ success, roll: finalRoll, margin, inZone, actionType, quality });
+                    }, 1500);
+                }
+            };
+            
+            window.addEventListener('keydown', handlePress);
+            moveIndicator();
+        }
+        
+        function showActionSelection(callback) {
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            
+            title.textContent = `⚔️ Round ${combatState.currentRound} - Choose Your Actions`;
+            subtitle.textContent = `${combatState.actionsRemaining} action${combatState.actionsRemaining !== 1 ? 's' : ''} remaining`;
+            
+            let selectedAction = null;
+            let attackCount = 1;
+            let actionsUsed = 0;
+            
+            const updateDisplay = () => {
+                const actionsText = combatState.actionsRemaining - actionsUsed > 0 
+                    ? `${combatState.actionsRemaining - actionsUsed} action${combatState.actionsRemaining - actionsUsed !== 1 ? 's' : ''} remaining`
+                    : 'No actions remaining';
+                
+                instructions.innerHTML = `
+                    <div class="actions-remaining">${actionsText}</div>
+                    <div style="margin: 15px 0; padding: 10px; background: rgba(212,175,55,0.1); border-radius: 5px;">
+                        <div style="color: #d4af37; margin-bottom: 10px;">Stance: 
+                            <button onclick="selectStance('aggressive')" style="margin: 0 5px; padding: 5px 10px; background: ${selectedStance === 'aggressive' ? '#d4af37' : '#2a2a2a'}; border: 1px solid #d4af37; color: ${selectedStance === 'aggressive' ? '#1a1a1a' : '#d4af37'}; cursor: pointer; border-radius: 3px;">
+                                Aggressive (+damage, +fatigue)
+                            </button>
+                            <button onclick="selectStance('balanced')" style="margin: 0 5px; padding: 5px 10px; background: ${selectedStance === 'balanced' ? '#d4af37' : '#2a2a2a'}; border: 1px solid #d4af37; color: ${selectedStance === 'balanced' ? '#1a1a1a' : '#d4af37'}; cursor: pointer; border-radius: 3px;">
+                                Balanced
+                            </button>
+                            <button onclick="selectStance('guarded')" style="margin: 0 5px; padding: 5px 10px; background: ${selectedStance === 'guarded' ? '#d4af37' : '#2a2a2a'}; border: 1px solid #d4af37; color: ${selectedStance === 'guarded' ? '#1a1a1a' : '#d4af37'}; cursor: pointer; border-radius: 3px;">
+                                Guarded (-damage, -fatigue, +defense)
+                            </button>
+                        </div>
+                        <div style="color: #888; font-size: 12px;">
+                            Fatigue: ${combatState.playerState.fatigue}/100
+                            ${combatState.playerState.fatigue > 70 ? ' <span style="color: #f00;">(High fatigue - smaller zones!)</span>' : ''}
+                            ${combatState.playerState.counterReady ? ' <span style="color: #0f0;">Counter ready!</span>' : ''}
+                        </div>
+                    </div>
+                    ${selectedAction === 'attack' ? `
+                        <div style="text-align: center; margin: 20px 0;">
+                            <div style="color: #d4af37; margin-bottom: 10px;">Attack Style:</div>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="selectAttackStyle('measured')" style="padding: 15px 20px; background: ${attackStyle === 'measured' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${attackStyle === 'measured' ? '#1a1a1a' : '#d4af37'}; cursor: pointer; border-radius: 5px; font-size: 16px;">
+                                    Measured<br><small>Big zone, moderate damage</small>
+                                </button>
+                                <button onclick="selectAttackStyle('press')" style="padding: 15px 20px; background: ${attackStyle === 'press' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${attackStyle === 'press' ? '#1a1a1a' : '#d4af37'}; cursor: pointer; border-radius: 5px; font-size: 16px;">
+                                    Press<br><small>Smaller zone, higher damage</small>
+                                </button>
+                                <button onclick="selectAttackStyle('flurry')" style="padding: 15px 20px; background: ${attackStyle === 'flurry' ? '#f00' : '#2a2a2a'}; border: 2px solid ${attackStyle === 'flurry' ? '#f00' : '#d4af37'}; color: ${attackStyle === 'flurry' ? 'white' : '#d4af37'}; cursor: pointer; border-radius: 5px; font-size: 16px;">
+                                    Flurry<br><small>Smallest zone, multi-hit, high fatigue</small>
+                                </button>
+                            </div>
+                            <div style="color: #888; margin-top: 10px; font-size: 14px;">
+                                ${attackStyle === 'flurry' ? '<span style="color: #f00;">Uses both actions!</span>' : 'Uses 1 action'}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            };
+            
+            display.innerHTML = `
+                <div class="action-selection">
+                    <button class="action-button" onclick="selectAction('attack')">
+                        ⚔️ Attack
+                        <div class="action-details">Strike your enemy</div>
+                    </button>
+                    <button class="action-button" onclick="selectAction('defend')">
+                        🛡️ Defend
+                        <div class="action-details">Block incoming attacks</div>
+                    </button>
+                    <button class="action-button ${!combatState.playerStats.shield ? 'disabled' : ''}" 
+                            onclick="selectAction('shield_bash')" ${!combatState.playerStats.shield ? 'disabled' : ''}>
+                        🛡️ Shield Bash
+                        <div class="action-details">Stun enemy (requires shield)</div>
+                    </button>
+                    <button class="action-button" onclick="selectAction('dirty_trick')">
+                        🎯 Dirty Trick
+                        <div class="action-details">Disorient your enemy</div>
+                    </button>
+                    <button class="action-button" onclick="selectAction('flee')">
+                        🏃 Flee
+                        <div class="action-details">Attempt to escape</div>
+                    </button>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="start-button" onclick="confirmAction()" style="max-width: 300px;">
+                        Confirm Action
+                    </button>
+                </div>
+            `;
+            
+            window.selectAction = (action) => {
+                selectedAction = action;
+                attackStyle = 'measured';
+                actionsUsed = 0;
+                
+                // Update button states
+                document.querySelectorAll('.action-button').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                event.target.closest('.action-button').classList.add('selected');
+                
+                if (action === 'attack') {
+                    actionsUsed = 1; // Will update when style selected
+                } else {
+                    actionsUsed = 1;
+                }
+                
+                updateDisplay();
+            };
+            
+            window.selectAttackStyle = (style) => {
+                attackStyle = style;
+                actionsUsed = style === 'flurry' ? 2 : 1;
+                
+                // Update style buttons
+                document.querySelectorAll('[onclick*="selectAttackStyle"]').forEach(btn => {
+                    btn.style.background = '#2a2a2a';
+                    btn.style.color = '#d4af37';
+                    btn.style.borderColor = '#d4af37';
+                });
+                event.target.style.background = style === 'flurry' ? '#f00' : '#d4af37';
+                event.target.style.color = 'white';
+                event.target.style.borderColor = style === 'flurry' ? '#f00' : '#d4af37';
+                
+                updateDisplay();
+            };
+            
+            window.selectStance = (stance) => {
+                selectedStance = stance;
+                updateDisplay();
+            };
+            
+            window.confirmAction = () => {
+                if (!selectedAction) {
+                    alert('Please select an action!');
+                    return;
+                }
+                
+                if (selectedAction === 'attack' && (combatState.actionsRemaining - actionsUsed) < 0) {
+                    alert('Not enough actions remaining!');
+                    return;
+                }
+                
+                if (selectedAction !== 'attack' && combatState.actionsRemaining < 1) {
+                    alert('No actions remaining!');
+                    return;
+                }
+                
+                // Clean up
+                delete window.selectAction;
+                delete window.selectAttackStyle;
+                delete window.selectStance;
+                delete window.confirmAction;
+                
+                callback({
+                    action: selectedAction,
+                    attackStyle: selectedAction === 'attack' ? attackStyle : null,
+                    stance: selectedStance,
+                    actionsUsed: selectedAction === 'attack' ? actionsUsed : 1
+                });
+            };
+            
+            updateDisplay();
+        }
+        
+        function determineEnemyIntent() {
+            // Enemy AI based on archetype
+            const archetype = combatState.enemyStats.archetype;
+            let intent;
+            
+            if (archetype === 'aggressive') {
+                // Aggressive enemies favor heavy attacks
+                intent = Math.random() > 0.4 ? 'heavy' : 'quick';
+            } else if (archetype === 'cautious') {
+                // Cautious enemies defend more, punish flurries
+                if (combatState.playerState.fatigue > 60) {
+                    intent = 'heavy'; // Punish tired player
+                } else {
+                    intent = Math.random() > 0.6 ? 'defend' : 'quick';
+                }
+            } else { // skilled
+                // Skilled enemies mix it up
+                const rand = Math.random();
+                intent = rand > 0.6 ? 'heavy' : rand > 0.3 ? 'quick' : 'defend';
+            }
+            
+            combatState.enemyState.nextIntent = intent;
+            combatState.enemyState.intentTelegraphed = true;
+            
+            const intentText = {
+                'heavy': 'winds up a heavy cut',
+                'quick': 'probes with quick jabs',
+                'defend': 'raises guard defensively'
+            };
+            
+            return intentText[intent];
+        }
+        
+        async function enemyAttack() {
+            // Telegraph intent
+            const intentText = determineEnemyIntent();
+            addLogEntry(`Enemy ${intentText}!`, 'info');
+            
+            // Show player response options
+            const response = await new Promise((resolve) => {
+                showEnemyResponseSelection(resolve);
+            });
+            
+            // Execute player's chosen response
+            const defenseResult = await new Promise((resolve) => {
+                showCombatQTE(
+                    response.action,
+                    null,
+                    combatState.playerStats.agility,
+                    combatState.conditions,
+                    resolve
+                );
+            });
+            
+            const intent = combatState.enemyState.nextIntent;
+            const baseDamage = intent === 'heavy' ? 25 : 12;
+            
+            // Process result based on response type
+            if (response.action === 'parry') {
+                if (defenseResult.quality === 'perfect') {
+                    // Perfect parry = counter ready
+                    combatState.playerState.counterReady = true;
+                    combatState.playerState.nextActionBonus = 3;
+                    addLogEntry('Perfect parry! Counter ready!', 'success');
+                } else if (defenseResult.success) {
+                    const damage = Math.floor(baseDamage * 0.3);
+                    combatState.playerHealth = Math.max(0, combatState.playerHealth - damage);
+                    addLogEntry(`Parried! (${damage} damage)`, 'success');
+                } else {
+                    combatState.playerHealth = Math.max(0, combatState.playerHealth - baseDamage);
+                    addLogEntry(`Parry failed! (${baseDamage} damage)`, 'failure');
+                }
+            } else if (response.action === 'dodge') {
+                if (defenseResult.quality === 'perfect') {
+                    addLogEntry('Perfect dodge! No damage!', 'success');
+                } else if (defenseResult.success) {
+                    const damage = Math.floor(baseDamage * 0.5);
+                    combatState.playerHealth = Math.max(0, combatState.playerHealth - damage);
+                    addLogEntry(`Dodged! (${damage} damage)`, 'success');
+                } else {
+                    combatState.playerHealth = Math.max(0, combatState.playerHealth - baseDamage);
+                    addLogEntry(`Dodge failed! (${baseDamage} damage)`, 'failure');
+                }
+            } else if (response.action === 'interrupt') {
+                if (defenseResult.success) {
+                    // Interrupt stops enemy attack and deals damage
+                    const damage = 15;
+                    combatState.enemyHealth = Math.max(0, combatState.enemyHealth - damage);
+                    addLogEntry(`Interrupted enemy! (${damage} damage to enemy)`, 'success');
+                } else {
+                    // Failed interrupt = take full damage
+                    combatState.playerHealth = Math.max(0, combatState.playerHealth - baseDamage);
+                    addLogEntry(`Interrupt failed! (${baseDamage} damage)`, 'failure');
+                }
+            }
+            
+            // Add fatigue from taking damage
+            if (defenseResult.success === false || defenseResult.quality === 'glancing') {
+                combatState.playerState.fatigue += 5;
+            }
+            
+            updateHealthBars();
+        }
+        
+        function showEnemyResponseSelection(callback) {
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            
+            const intent = combatState.enemyState.nextIntent;
+            const intentText = {
+                'heavy': 'Heavy Cut',
+                'quick': 'Quick Jabs',
+                'defend': 'Defensive Stance'
+            };
+            
+            title.textContent = `⚔️ Enemy ${intentText[intent]}!`;
+            subtitle.textContent = 'Choose your response';
+            instructions.textContent = 'How do you respond?';
+            
+            display.innerHTML = `
+                <div class="action-selection">
+                    <button class="action-button" onclick="selectResponse('parry')">
+                        🛡️ Parry
+                        <div class="action-details">Block and counter (perfect = counter ready)</div>
+                    </button>
+                    <button class="action-button" onclick="selectResponse('dodge')">
+                        💨 Dodge
+                        <div class="action-details">Avoid the attack (perfect = no damage)</div>
+                    </button>
+                    <button class="action-button" onclick="selectResponse('interrupt')">
+                        ⚔️ Interrupt
+                        <div class="action-details">Strike first (risky but rewarding)</div>
+                    </button>
+                </div>
+            `;
+            
+            let selectedResponse = null;
+            
+            window.selectResponse = (action) => {
+                selectedResponse = action;
+                document.querySelectorAll('.action-button').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                event.target.closest('.action-button').classList.add('selected');
+                
+                setTimeout(() => {
+                    delete window.selectResponse;
+                    callback({ action: selectedResponse });
+                }, 300);
+            };
+        }
+        
+        async function startCombat() {
+            // Reset combat state
+            combatState.playerHealth = 100;
+            combatState.enemyHealth = 100;
+            combatState.currentRound = 1;
+            combatState.actionsRemaining = 2;
+            combatState.conditions.defending = false;
+            combatState.conditions.enemyStunned = 0;
+            combatState.conditions.playerStunned = 0;
+            combatState.combatHistory = [];
+            combatState.turnOrder = 'player';
+            
+            // Clear log
+            document.getElementById('combat-log').innerHTML = '<h3>Combat Log</h3>';
+            addLogEntry('Combat begins!', 'info');
+            
+            // Show overlay
+            document.getElementById('minigame-overlay').style.display = 'flex';
+            updateHealthBars();
+            
+            // Initiative check
+            addLogEntry('--- Initiative Check ---', 'info');
+            const initiativeResult = await new Promise((resolve) => {
+                showInitiativeCheck(resolve);
+            });
+            
+            combatState.initiative.playerWon = initiativeResult.playerWon;
+            combatState.initiative.margin = initiativeResult.margin;
+            combatState.initiative.playerActions = 2 + initiativeResult.bonusActions;
+            combatState.turnOrder = initiativeResult.playerWon ? 'player' : 'enemy';
+            
+            if (initiativeResult.playerWon) {
+                addLogEntry(`You win initiative! (${initiativeResult.bonusActions > 0 ? '+1 bonus action' : ''})`, 'success');
+            } else {
+                addLogEntry('Enemy wins initiative!', 'failure');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Combat loop
+            while (combatState.playerHealth > 0 && combatState.enemyHealth > 0) {
+            // Reset actions for new round
+            combatState.actionsRemaining = combatState.initiative.playerActions;
+            combatState.conditions.defending = false;
+            
+            // Reduce fatigue slightly each round (recovery)
+            combatState.playerState.fatigue = Math.max(0, combatState.playerState.fatigue - 3);
+                
+                // Reduce stun counters
+                if (combatState.conditions.enemyStunned > 0) {
+                    combatState.conditions.enemyStunned--;
+                }
+                if (combatState.conditions.playerStunned > 0) {
+                    combatState.conditions.playerStunned--;
+                }
+                
+                addLogEntry(`--- Round ${combatState.currentRound} ---`, 'info');
+                
+                // Turn order based on initiative
+                if (combatState.turnOrder === 'enemy' && combatState.conditions.playerStunned === 0) {
+                    // Enemy acts first
+                    await enemyAttack();
+                    if (combatState.playerHealth <= 0) {
+                        addLogEntry('Defeat! You have been struck down...', 'failure');
+                        setTimeout(() => {
+                            document.getElementById('minigame-overlay').style.display = 'none';
+                        }, 2000);
+                        return;
+                    }
+                }
+                
+                // Player actions
+                while (combatState.actionsRemaining > 0) {
+                    // Show action selection
+                    const actionChoice = await new Promise((resolve) => {
+                        showActionSelection(resolve);
+                    });
+                    
+                    combatState.actionsRemaining -= actionChoice.actionsUsed;
+                    
+                    // Update stance
+                    combatState.playerState.stance = actionChoice.stance;
+                    
+                    // Execute action
+                    if (actionChoice.action === 'attack') {
+                        // Single QTE determines outcome
+                        const result = await new Promise((resolve) => {
+                            showCombatQTE(
+                                'attack',
+                                actionChoice.attackStyle,
+                                combatState.playerStats.strength + combatState.playerStats.weaponQuality,
+                                {
+                                    weaponQuality: combatState.playerStats.weaponQuality,
+                                    terrain: combatState.conditions.terrain,
+                                    enemyDefense: combatState.conditions.enemyDefense - combatState.enemyState.defenseReduced - (combatState.conditions.enemyStunned > 0 ? 2 : 0),
+                                    positioning: combatState.conditions.positioning
+                                },
+                                resolve
+                            );
+                        });
+                        
+                        // Add fatigue
+                        const fatigueGain = calculateFatigueGain(actionChoice.attackStyle, actionChoice.stance);
+                        combatState.playerState.fatigue = Math.min(100, combatState.playerState.fatigue + fatigueGain);
+                        
+                        // Calculate damage based on quality and style
+                        let damage = 0;
+                        let hits = 1;
+                        
+                        if (result.success) {
+                            if (actionChoice.attackStyle === 'measured') {
+                                damage = result.quality === 'perfect' ? 20 : result.quality === 'good' ? 15 : 10;
+                            } else if (actionChoice.attackStyle === 'press') {
+                                damage = result.quality === 'perfect' ? 30 : result.quality === 'good' ? 22 : 12;
+                            } else if (actionChoice.attackStyle === 'flurry') {
+                                // Flurry: quality determines number of hits
+                                hits = result.quality === 'perfect' ? 3 : result.quality === 'good' ? 2 : 1;
+                                damage = hits * 12;
+                            }
+                            
+                            // Stance modifies damage
+                            if (actionChoice.stance === 'aggressive') {
+                                damage = Math.floor(damage * 1.3);
+                            } else if (actionChoice.stance === 'guarded') {
+                                damage = Math.floor(damage * 0.8);
+                            }
+                            
+                            // Add margin bonus
+                            damage += result.margin * 2;
+                            
+                            combatState.enemyHealth = Math.max(0, combatState.enemyHealth - damage);
+                            addLogEntry(`${actionChoice.attackStyle === 'flurry' ? `Flurry: ${hits} hits!` : 'Hit!'} (${damage} damage)`, 'success');
+                        } else {
+                            addLogEntry('Missed!', 'failure');
+                        }
+                        
+                        // Clear counter bonus after use
+                        combatState.playerState.counterReady = false;
+                        combatState.playerState.nextActionBonus = 0;
+                        
+                        updateHealthBars();
+                    } else if (actionChoice.action === 'defend') {
+                        const result = await new Promise((resolve) => {
+                            showCombatQTE(
+                                'defend',
+                                null,
+                                combatState.playerStats.agility,
+                                combatState.conditions,
+                                resolve
+                            );
+                        });
+                        
+                        // Add small fatigue reduction for defending
+                        combatState.playerState.fatigue = Math.max(0, combatState.playerState.fatigue - 5);
+                        
+                        if (result.quality === 'perfect') {
+                            combatState.playerState.counterReady = true;
+                            combatState.playerState.nextActionBonus = 3;
+                            addLogEntry('Perfect guard! Counter ready!', 'success');
+                        } else if (result.success) {
+                            addLogEntry('You raise your guard!', 'success');
+                        } else {
+                            addLogEntry('Defense failed!', 'failure');
+                        }
+                    } else if (actionChoice.action === 'shield_bash') {
+                        const result = await new Promise((resolve) => {
+                            showCombatQTE(
+                                'shield_bash',
+                                null,
+                                combatState.playerStats.strength,
+                                combatState.conditions,
+                                resolve
+                            );
+                        });
+                        
+                        const fatigueGain = calculateFatigueGain('shield_bash', actionChoice.stance);
+                        combatState.playerState.fatigue = Math.min(100, combatState.playerState.fatigue + fatigueGain);
+                        
+                        if (result.success) {
+                            combatState.conditions.enemyStunned = 2;
+                            const damage = 10;
+                            combatState.enemyHealth = Math.max(0, combatState.enemyHealth - damage);
+                            addLogEntry(`Shield bash! Enemy stunned for 2 rounds! (${damage} damage)`, 'success');
+                        } else {
+                            // Failed bash = disadvantage
+                            combatState.conditions.positioning = 'disadvantage';
+                            addLogEntry('Shield bash missed! You are off-balance!', 'failure');
+                        }
+                        updateHealthBars();
+                    } else if (actionChoice.action === 'dirty_trick') {
+                        const result = await new Promise((resolve) => {
+                            showCombatQTE(
+                                'dirty_trick',
+                                null,
+                                combatState.playerStats.agility,
+                                combatState.conditions,
+                                resolve
+                            );
+                        });
+                        
+                        const fatigueGain = calculateFatigueGain('dirty_trick', actionChoice.stance);
+                        combatState.playerState.fatigue = Math.min(100, combatState.playerState.fatigue + fatigueGain);
+                        
+                        if (result.success) {
+                            // Tempo play: reduces enemy defense and improves positioning
+                            combatState.enemyState.defenseReduced = 2;
+                            combatState.conditions.positioning = 'advantage';
+                            addLogEntry('Dirty trick! Enemy defense reduced, advantage gained!', 'success');
+                        } else {
+                            addLogEntry('Dirty trick failed!', 'failure');
+                        }
+                    } else if (actionChoice.action === 'flee') {
+                        const result = await new Promise((resolve) => {
+                            showCombatQTE(
+                                'flee',
+                                null,
+                                combatState.playerStats.agility,
+                                combatState.conditions,
+                                resolve
+                            );
+                        });
+                        
+                        if (result.success) {
+                            addLogEntry('You successfully flee!', 'success');
+                            setTimeout(() => {
+                                document.getElementById('minigame-overlay').style.display = 'none';
+                            }, 2000);
+                            return;
+                        } else {
+                            // Failed flee: lose positioning and take damage based on margin
+                            combatState.conditions.positioning = 'disadvantage';
+                            const damage = 15 + Math.abs(result.margin) * 2;
+                            combatState.playerHealth = Math.max(0, combatState.playerHealth - damage);
+                            addLogEntry(`Escape failed! Enemy strikes! (${damage} damage, positioning lost)`, 'failure');
+                            updateHealthBars();
+                        }
+                    }
+                    
+                    // Check for victory/defeat
+                    if (combatState.enemyHealth <= 0) {
+                        addLogEntry('Victory! You have defeated your enemy!', 'success');
+                        setTimeout(() => {
+                            document.getElementById('minigame-overlay').style.display = 'none';
+                        }, 2000);
+                        return;
+                    }
+                    if (combatState.playerHealth <= 0) {
+                        addLogEntry('Defeat! You have been struck down...', 'failure');
+                        setTimeout(() => {
+                            document.getElementById('minigame-overlay').style.display = 'none';
+                        }, 2000);
+                        return;
+                    }
+                }
+                
+                // Enemy turn (if player acted first, or if enemy didn't act yet)
+                if (combatState.turnOrder === 'player' && combatState.enemyHealth > 0 && combatState.conditions.enemyStunned === 0) {
+                    await enemyAttack();
+                    if (combatState.playerHealth <= 0) {
+                        addLogEntry('Defeat! You have been struck down...', 'failure');
+                        setTimeout(() => {
+                            document.getElementById('minigame-overlay').style.display = 'none';
+                        }, 2000);
+                        return;
+                    }
+                } else if (combatState.conditions.enemyStunned > 0) {
+                    addLogEntry('Enemy is stunned and cannot attack!', 'info');
+                } else if (combatState.conditions.playerStunned > 0) {
+                    addLogEntry('You are stunned and cannot act!', 'failure');
+                }
+                
+                // Check for victory/defeat after enemy turn
+                if (combatState.enemyHealth <= 0) {
+                    addLogEntry('Victory! You have defeated your enemy!', 'success');
+                    setTimeout(() => {
+                        document.getElementById('minigame-overlay').style.display = 'none';
+                    }, 2000);
+                    return;
+                }
+                
+                combatState.currentRound++;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+        
+            // Initialize display
+            document.getElementById('player-strength').textContent = combatState.playerStats.strength;
+            document.getElementById('player-agility').textContent = combatState.playerStats.agility;
+            document.getElementById('player-initiative').textContent = combatState.playerStats.initiative;
+            document.getElementById('weapon-quality').textContent = combatState.playerStats.weaponQuality;
+            document.getElementById('player-health').textContent = combatState.playerHealth;
+            document.getElementById('enemy-initiative').textContent = combatState.enemyStats.initiative;
+            document.getElementById('enemy-defense').textContent = combatState.conditions.enemyDefense;
+            document.getElementById('enemy-health').textContent = combatState.enemyHealth;
+            
+        function setEnemyType(type) {
+            combatState.enemyStats.archetype = type;
+            document.querySelectorAll('[onclick*="setEnemyType"]').forEach(btn => {
+                btn.style.borderColor = '#d4af37';
+                btn.style.background = '#2a2a2a';
+            });
+            document.getElementById(`enemy-${type}`).style.borderColor = '#f4d03f';
+            document.getElementById(`enemy-${type}`).style.background = '#3a3a3a';
+        }
+        
+        // Set default enemy type
+        setEnemyType('aggressive');
+        
+        // Reduce enemy defense over time
+        setInterval(() => {
+            if (combatState.enemyState.defenseReduced > 0) {
+                combatState.enemyState.defenseReduced--;
+            }
+        }, 100);
+        
+        const terrainNames = {
+            'open': 'Open Field',
+            'mud': 'Muddy Ground',
+            'high_ground': 'High Ground'
+        };
+        document.getElementById('terrain').textContent = terrainNames[combatState.conditions.terrain];
+        
+        const positioningNames = {
+            'advantage': 'Advantage',
+            'neutral': 'Neutral',
+            'disadvantage': 'Disadvantage'
+        };
+        document.getElementById('positioning').textContent = positioningNames[combatState.conditions.positioning];
+    </script>
+</body>
+</html>
