@@ -1253,53 +1253,116 @@
                                 '</div>' : ''}
                         </div>
                         
-                        <!-- STAT ALLOCATION -->
+                        <!-- PRIORITY SYSTEM -->
                         <div style="margin-bottom: 20px; padding: 15px; background: rgba(212, 175, 55, 0.1); border-radius: 5px;">
-                            <h3 style="color: #f4d03f; margin-bottom: 15px;">Distribute Stat Points</h3>
-                            <p style="color: #888; margin-bottom: 15px;">You have <strong style="color: ${pointsRemaining > 0 ? '#0f0' : pointsRemaining < 0 ? '#f00' : '#f4d03f'}">${pointsRemaining}</strong> points remaining.</p>
-                            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">All stats start at 5. You have 20 points to distribute. Each stat can go up to 10.</p>
+                            <h3 style="color: #f4d03f; margin-bottom: 15px;">Section 4 — Priorities</h3>
+                            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Assign each priority (A, B, C, D, E) exactly once across the five categories. Your choices determine your starting capabilities and equipment.</p>
                             
-                            <!-- PRESET BUILD TEMPLATES -->
+                            <!-- Initialize priorities if not set -->
+                            ${(function() {
+                                if (!gameState.priorities) {
+                                    gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+                                }
+                                if (!gameState.kitTier) {
+                                    gameState.kitTier = "Standard";
+                                }
+                                return '';
+                            })()}
+                            
+                            <!-- Priority Selection -->
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px;">
+                                ${(function() {
+                                    const categories = [
+                                        { id: 'might', name: '💪 Might', desc: 'Strength + Endurance', icon: '⚔️' },
+                                        { id: 'finesse', name: '🏃 Finesse', desc: 'Agility', icon: '🎯' },
+                                        { id: 'wits', name: '🧠 Wits', desc: 'Intelligence & Tactics', icon: '📚' },
+                                        { id: 'presence', name: '💬 Presence', desc: 'Charisma & Leadership', icon: '👑' },
+                                        { id: 'fortune', name: '💰 Fortune', desc: 'Luck, Wealth & Starting Kit', icon: '🎲' }
+                                    ];
+                                    
+                                    // Get currently used priorities
+                                    const usedPriorities = Object.values(gameState.priorities || {}).filter(function(p) { return p !== null; });
+                                    
+                                    return categories.map(function(cat) {
+                                        const currentPriority = (gameState.priorities || {})[cat.id] || '';
+                                        const priorityOptions = ['A', 'B', 'C', 'D', 'E'];
+                                        
+                                        return '<div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (currentPriority ? '#d4af37' : '#555') + ';">' +
+                                            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">' +
+                                                '<div>' +
+                                                    '<div style="color: #d4af37; font-weight: bold; font-size: 1.05em;">' + cat.name + '</div>' +
+                                                    '<div style="color: #888; font-size: 12px;">' + cat.desc + '</div>' +
+                                                '</div>' +
+                                                '<select id="priority-' + cat.id + '" ' +
+                                                    'onchange="setPriority(\'' + cat.id + '\', this.value);" ' +
+                                                    'style="padding: 6px 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 4px; font-size: 14px; font-weight: bold; min-width: 60px;">' +
+                                                    '<option value="">--</option>' +
+                                                    priorityOptions.map(function(letter) {
+                                                        const isUsed = usedPriorities.includes(letter) && letter !== currentPriority;
+                                                        return '<option value="' + letter + '" ' + 
+                                                            (currentPriority === letter ? 'selected' : '') + 
+                                                            (isUsed ? 'disabled' : '') + '>' + 
+                                                            letter + (isUsed ? ' (used)' : '') + 
+                                                        '</option>';
+                                                    }).join('') +
+                                                '</select>' +
+                                            '</div>' +
+                                            '<div style="color: #888; font-size: 11px; margin-top: 5px;">' +
+                                                (currentPriority ? 
+                                                    (function() {
+                                                        const bonuses = getPriorityBonuses(cat.id, currentPriority);
+                                                        if (cat.id === 'fortune') {
+                                                            return 'Bonus: +' + bonuses.luck + ' Luck, +' + bonuses.wealth + ' silver, ' + bonuses.kitTier + ' kit';
+                                                        } else if (cat.id === 'might') {
+                                                            return 'Bonus: +' + bonuses.strength + ' Strength, +' + bonuses.endurance + ' Endurance';
+                                                        } else {
+                                                            const statName = cat.id === 'finesse' ? 'Agility' : cat.id === 'wits' ? 'Wits' : 'Charisma';
+                                                            return 'Bonus: +' + bonuses[cat.id] + ' ' + statName;
+                                                        }
+                                                    })() :
+                                                    'Select a priority (A-E)') +
+                                            '</div>' +
+                                        '</div>';
+                                    }).join('');
+                                })()}
+                            </div>
+                            
+                            <!-- Quick Presets -->
                             <div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">
                                 <div style="color: #d4af37; font-weight: bold; margin-bottom: 8px; font-size: 13px;">Quick Presets:</div>
                                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                    <button onclick="applyPresetBuild('balanced')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">⚖️ Balanced Warrior</button>
-                                    <button onclick="applyPresetBuild('strong')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">💪 Mighty Champion</button>
-                                    <button onclick="applyPresetBuild('clever')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🧠 Cunning Scout</button>
-                                    <button onclick="applyPresetBuild('leader')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">👑 Charismatic Leader</button>
+                                    <button onclick="applyPriorityPreset('brawny')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">💪 Brawny Footman</button>
+                                    <button onclick="applyPriorityPreset('cunning')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🧠 Cunning Scout</button>
+                                    <button onclick="applyPriorityPreset('court')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">👑 Court-Leaned</button>
+                                    <button onclick="applyPriorityPreset('lucky')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🎲 Lucky Bastard</button>
                                 </div>
-                                <div style="color: #888; font-size: 11px; margin-top: 5px; font-style: italic;">Select a preset to auto-allocate points, then customize as needed</div>
+                                <div style="color: #888; font-size: 11px; margin-top: 5px; font-style: italic;">Select a preset to auto-assign priorities, then customize as needed</div>
                             </div>
                             
+                            <!-- Live Summary Panel -->
                             ${(function() {
-                                const statLabels = {
-                                    strength: '⚔️ Strength',
-                                    agility: '🏃 Agility', 
-                                    endurance: '❤️ Endurance',
-                                    charisma: '💬 Charisma',
-                                    wits: '🧠 Wits'
-                                };
-                                return ['strength', 'agility', 'endurance', 'charisma', 'wits'].map(function(stat) {
-                                    const value = gameState.stats[stat];
-                                    const pointsSpent = Math.max(0, value - 5);
-                                    const canDecrease = value > 5;
-                                    const canIncrease = value < 10 && pointsRemaining > 0;
-                                    return '<div style="display: flex; align-items: center; justify-content: space-between; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
-                                        '<div style="flex: 1;">' +
-                                            '<div style="color: #d4af37; font-weight: bold;">' + statLabels[stat] + '</div>' +
-                                            '<div style="color: #888; font-size: 12px;">Current: ' + value + '/10' + (pointsSpent > 0 ? ' (+' + pointsSpent + ')' : '') + '</div>' +
-                                        '</div>' +
-                                        '<div style="display: flex; gap: 10px; align-items: center;">' +
-                                            '<button onclick="adjustStat(\'' + stat + '\', -1)" ' +
-                                                    'style="width: 40px; height: 40px; background: ' + (canDecrease ? '#8b0000' : '#444') + '; border: 2px solid #d4af37; color: white; border-radius: 5px; cursor: ' + (canDecrease ? 'pointer' : 'not-allowed') + '; font-size: 20px; font-weight: bold;"' +
-                                                    (!canDecrease ? ' disabled' : '') + '>-</button>' +
-                                            '<span style="color: #f4d03f; font-size: 24px; font-weight: bold; min-width: 30px; text-align: center;">' + value + '</span>' +
-                                            '<button onclick="adjustStat(\'' + stat + '\', 1)" ' +
-                                                    'style="width: 40px; height: 40px; background: ' + (canIncrease ? '#006400' : '#444') + '; border: 2px solid #d4af37; color: white; border-radius: 5px; cursor: ' + (canIncrease ? 'pointer' : 'not-allowed') + '; font-size: 20px; font-weight: bold;"' +
-                                                    (!canIncrease ? ' disabled' : '') + '>+</button>' +
-                                        '</div>' +
-                                    '</div>';
-                                }).join('');
+                                recalculateFromPriorities();
+                                const validation = validatePrioritiesCompleteAndUnique();
+                                const kitTier = gameState.kitTier || "Standard";
+                                const startingSilver = gameState.stats.wealth || 10;
+                                
+                                return '<div style="padding: 15px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 5px; margin-top: 15px;">' +
+                                    '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">Computed Stats & Resources</div>' +
+                                    '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 10px;">' +
+                                        '<div><strong style="color: #d4af37;">Strength:</strong> <span style="color: #f4d03f;">' + (gameState.stats.strength || 5) + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Agility:</strong> <span style="color: #f4d03f;">' + (gameState.stats.agility || 5) + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Endurance:</strong> <span style="color: #f4d03f;">' + (gameState.stats.endurance || 5) + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Charisma:</strong> <span style="color: #f4d03f;">' + (gameState.stats.charisma || 5) + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Wits:</strong> <span style="color: #f4d03f;">' + (gameState.stats.wits || 5) + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Luck:</strong> <span style="color: #f4d03f;">' + (gameState.stats.luck || 5) + '</span></div>' +
+                                    '</div>' +
+                                    '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #555;">' +
+                                        '<div><strong style="color: #d4af37;">Starting Silver:</strong> <span style="color: #f4d03f;">' + startingSilver + '</span></div>' +
+                                        '<div><strong style="color: #d4af37;">Kit Tier:</strong> <span style="color: #f4d03f;">' + kitTier + '</span></div>' +
+                                        (gameState.stats.reputation > 0 ? '<div><strong style="color: #d4af37;">Reputation:</strong> <span style="color: #f4d03f;">+' + gameState.stats.reputation + '</span></div>' : '') +
+                                    '</div>' +
+                                    (!validation.ok ? '<div style="margin-top: 10px; padding: 8px; background: rgba(139, 0, 0, 0.3); border-left: 3px solid #8b0000; color: #ff6666; font-size: 12px;">⚠️ ' + validation.message + '</div>' : '') +
+                                '</div>';
                             })()}
                         </div>
                     </div>`;
@@ -1309,7 +1372,15 @@
                         text: "Begin Your Journey",
                         effects: {},
                         nextScene: "start",
-                        requiresOrigin: true
+                        requiresOrigin: true,
+                        onChoose: function() {
+                            // Grant starting kit if not already granted
+                            if (!gameState.startingKitGranted) {
+                                const origin = gameState.origin || 'rural_peasant';
+                                const kitTier = gameState.kitTier || "Standard";
+                                grantStartingKit(origin, kitTier);
+                            }
+                        }
                     }
                 ]
             },
@@ -5629,28 +5700,240 @@
         }
         
         // Character creation helpers
-        function adjustStat(stat, delta) {
-            const currentValue = gameState.stats[stat];
-            const totalPointsSpent = Object.keys(gameState.stats).reduce((sum, s) => {
-                if (['strength', 'agility', 'endurance', 'charisma', 'wits'].includes(s)) {
-                    return sum + Math.max(0, gameState.stats[s] - 5);
+        // ========================================================================
+        // PRIORITY SYSTEM FUNCTIONS
+        // ========================================================================
+        
+        /** Get priority bonuses for a category and letter */
+        function getPriorityBonuses(category, letter) {
+            const bonuses = {
+                might: { A: { strength: 4, endurance: 4 }, B: { strength: 3, endurance: 3 }, C: { strength: 2, endurance: 2 }, D: { strength: 1, endurance: 1 }, E: { strength: 0, endurance: 0 } },
+                finesse: { A: { agility: 5 }, B: { agility: 4 }, C: { agility: 3 }, D: { agility: 2 }, E: { agility: 1 } },
+                wits: { A: { wits: 5 }, B: { wits: 4 }, C: { wits: 3 }, D: { wits: 2 }, E: { wits: 1 } },
+                presence: { A: { charisma: 5 }, B: { charisma: 4 }, C: { charisma: 3 }, D: { charisma: 2 }, E: { charisma: 1 } },
+                fortune: { 
+                    A: { luck: 4, wealth: 12, reputation: 2, kitTier: "Superior" },
+                    B: { luck: 3, wealth: 8, reputation: 1, kitTier: "Fine" },
+                    C: { luck: 2, wealth: 5, reputation: 0, kitTier: "Good" },
+                    D: { luck: 1, wealth: 2, reputation: 0, kitTier: "Standard" },
+                    E: { luck: 0, wealth: 0, reputation: 0, kitTier: "Ragged" }
                 }
-                return sum;
-            }, 0);
-            
-            if (delta > 0) {
-                // Increasing stat
-                if (currentValue >= 10) return; // Already at max
-                if (totalPointsSpent >= 20) return; // No points left
-                gameState.stats[stat] = Math.min(10, currentValue + 1);
-            } else {
-                // Decreasing stat
-                if (currentValue <= 5) return; // Already at minimum
-                gameState.stats[stat] = Math.max(5, currentValue - 1);
+            };
+            return bonuses[category] && bonuses[category][letter] ? bonuses[category][letter] : {};
+        }
+        
+        /** Set priority for a category */
+        function setPriority(category, letter) {
+            if (!gameState.priorities) {
+                gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
             }
             
-            gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
+            // Clear previous assignment of this letter
+            if (letter) {
+                Object.keys(gameState.priorities).forEach(function(key) {
+                    if (gameState.priorities[key] === letter && key !== category) {
+                        gameState.priorities[key] = null;
+                    }
+                });
+            }
+            
+            gameState.priorities[category] = letter || null;
+            recalculateFromPriorities();
             updateDisplay();
+        }
+        
+        /** Recalculate stats from priorities */
+        function recalculateFromPriorities() {
+            if (!gameState.priorities) {
+                gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            }
+            
+            // Start with base stats (all 5)
+            gameState.stats.strength = 5;
+            gameState.stats.agility = 5;
+            gameState.stats.endurance = 5;
+            gameState.stats.charisma = 5;
+            gameState.stats.wits = 5;
+            gameState.stats.luck = 5;
+            gameState.stats.wealth = 10; // Base wealth
+            gameState.stats.reputation = 0; // Base reputation
+            
+            // Apply priority bonuses
+            Object.keys(gameState.priorities).forEach(function(category) {
+                const letter = gameState.priorities[category];
+                if (letter) {
+                    const bonuses = getPriorityBonuses(category, letter);
+                    Object.keys(bonuses).forEach(function(stat) {
+                        if (stat === 'kitTier') {
+                            gameState.kitTier = bonuses[stat];
+                        } else if (gameState.stats.hasOwnProperty(stat)) {
+                            gameState.stats[stat] += bonuses[stat];
+                        }
+                    });
+                }
+            });
+            
+            // Clamp all stats
+            Object.keys(gameState.stats).forEach(function(stat) {
+                gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
+            });
+            
+            // Ensure kitTier is set
+            if (!gameState.kitTier) {
+                gameState.kitTier = "Standard";
+            }
+        }
+        
+        /** Validate priorities are complete and unique */
+        function validatePrioritiesCompleteAndUnique() {
+            if (!gameState.priorities) {
+                return { ok: false, message: "Please assign all priorities (A-E)." };
+            }
+            
+            const priorities = gameState.priorities;
+            const categories = ['might', 'finesse', 'wits', 'presence', 'fortune'];
+            const assigned = [];
+            const missing = [];
+            
+            categories.forEach(function(cat) {
+                if (!priorities[cat] || priorities[cat] === '') {
+                    missing.push(cat);
+                } else {
+                    if (assigned.includes(priorities[cat])) {
+                        return { ok: false, message: "Each priority (A-E) must be assigned exactly once." };
+                    }
+                    assigned.push(priorities[cat]);
+                }
+            });
+            
+            if (missing.length > 0) {
+                return { ok: false, message: "Please assign all priorities (A-E). Missing: " + missing.length + " category(ies)." };
+            }
+            
+            if (assigned.length !== 5) {
+                return { ok: false, message: "Please assign exactly one priority (A-E) to each category." };
+            }
+            
+            return { ok: true, message: "All priorities assigned correctly." };
+        }
+        
+        /** Apply priority preset */
+        function applyPriorityPreset(presetId) {
+            if (!gameState.priorities) {
+                gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            }
+            
+            const presets = {
+                brawny: { might: 'A', finesse: 'C', wits: 'D', presence: 'E', fortune: 'B' },
+                cunning: { might: 'D', finesse: 'A', wits: 'A', presence: 'C', fortune: 'B' },
+                court: { might: 'C', finesse: 'D', wits: 'B', presence: 'A', fortune: 'E' },
+                lucky: { might: 'C', finesse: 'C', wits: 'C', presence: 'C', fortune: 'A' }
+            };
+            
+            if (presets[presetId]) {
+                Object.assign(gameState.priorities, presets[presetId]);
+                recalculateFromPriorities();
+                updateDisplay();
+            }
+        }
+        
+        /** Grant starting kit based on origin and fortune tier */
+        function grantStartingKit(origin, kitTier) {
+            if (gameState.startingKitGranted) {
+                return; // Already granted
+            }
+            
+            if (!gameState.inventory) {
+                gameState.inventory = [];
+            }
+            
+            const tier = kitTier || "Standard";
+            
+            // Kit shapes by origin
+            const originKits = {
+                rural_peasant: {
+                    Ragged: [{ id: "cudgel", name: "Cudgel", type: "weapon" }],
+                    Standard: [{ id: "cudgel", name: "Cudgel", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }],
+                    Good: [{ id: "knife", name: "Knife", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }, { id: "cap", name: "Leather Cap", type: "armor" }],
+                    Fine: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }],
+                    Superior: [{ id: "arming_sword", name: "Fine Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }]
+                },
+                manor_retainer: {
+                    Ragged: [{ id: "spear", name: "Spear", type: "weapon" }],
+                    Standard: [{ id: "spear", name: "Spear", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }],
+                    Good: [{ id: "bill", name: "Bill", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Fine: [{ id: "bill", name: "Bill", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Superior: [{ id: "bill", name: "Bill", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_coif", name: "Mail Coif", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }]
+                },
+                craftsman_apprentice: {
+                    Ragged: [{ id: "knife", name: "Knife", type: "weapon" }],
+                    Standard: [{ id: "knife", name: "Knife", type: "weapon" }, { id: "leather_jerkin", name: "Leather Jerkin", type: "armor" }],
+                    Good: [{ id: "short_sword", name: "Short Sword", type: "weapon" }, { id: "leather_jerkin", name: "Leather Jerkin", type: "armor" }, { id: "cap", name: "Cap", type: "armor" }],
+                    Fine: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }],
+                    Superior: [{ id: "arming_sword", name: "Fine Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }]
+                },
+                squire: {
+                    Ragged: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }],
+                    Standard: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "padded_jack", name: "Padded Jack", type: "armor" }],
+                    Good: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Fine: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_shirt", name: "Mail Shirt", type: "armor" }, { id: "kettle_hat", name: "Kettle Hat", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Superior: [{ id: "arming_sword", name: "Fine Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_shirt", name: "Mail Shirt", type: "armor" }, { id: "bascinet", name: "Bascinet", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }]
+                },
+                minor_noble: {
+                    Ragged: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }],
+                    Standard: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }],
+                    Good: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_shirt", name: "Mail Shirt", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Fine: [{ id: "arming_sword", name: "Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_shirt", name: "Mail Shirt", type: "armor" }, { id: "bascinet", name: "Bascinet", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }],
+                    Superior: [{ id: "arming_sword", name: "Fine Arming Sword", type: "weapon" }, { id: "gambeson", name: "Gambeson", type: "armor" }, { id: "mail_shirt", name: "Mail Shirt", type: "armor" }, { id: "bascinet", name: "Visored Bascinet", type: "armor" }, { id: "buckler", name: "Buckler", type: "shield" }, { id: "rondel_dagger", name: "Rondel Dagger", type: "weapon" }]
+                }
+            };
+            
+            const origin = origin || 'rural_peasant';
+            const kit = originKits[origin] && originKits[origin][tier] ? originKits[origin][tier] : originKits.rural_peasant[tier] || originKits.rural_peasant.Standard;
+            
+            // Add items to inventory
+            kit.forEach(function(item) {
+                gameState.inventory.push({
+                    id: item.id,
+                    name: item.name,
+                    type: item.type,
+                    condition: tier === "Ragged" ? 0.5 : tier === "Standard" ? 0.7 : tier === "Good" ? 0.8 : tier === "Fine" ? 0.9 : 1.0,
+                    fit: "standard"
+                });
+            });
+            
+            // Auto-equip basic items if equipment manager exists
+            if (typeof EquipmentManager !== 'undefined' && window.equipmentManager) {
+                kit.forEach(function(item) {
+                    try {
+                        if (item.type === "weapon" && !gameState.equipment.weapon.item) {
+                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                            if (invItem) {
+                                window.equipmentManager.equipItem(invItem.id, 'weapon');
+                            }
+                        } else if (item.type === "armor" && item.id.includes("hat") && !gameState.equipment.head.item) {
+                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                            if (invItem) {
+                                window.equipmentManager.equipItem(invItem.id, 'head');
+                            }
+                        } else if (item.type === "armor" && !gameState.equipment.torso.item) {
+                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id && i.type === "armor"; });
+                            if (invItem) {
+                                window.equipmentManager.equipItem(invItem.id, 'torso');
+                            }
+                        } else if (item.type === "shield" && !gameState.equipment.accessory.item) {
+                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                            if (invItem) {
+                                window.equipmentManager.equipItem(invItem.id, 'accessory');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Could not auto-equip " + item.name + ":", e);
+                    }
+                });
+            }
+            
+            gameState.startingKitGranted = true;
         }
         
         function selectBackground(bg) {
@@ -6100,7 +6383,16 @@
                     wounds: 0,
                     promotions: 0
                 },
-                lastResolution: null
+                lastResolution: null,
+                priorities: {
+                    might: null,
+                    finesse: null,
+                    wits: null,
+                    presence: null,
+                    fortune: null
+                },
+                kitTier: "Standard",
+                startingKitGranted: false
             };
         }
         
