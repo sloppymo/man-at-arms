@@ -5800,7 +5800,48 @@
             if (currentStep < maxStep) {
                 gameState.characterCreationStep = currentStep + 1;
                 updateDisplay();
+            } else if (currentStep === maxStep) {
+                // On step 6, clicking Next creates the character
+                completeCharacterCreation();
             }
+        }
+        
+        function completeCharacterCreation() {
+            // Validate required fields
+            if (!gameState.characterName || gameState.characterName.trim() === '') {
+                showNotification('Character Creation', 'Please enter your name.');
+                return;
+            }
+            if (!gameState.culture) {
+                showNotification('Character Creation', 'Please select your region.');
+                return;
+            }
+            if (!gameState.ageRange) {
+                showNotification('Character Creation', 'Please select your age range.');
+                return;
+            }
+            if (!gameState.origin) {
+                showNotification('Character Creation', 'Please select your origin.');
+                return;
+            }
+            
+            // Validate priorities
+            const priorityValidation = validatePrioritiesCompleteAndUnique();
+            if (!priorityValidation.ok) {
+                showNotification('Character Creation', priorityValidation.message);
+                return;
+            }
+            
+            // Grant starting kit if not already granted
+            if (!gameState.startingKitGranted) {
+                const origin = gameState.origin || 'rural_peasant';
+                const kitTier = gameState.kitTier || "Standard";
+                grantStartingKit(origin, kitTier);
+            }
+            
+            // Transition to start scene
+            gameState.currentScene = "start";
+            updateDisplay();
         }
         
         function prevCharacterCreationStep() {
@@ -5821,7 +5862,7 @@
         // Render step navigation buttons
         function renderStepNavigation(currentStep, maxStep) {
             const canGoBack = currentStep > 1;
-            const canGoForward = currentStep < maxStep;
+            const isLastStep = currentStep === maxStep;
             
             let navHtml = '<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #8b6914;">';
             
@@ -5837,10 +5878,11 @@
                 navHtml += '<button disabled style="padding: 10px 20px; background: #1a1a1a; border: 2px solid #555; color: #666; border-radius: 5px; font-size: 14px; font-family: \'Crimson Text\', serif; cursor: not-allowed;">← Previous</button>';
             }
             
-            if (canGoForward) {
-                navHtml += '<button onclick="nextCharacterCreationStep()" style="padding: 10px 20px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; cursor: pointer; font-size: 14px; font-family: \'Crimson Text\', serif;">Next →</button>';
+            if (isLastStep) {
+                // On last step, show "Begin Journey" button
+                navHtml += '<button onclick="completeCharacterCreation()" style="padding: 10px 20px; background: #d4af37; border: 2px solid #f4d03f; color: #1a0f08; border-radius: 5px; cursor: pointer; font-size: 14px; font-family: \'Crimson Text\', serif; font-weight: bold;">Begin Your Journey →</button>';
             } else {
-                navHtml += '<button disabled style="padding: 10px 20px; background: #1a1a1a; border: 2px solid #555; color: #666; border-radius: 5px; font-size: 14px; font-family: \'Crimson Text\', serif; cursor: not-allowed;">Next →</button>';
+                navHtml += '<button onclick="nextCharacterCreationStep()" style="padding: 10px 20px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; cursor: pointer; font-size: 14px; font-family: \'Crimson Text\', serif;">Next →</button>';
             }
             
             navHtml += '</div>';
