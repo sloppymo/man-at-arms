@@ -616,7 +616,7 @@
         </div>
         
         <div class="story-text" id="story">
-            <p>Loading...</p>
+            <p id="loading-message">Loading...</p>
         </div>
         
         <div class="stats-panel" id="stats">
@@ -3459,6 +3459,7 @@
         
         // Initialize game
         function initGame() {
+            console.log("=== INIT GAME START ===");
             console.log("initGame called");
             console.log("gameState.currentScene:", gameState.currentScene);
             console.log("scenes object exists:", typeof scenes !== 'undefined');
@@ -3489,7 +3490,17 @@
             }
             
             console.log("Calling updateDisplay");
-            updateDisplay();
+            try {
+                updateDisplay();
+                console.log("updateDisplay completed");
+            } catch (e) {
+                console.error("updateDisplay threw error:", e);
+                const storyEl = document.getElementById('story');
+                if (storyEl) {
+                    storyEl.innerHTML = '<p style="color: red;">Error initializing game. Check console for details.</p><p>Error: ' + e.message + '</p>';
+                }
+            }
+            console.log("=== INIT GAME END ===");
         }
         
         // Update all displays
