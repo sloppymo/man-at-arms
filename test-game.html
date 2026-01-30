@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Game Test</title>
+</head>
+<body>
+    <h1>Game Load Test</h1>
+    <div id="results"></div>
+    <script>
+        const results = document.getElementById('results');
+        const checks = [];
+        
+        // Test 1: Check if main game file loads
+        const script = document.createElement('script');
+        script.src = 'man-at-arms.html';
+        script.onerror = () => {
+            checks.push('❌ Main game file failed to load');
+            updateResults();
+        };
+        script.onload = () => {
+            checks.push('✅ Main game file loaded');
+            updateResults();
+        };
+        // Note: This won't work for HTML files, but we can check functions
+        
+        function updateResults() {
+            results.innerHTML = checks.join('<br>');
+        }
+        
+        // Instead, just provide instructions
+        results.innerHTML = `
+            <h2>Manual Test Instructions:</h2>
+            <ol>
+                <li>Open <code>man-at-arms.html</code> in your browser</li>
+                <li>Open Developer Console (F12)</li>
+                <li>Check for any red error messages</li>
+                <li>Verify you see "=== INIT GAME START ===" in console</li>
+                <li>Verify character creation screen appears</li>
+            </ol>
+            <h2>Expected Console Output:</h2>
+            <ul>
+                <li>"=== INIT GAME START ==="</li>
+                <li>"initGame called"</li>
+                <li>"gameState.currentScene: character_creation"</li>
+                <li>"=== UPDATE STORY START ==="</li>
+                <li>"Rendering character creation scene"</li>
+            </ul>
+        `;
+    </script>
+</body>
+</html>

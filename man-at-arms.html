@@ -716,7 +716,7 @@
     <div class="game-container">
         <div class="header">
             <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v1.1.0</div>
+            <div id="version-display">v1.2.0</div>
             <div class="status-bar">
                 <div class="status-item">
                     <span>📅</span>
@@ -1077,7 +1077,7 @@
                 year: 1337,
                 age: 18,
                 location: "England",
-                artwork: "https://example.com/medieval-character-creation.jpg", // Replace with your actual image URL
+                artwork: "artwork/character-creation.jpg", // Medieval town square scene
                 artworkCaption: "Forge your path in the Hundred Years' War",
                 text: function() {
                     // Ensure gameState.stats exists (safety check)
@@ -1479,7 +1479,7 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                artwork: "https://example.com/medieval-battle-art.jpg", // Replace with your actual image URL
+                artwork: "artwork/battle-scene-1.jpg", // French vs English battle scene
                 artworkCaption: "The clash of arms on the field of battle",
                 text: `<p>You charge into battle with courage. The clash of steel rings in your ears.</p>`,
                 choices: [
@@ -2088,6 +2088,8 @@
                 year: 1346,
                 age: 27,
                 location: "English Channel",
+                artwork: "artwork/naval-battle-1.jpg", // Naval battle scene with ships
+                artworkCaption: "The crossing to France",
                 text: `<p><strong>Early July 1346 — At sea</strong></p>
                        <p>Men retch over the gunwale until there's nothing left to give. Horses scream when the deck shifts. The ship's bilge stinks. Someone drops a bow-case into seawater; someone else pretends not to see.</p>`,
                 choices: [
@@ -2221,6 +2223,8 @@
                 year: 1346,
                 age: 27,
                 location: "Saint-Vaast-la-Hougue, Normandy",
+                artwork: "artwork/naval-battle-2.jpg", // Naval battle with ships and coastal city
+                artworkCaption: "Landing at Saint-Vaast-la-Hougue",
                 text: `<p><strong>12 July 1346 — Saint-Vaast-la-Hougue / Cotentin</strong></p>
                        <p>The shoreline looks quiet until you notice how many doors are barred. Men spill out and form ranks. The order is simple: move inland, take what can be taken, and keep moving.</p>`,
                 choices: [
@@ -2291,6 +2295,8 @@
                 year: 1346,
                 age: 27,
                 location: "Normandy",
+                artwork: "artwork/naval-battle-3.jpg", // Another naval battle scene
+                artworkCaption: "The first raid on French soil",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You join the raiders...</p>`;
@@ -3066,6 +3072,8 @@
                 year: 1346,
                 age: 27,
                 location: "Crécy, Picardy",
+                artwork: "artwork/battle-scene-2.jpg", // Mountainous battle scene with French vs English
+                artworkCaption: "The Battle of Crécy - 26 August 1346",
                 text: `<p><strong>⚠️ HISTORICAL EVENT: The Battle of Crécy - 26 August 1346</strong></p>
                        <p>A sudden rain breaks, then stops. Bowstrings are handled like lifelines. The French come on late, crowded, impatient. You hear the word "oriflamme" and understand what that implies for anyone taken alive. The first line wavers; the second line steps on them.</p>`,
                 choices: [
@@ -3310,6 +3318,8 @@
                 year: 1346,
                 age: 27,
                 location: "Crécy, Picardy",
+                artwork: "artwork/battle-aftermath.jpg", // Post-battle scene with fallen soldiers
+                artworkCaption: "The aftermath of battle",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You search the field...</p>`;
