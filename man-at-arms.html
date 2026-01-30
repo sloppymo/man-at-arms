@@ -1317,7 +1317,8 @@
                                                             return 'Bonus: +' + bonuses.strength + ' Strength, +' + bonuses.endurance + ' Endurance';
                                                         } else {
                                                             const statName = cat.id === 'finesse' ? 'Agility' : cat.id === 'wits' ? 'Wits' : 'Charisma';
-                                                            return 'Bonus: +' + bonuses[cat.id] + ' ' + statName;
+                                                            const statKey = cat.id === 'finesse' ? 'agility' : cat.id === 'wits' ? 'wits' : 'charisma';
+                                                            return 'Bonus: +' + (bonuses[statKey] || 0) + ' ' + statName;
                                                         }
                                                     })() :
                                                     'Select a priority (A-E)') +
