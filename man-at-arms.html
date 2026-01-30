@@ -333,6 +333,7 @@
         @media (max-width: 768px) {
             .game-container {
                 padding: 15px;
+                max-width: 100%;
             }
             
             .header h1 {
@@ -346,6 +347,77 @@
             .status-bar {
                 flex-direction: column;
                 text-align: center;
+                font-size: 0.9em;
+                gap: 5px;
+            }
+            
+            .stats-summary {
+                font-size: 0.9em;
+            }
+            
+            .choice-button {
+                font-size: 1em;
+                padding: 12px;
+            }
+            
+            .story-text {
+                font-size: 1em;
+                padding: 20px;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .control-button {
+                font-size: 0.9em;
+                padding: 8px 15px;
+            }
+        }
+        
+        /* ===== EQUIPMENT SCREEN STYLES ===== */
+        .equipment-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            overflow-y: auto;
+        }
+        
+        .equipment-screen.hidden {
+            display: none;
+        }
+        
+        .equipment-screen-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #d4af37;
+        }
+        
+        .equipment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 10px;
+        }
+        
+        .equipment-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .equipment-layout {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -633,7 +705,7 @@
         </div>
         
         <div class="story-text" id="story">
-            <p id="loading-message">Loading...</p>
+            <p id="loading-message" style="display: none;">Loading...</p>
         </div>
         
         <div class="stats-panel" id="stats">
@@ -899,14 +971,26 @@
         
         // Get equipment bonuses
         function getEquipmentBonus(stat) {
+            // Use EquipmentManager if available (preferred method)
+            if (window.equipmentManager && typeof window.equipmentManager.getStatModifiers === 'function') {
+                try {
+                    const mods = window.equipmentManager.getStatModifiers();
+                    return mods[stat] || 0;
+                } catch (e) {
+                    console.warn('Error getting equipment modifiers:', e);
+                    // Fall through to fallback
+                }
+            }
+            
+            // Fallback to old system for compatibility
             let bonus = 0;
             // Weapon quality affects strength/agility in combat
             if (stat === 'strength' || stat === 'agility') {
-                bonus += gameState.equipment.weapon.quality || 0;
+                bonus += gameState.equipment?.weapon?.quality || 0;
             }
             // Armor quality affects endurance (protection)
             if (stat === 'endurance') {
-                bonus += gameState.equipment.armor.quality || 0;
+                bonus += gameState.equipment?.armor?.quality || 0;
             }
             return bonus;
         }
@@ -3544,6 +3628,12 @@
         
         // Initialize game
         function initGame() {
+            // Hide loading message immediately
+            const loadingMsg = document.getElementById('loading-message');
+            if (loadingMsg) {
+                loadingMsg.style.display = 'none';
+            }
+            
             console.log("=== INIT GAME START ===");
             console.log("initGame called");
             console.log("gameState.currentScene:", gameState.currentScene);
