@@ -1249,29 +1249,97 @@
                                 </div>
                             </div>
                             
-                            <!-- Age -->
+                            <!-- Age Range -->
                             <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
-                                <label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Age (16-40):</label>
-                                <div style="display: flex; align-items: center; gap: 15px;">
-                                    <input type="number" id="age-input" min="16" max="40" value="${currentAge}"
-                                           onchange="setAge(parseInt(this.value));"
-                                           style="width: 100px; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif; text-align: center;">
-                                    <div style="flex: 1;">
-                                        <div style="color: #f4d03f; font-weight: bold; margin-bottom: 5px;">
-                                            ${currentAge >= 16 && currentAge <= 19 ? "Younger (16-19)" : 
-                                              currentAge >= 20 && currentAge <= 30 ? "Prime (20-30)" : 
-                                              currentAge >= 31 && currentAge <= 40 ? "Older (31-40)" : "Select Age"}
-                                        </div>
-                                        <div style="color: #888; font-size: 13px;">
-                                            ${ageModifiers || "Select age to see modifiers"}
-                                        </div>
-                                        <div style="color: #888; font-size: 12px; margin-top: 5px; font-style: italic;">
-                                            ${currentAge >= 16 && currentAge <= 19 ? "Youthful energy, less experience" : 
-                                              currentAge >= 20 && currentAge <= 30 ? "Peak physical condition" : 
-                                              currentAge >= 31 && currentAge <= 40 ? "Veteran wisdom, slower reflexes" : ""}
-                                        </div>
-                                    </div>
+                                <label style="display: block; color: #d4af37; margin-bottom: 12px; font-weight: bold;">Your Age:</label>
+                                <p style="color: #888; font-size: 13px; margin-bottom: 15px;">Choose the age range that best describes your character. Each has unique advantages and drawbacks.</p>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                                    ${(function() {
+                                        const ageRanges = [
+                                            {
+                                                id: 'youth',
+                                                name: 'Youth (16-19)',
+                                                description: 'Fresh-faced and eager, but untested in the ways of war.',
+                                                advantages: ['+2 Initiative', '+1 Agility', 'Quick to learn'],
+                                                drawbacks: ['-1 Endurance', '-1 Wits', 'Less respect from veterans'],
+                                                statMods: { initiative: 2, agility: 1, endurance: -1, wits: -1 },
+                                                numericAge: 18
+                                            },
+                                            {
+                                                id: 'young_adult',
+                                                name: 'Young Adult (20-24)',
+                                                description: 'In your prime, strong and fast with growing experience.',
+                                                advantages: ['+1 Strength', '+1 Agility', 'Peak physical condition'],
+                                                drawbacks: ['-1 Wits', 'Still learning tactics'],
+                                                statMods: { strength: 1, agility: 1, wits: -1 },
+                                                numericAge: 22
+                                            },
+                                            {
+                                                id: 'prime',
+                                                name: 'Prime (25-30)',
+                                                description: 'The perfect balance of strength, speed, and wisdom.',
+                                                advantages: ['+1 Strength', '+1 Wits', 'Balanced capabilities'],
+                                                drawbacks: ['None - the ideal age for a soldier'],
+                                                statMods: { strength: 1, wits: 1 },
+                                                numericAge: 27
+                                            },
+                                            {
+                                                id: 'veteran',
+                                                name: 'Veteran (31-35)',
+                                                description: 'Seasoned by years of service, wise but slower.',
+                                                advantages: ['+2 Wits', '+1 Endurance', 'Respected by peers'],
+                                                drawbacks: ['-1 Agility', 'Slower reflexes'],
+                                                statMods: { wits: 2, endurance: 1, agility: -1 },
+                                                numericAge: 33
+                                            },
+                                            {
+                                                id: 'old_hand',
+                                                name: 'Old Hand (36-40)',
+                                                description: 'A grizzled veteran with hard-won wisdom, but age takes its toll.',
+                                                advantages: ['+2 Wits', '+1 Endurance', '+1 Charisma', 'Greatly respected'],
+                                                drawbacks: ['-2 Agility', '-1 Strength', 'Slower in combat'],
+                                                statMods: { wits: 2, endurance: 1, charisma: 1, agility: -2, strength: -1 },
+                                                numericAge: 38
+                                            }
+                                        ];
+                                        
+                                        const currentAgeRange = gameState.ageRange || null;
+                                        
+                                        return ageRanges.map(function(range) {
+                                            const isSelected = currentAgeRange === range.id;
+                                            return '<button onclick="selectAgeRange(\'' + range.id + '\')" ' +
+                                                'id="age-range-' + range.id + '" ' +
+                                                'style="padding: 15px; background: ' + (isSelected ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (isSelected ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left; transition: all 0.2s;">' +
+                                                '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">' +
+                                                    '<div style="flex: 1;">' +
+                                                        '<strong style="font-size: 1.1em; display: block; margin-bottom: 5px;">' + range.name + '</strong>' +
+                                                        '<div style="font-size: 13px; font-style: italic; color: ' + (isSelected ? '#1a0f08' : '#888') + '; margin-bottom: 10px;">' + range.description + '</div>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">' +
+                                                    '<div style="padding: 8px; background: rgba(0, 150, 0, ' + (isSelected ? '0.3' : '0.1') + '); border-radius: 3px;">' +
+                                                        '<div style="font-size: 11px; font-weight: bold; color: ' + (isSelected ? '#0a5a0a' : '#0f0') + '; margin-bottom: 5px;">Advantages:</div>' +
+                                                        '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: ' + (isSelected ? '#1a0f08' : '#0f0') + ';">' +
+                                                            range.advantages.map(function(adv) { return '<li>' + adv + '</li>'; }).join('') +
+                                                        '</ul>' +
+                                                    '</div>' +
+                                                    '<div style="padding: 8px; background: rgba(150, 0, 0, ' + (isSelected ? '0.3' : '0.1') + '); border-radius: 3px;">' +
+                                                        '<div style="font-size: 11px; font-weight: bold; color: ' + (isSelected ? '#5a0a0a' : '#f00') + '; margin-bottom: 5px;">Drawbacks:</div>' +
+                                                        '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: ' + (isSelected ? '#1a0f08' : '#f66') + ';">' +
+                                                            range.drawbacks.map(function(draw) { return '<li>' + draw + '</li>'; }).join('') +
+                                                        '</ul>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                            '</button>';
+                                        }).join('');
+                                    })()}
                                 </div>
+                                
+                                ${currentAgeRange ? 
+                                    '<div style="margin-top: 12px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px; color: #d4af37; font-size: 12px;">' +
+                                        'Selected age range will affect your starting stats and how others perceive you.' +
+                                    '</div>' : ''}
                             </div>
                         </div>
                         
@@ -6190,8 +6258,40 @@
             });
         }
         
+        function selectAgeRange(ageRangeId) {
+            const ageRanges = {
+                'youth': { numericAge: 18, statMods: { initiative: 2, agility: 1, endurance: -1, wits: -1 } },
+                'young_adult': { numericAge: 22, statMods: { strength: 1, agility: 1, wits: -1 } },
+                'prime': { numericAge: 27, statMods: { strength: 1, wits: 1 } },
+                'veteran': { numericAge: 33, statMods: { wits: 2, endurance: 1, agility: -1 } },
+                'old_hand': { numericAge: 38, statMods: { wits: 2, endurance: 1, charisma: 1, agility: -2, strength: -1 } }
+            };
+            
+            const range = ageRanges[ageRangeId];
+            if (!range) return;
+            
+            // Store the age range ID and numeric age
+            gameState.ageRange = ageRangeId;
+            gameState.age = range.numericAge;
+            
+            // Age-based stat modifiers are applied when priorities are recalculated
+            // They're stored in gameState.ageRange for reference
+            updateDisplay();
+        }
+        
+        // Legacy function for backward compatibility (if called from elsewhere)
         function setAge(age) {
             if (age < 16 || age > 40) return;
+            
+            // Map numeric age to closest age range
+            let ageRangeId = 'prime';
+            if (age <= 19) ageRangeId = 'youth';
+            else if (age <= 24) ageRangeId = 'young_adult';
+            else if (age <= 30) ageRangeId = 'prime';
+            else if (age <= 35) ageRangeId = 'veteran';
+            else ageRangeId = 'old_hand';
+            
+            selectAgeRange(ageRangeId);
             
             const oldAge = gameState.age || 18;
             gameState.age = age;
