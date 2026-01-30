@@ -847,6 +847,7 @@
             wits: { min: 0, max: 10 },
             morale: { min: 0, max: 10 },
             stress: { min: 0, max: 10 },
+            initiative: { min: 5, max: 10 },
             wealth: { min: 0, max: 200 },
             reputation: { min: -20, max: 50 },
             experience: { min: 0, max: 1000 },
@@ -1033,17 +1034,247 @@
                         Math.max(0, gameState.stats.wits - 5)
                     );
                     const nameDisplay = gameState.characterName || "";
-                    return `<div style="max-width: 700px; margin: 0 auto;">
-                        <h2 style="color: #f4d03f; text-align: center; margin-bottom: 20px;">Create Your Character</h2>
+                    const currentAge = gameState.age || 18;
+                    const currentPronouns = gameState.pronouns || "he";
+                    const currentCulture = gameState.culture || "";
+                    
+                    // Age-based stat modifiers (display only, applied on selection)
+                    let ageModifiers = "";
+                    if (currentAge >= 16 && currentAge <= 19) {
+                        ageModifiers = "+Initiative, -Endurance";
+                    } else if (currentAge >= 20 && currentAge <= 30) {
+                        ageModifiers = "Balanced";
+                    } else if (currentAge >= 31 && currentAge <= 40) {
+                        ageModifiers = "+Endurance, -Agility";
+                    }
+                    
+                    // Medieval name suggestions by culture
+                    const nameSuggestions = {
+                        "English": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger"],
+                        "French": ["Pierre", "Jean", "Philippe", "Louis", "Henri", "Charles", "Guillaume", "Robert"],
+                        "Occitan": ["Raimond", "Bernat", "Guilhem", "Peire", "Arnaut", "Bertran", "Jaufre"],
+                        "Welsh": ["Llywelyn", "Dafydd", "Rhys", "Owain", "Gruffydd", "Madog", "Iorwerth"],
+                        "Flemish": ["Willem", "Jan", "Pieter", "Hendrik", "Karel", "Filip", "Dirk"],
+                        "Norman": ["Guillaume", "Henri", "Robert", "Richard", "Roger", "Hugues", "Geoffroi"]
+                    };
+                    
+                    // Background questions data structure
+                    const backgroundQuestions = [
+                        {
+                            id: 'hard_father',
+                            text: "Your father was a hard, cruel man. Your entire life you have woken before the dawn to break hard Earth, scratching a living out of the frozen soil to appease him. You learned hard lessons from those days, but each day in that house is a stain of black misery in your memories.",
+                            effects: { strength: 1, endurance: 1, charisma: -1 }
+                        },
+                        {
+                            id: 'mangled_hand',
+                            text: "Your hand was mangled as a youth. It wasn't ruined, but it bears the twisted scars of that old trauma and has never been quite the same. Your hand excused you from some of the chores that would have been assigned to a healthy boy. Instead, you often helped in the homestead with women's work, and learned to read at the local Abbey.",
+                            effects: { agility: -1, endurance: -1, wits: 3 }
+                        },
+                        {
+                            id: 'lost_sibling',
+                            text: "You had a sibling who died young—fever, accident, or the simple cruelty of a world that takes children. Their absence shaped you. You learned to be careful, to watch for danger, but also to value what remains.",
+                            effects: { wits: 1, endurance: 1, morale: -1 }
+                        },
+                        {
+                            id: 'village_hero',
+                            text: "When bandits came to your village, you stood with the others. You weren't the strongest or the fastest, but you were there when it mattered. The respect you earned that day still follows you.",
+                            effects: { charisma: 1, reputation: 2, strength: -1 }
+                        },
+                        {
+                            id: 'apprentice_master',
+                            text: "Your master was a harsh teacher, but fair. Every mistake was a lesson, every success earned a nod. You learned discipline and precision, but also learned to fear failure.",
+                            effects: { wits: 2, agility: 1, stress: 1 }
+                        },
+                        {
+                            id: 'first_love',
+                            text: "There was someone once—a first love, a promise made, a promise broken. Whether by war, by family, or by your own choices, it ended. The memory of what was lost makes you careful with new bonds.",
+                            effects: { charisma: -1, wits: 1, morale: 1 }
+                        }
+                    ];
+                    
+                    // Initialize backgroundQuestionsAnswered if it doesn't exist
+                    if (!gameState.backgroundQuestionsAnswered) {
+                        gameState.backgroundQuestionsAnswered = [];
+                    }
+                    
+                    return `<div style="max-width: 800px; margin: 0 auto;">
+                        <h2 style="color: #f4d03f; text-align: center; margin-bottom: 30px;">Create Your Character</h2>
                         
-                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(212, 175, 55, 0.1); border-radius: 5px;">
-                            <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Your Name:</label>
-                            <input type="text" id="character-name-input" placeholder="Enter your name" 
-                                   value="${nameDisplay}" 
-                                   style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif;"
-                                   onchange="gameState.characterName = this.value; updateDisplay();">
+                        <!-- SECTION 1: IDENTITY -->
+                        <div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">
+                            <h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Section 1 — Identity</h3>
+                            
+                            <!-- Name & Pronouns -->
+                            <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                                <label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Your Name:</label>
+                                <input type="text" id="character-name-input" placeholder="Enter your name" 
+                                       value="${nameDisplay}" 
+                                       list="name-suggestions"
+                                       style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif; margin-bottom: 10px;"
+                                       onchange="gameState.characterName = this.value; updateDisplay();">
+                                <datalist id="name-suggestions">
+                                    ${(currentCulture && nameSuggestions[currentCulture] ? nameSuggestions[currentCulture].map(function(n) { return '<option value="' + n + '">'; }).join('') : '')}
+                                </datalist>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                    <div>
+                                        <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Pronouns:</label>
+                                        <select id="pronouns-select" 
+                                                onchange="selectPronouns(this.value);"
+                                                style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
+                                            <option value="he" ${currentPronouns === "he" ? "selected" : ""}>He/Him</option>
+                                            <option value="she" ${currentPronouns === "she" ? "selected" : ""}>She/Her</option>
+                                            <option value="they" ${currentPronouns === "they" ? "selected" : ""}>They/Them</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Culture:</label>
+                                        <select id="culture-select" 
+                                                onchange="selectCulture(this.value);"
+                                                style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
+                                            <option value="">Select Culture</option>
+                                            <option value="English" ${currentCulture === "English" ? "selected" : ""}>English</option>
+                                            <option value="French" ${currentCulture === "French" ? "selected" : ""}>French</option>
+                                            <option value="Occitan" ${currentCulture === "Occitan" ? "selected" : ""}>Occitan</option>
+                                            <option value="Welsh" ${currentCulture === "Welsh" ? "selected" : ""}>Welsh</option>
+                                            <option value="Flemish" ${currentCulture === "Flemish" ? "selected" : ""}>Flemish</option>
+                                            <option value="Norman" ${currentCulture === "Norman" ? "selected" : ""}>Norman</option>
+                                        </select>
+                                        <small style="color: #888; font-size: 12px;">Affects dialogue options and social interactions</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Age -->
+                            <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                                <label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Age (16-40):</label>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <input type="number" id="age-input" min="16" max="40" value="${currentAge}"
+                                           onchange="setAge(parseInt(this.value));"
+                                           style="width: 100px; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: 'Crimson Text', serif; text-align: center;">
+                                    <div style="flex: 1;">
+                                        <div style="color: #f4d03f; font-weight: bold; margin-bottom: 5px;">
+                                            ${currentAge >= 16 && currentAge <= 19 ? "Younger (16-19)" : 
+                                              currentAge >= 20 && currentAge <= 30 ? "Prime (20-30)" : 
+                                              currentAge >= 31 && currentAge <= 40 ? "Older (31-40)" : "Select Age"}
+                                        </div>
+                                        <div style="color: #888; font-size: 13px;">
+                                            ${ageModifiers || "Select age to see modifiers"}
+                                        </div>
+                                        <div style="color: #888; font-size: 12px; margin-top: 5px; font-style: italic;">
+                                            ${currentAge >= 16 && currentAge <= 19 ? "Youthful energy, less experience" : 
+                                              currentAge >= 20 && currentAge <= 30 ? "Peak physical condition" : 
+                                              currentAge >= 31 && currentAge <= 40 ? "Veteran wisdom, slower reflexes" : ""}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
+                        <!-- SECTION 2: ORIGIN STORY -->
+                        <div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">
+                            <h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Section 2 — Origin Story</h3>
+                            <p style="color: #888; font-size: 14px; margin-bottom: 20px;">Your origin unlocks unique story paths, advantages, and challenges that shape your journey.</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                                <!-- Rural Peasant -->
+                                <button onclick="selectOrigin('rural_peasant')" 
+                                        id="origin-rural_peasant"
+                                        style="padding: 20px; background: ${gameState.origin === 'rural_peasant' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.origin === 'rural_peasant' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
+                                    <strong style="font-size: 1.1em;">Rural Peasant</strong>
+                                    <div style="font-size: 14px; margin-top: 8px; color: ${gameState.origin === 'rural_peasant' ? '#1a0f08' : '#888'};">
+                                        <div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Endurance, Insight into rural networks</div>
+                                        <div style="margin-bottom: 5px;"><strong>Challenges:</strong> Low coin, no formal training</div>
+                                        <div style="font-style: italic; margin-top: 8px; font-size: 13px;">Life: Farming, tending animals, basic tools. May face land disputes, harvest failures, connections to local clergy.</div>
+                                    </div>
+                                </button>
+                                
+                                <!-- Manor Retainer -->
+                                <button onclick="selectOrigin('manor_retainer')" 
+                                        id="origin-manor_retainer"
+                                        style="padding: 20px; background: ${gameState.origin === 'manor_retainer' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.origin === 'manor_retainer' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
+                                    <strong style="font-size: 1.1em;">Manor Retainer</strong>
+                                    <div style="font-size: 14px; margin-top: 8px; color: ${gameState.origin === 'manor_retainer' ? '#1a0f08' : '#888'};">
+                                        <div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Strength, +Charisma in village contexts</div>
+                                        <div style="margin-bottom: 5px;"><strong>Challenges:</strong> Fealty binds your options, owe service</div>
+                                        <div style="font-style: italic; margin-top: 8px; font-size: 13px;">Life: Fields, maintenance, basic martial chores. Land disputes with overlord, implicit debt, must balance duty vs aspiration.</div>
+                                    </div>
+                                </button>
+                                
+                                <!-- Craftsman's Apprentice -->
+                                <button onclick="selectOrigin('craftsman_apprentice')" 
+                                        id="origin-craftsman_apprentice"
+                                        style="padding: 20px; background: ${gameState.origin === 'craftsman_apprentice' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.origin === 'craftsman_apprentice' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
+                                    <strong style="font-size: 1.1em;">Craftsman's Apprentice</strong>
+                                    <div style="font-size: 14px; margin-top: 8px; color: ${gameState.origin === 'craftsman_apprentice' ? '#1a0f08' : '#888'};">
+                                        <div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Wits, +Agility when crafting/repairing</div>
+                                        <div style="margin-bottom: 5px;"><strong>Challenges:</strong> No noble allies, urban ties pull into guild politics</div>
+                                        <div style="font-style: italic; margin-top: 8px; font-size: 13px;">Life: Blacksmith, Carpenter, Tanner, etc. Crafting and problem solving. Rival guild intrigue, forged weapons side quests.</div>
+                                    </div>
+                                </button>
+                                
+                                <!-- Squire to a Knight -->
+                                <button onclick="selectOrigin('squire')" 
+                                        id="origin-squire"
+                                        style="padding: 20px; background: ${gameState.origin === 'squire' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.origin === 'squire' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
+                                    <strong style="font-size: 1.1em;">Squire to a Knight</strong>
+                                    <div style="font-size: 14px; margin-top: 8px; color: ${gameState.origin === 'squire' ? '#1a0f08' : '#888'};">
+                                        <div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Strength, +Wits, Access to basic gear</div>
+                                        <div style="margin-bottom: 5px;"><strong>Challenges:</strong> Bound by knight's agenda, must prove worth</div>
+                                        <div style="font-style: italic; margin-top: 8px; font-size: 13px;">Life: Martial training and service. Your knight's reputation colors every interaction, commissioned missions.</div>
+                                    </div>
+                                </button>
+                                
+                                <!-- Minor Noble or Garrison's Son/Daughter -->
+                                <button onclick="selectOrigin('minor_noble')" 
+                                        id="origin-minor_noble"
+                                        style="padding: 20px; background: ${gameState.origin === 'minor_noble' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.origin === 'minor_noble' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
+                                    <strong style="font-size: 1.1em;">Minor Noble or Garrison's Son/Daughter</strong>
+                                    <div style="font-size: 14px; margin-top: 8px; color: ${gameState.origin === 'minor_noble' ? '#1a0f08' : '#888'};">
+                                        <div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Charisma, +Wits, Political network</div>
+                                        <div style="margin-bottom: 5px;"><strong>Challenges:</strong> Political stakes — errors are punished</div>
+                                        <div style="font-style: italic; margin-top: 8px; font-size: 13px;">Life: Minor status, some education. Rival noble houses, betrothal/unfulfilled oath.</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- SECTION 3: BACKGROUND QUESTIONS -->
+                        <div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">
+                            <h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Section 3 — Background Questions</h3>
+                            <p style="color: #888; font-size: 14px; margin-bottom: 20px;">These questions shape your past. Each answer adjusts your stats. You may answer as many or as few as you wish. <em style="color: #d4af37;">(Optional)</em></p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                                ${backgroundQuestions.map(function(q) {
+                                    const isAnswered = gameState.backgroundQuestionsAnswered && gameState.backgroundQuestionsAnswered.includes(q.id);
+                                    const effectText = Object.entries(q.effects).map(function([stat, val]) {
+                                        const sign = val > 0 ? '+' : '';
+                                        const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+                                        return sign + val + ' ' + statName;
+                                    }).join(', ');
+                                    
+                                    return '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (isAnswered ? '#d4af37' : '#555') + ';">' +
+                                        '<div style="color: #d4af37; font-style: italic; margin-bottom: 10px; line-height: 1.6;">"' + q.text + '"</div>' +
+                                        (isAnswered ? 
+                                            '<div style="color: #0f0; font-size: 12px; margin-top: 8px;">✓ Answered: ' + effectText + '</div>' :
+                                            '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">Secret result: ' + effectText + '</div>') +
+                                        '<button onclick="answerBackgroundQuestion(\'' + q.id + '\')" ' +
+                                            'style="margin-top: 10px; padding: 8px 15px; background: ' + (isAnswered ? '#444' : '#8b6914') + '; border: 1px solid #d4af37; color: ' + (isAnswered ? '#666' : '#d4af37') + '; border-radius: 3px; cursor: ' + (isAnswered ? 'not-allowed' : 'pointer') + '; font-size: 13px;" ' +
+                                            (isAnswered ? 'disabled' : '') + '>' +
+                                            (isAnswered ? 'Already Answered' : 'This Was My Past') +
+                                        '</button>' +
+                                    '</div>';
+                                }).join('')}
+                            </div>
+                            
+                            ${gameState.backgroundQuestionsAnswered && gameState.backgroundQuestionsAnswered.length > 0 ? 
+                                '<div style="margin-top: 15px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-radius: 5px; color: #888; font-size: 13px;">' +
+                                    'You have answered <strong style="color: #d4af37">' + gameState.backgroundQuestionsAnswered.length + '</strong> background question' + (gameState.backgroundQuestionsAnswered.length === 1 ? '' : 's') + '.' +
+                                '</div>' : ''}
+                        </div>
+                        
+                        <!-- STAT ALLOCATION -->
                         <div style="margin-bottom: 20px; padding: 15px; background: rgba(212, 175, 55, 0.1); border-radius: 5px;">
                             <h3 style="color: #f4d03f; margin-bottom: 15px;">Distribute Stat Points</h3>
                             <p style="color: #888; margin-bottom: 15px;">You have <strong style="color: ${pointsRemaining > 0 ? '#0f0' : pointsRemaining < 0 ? '#f00' : '#f4d03f'}">${pointsRemaining}</strong> points remaining.</p>
@@ -1080,43 +1311,6 @@
                                 }).join('');
                             })()}
                         </div>
-                        
-                        <div style="margin-bottom: 20px; padding: 15px; background: rgba(212, 175, 55, 0.1); border-radius: 5px;">
-                            <h3 style="color: #f4d03f; margin-bottom: 15px;">Choose Your Background</h3>
-                            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Your background will grant you additional bonuses and shape your starting story.</p>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-                                <button onclick="selectBackground('peasant')" 
-                                        id="bg-peasant"
-                                        style="padding: 15px; background: ${gameState.background === 'peasant' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.background === 'peasant' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
-                                    <strong>Peasant's Son</strong>
-                                    <div style="font-size: 14px; margin-top: 5px; color: ${gameState.background === 'peasant' ? '#1a0f08' : '#888'};">
-                                        +2 Endurance, -5 Wealth<br>
-                                        <small>Hard work has made you tough, but you start with little.</small>
-                                    </div>
-                                </button>
-                                
-                                <button onclick="selectBackground('merchant')" 
-                                        id="bg-merchant"
-                                        style="padding: 15px; background: ${gameState.background === 'merchant' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.background === 'merchant' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
-                                    <strong>Merchant's Son</strong>
-                                    <div style="font-size: 14px; margin-top: 5px; color: ${gameState.background === 'merchant' ? '#1a0f08' : '#888'};">
-                                        +2 Charisma, +10 Wealth<br>
-                                        <small>Your family's trade has taught you to talk and given you coin.</small>
-                                    </div>
-                                </button>
-                                
-                                <button onclick="selectBackground('noble')" 
-                                        id="bg-noble"
-                                        style="padding: 15px; background: ${gameState.background === 'noble' ? '#d4af37' : '#2a2a2a'}; border: 2px solid #d4af37; color: ${gameState.background === 'noble' ? '#1a0f08' : '#d4af37'}; border-radius: 5px; cursor: pointer; text-align: left;">
-                                    <strong>Minor Noble's Son</strong>
-                                    <div style="font-size: 14px; margin-top: 5px; color: ${gameState.background === 'noble' ? '#1a0f08' : '#888'};">
-                                        +1 Strength, +5 Reputation<br>
-                                        <small>Your bloodline grants you respect and some training.</small>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
                     </div>`;
                 },
                 choices: [
@@ -1124,26 +1318,24 @@
                         text: "Begin Your Journey",
                         effects: {},
                         nextScene: "start",
-                        requiresBackground: true
+                        requiresOrigin: true
                     }
                 ]
             },
             start: {
                 title: "The Beginning",
                 year: 1337,
-                age: 18,
+                age: function() { return gameState.age || 18; },
                 location: "England",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
-                    const background = gameState.background || 'peasant';
-                    const bgText = {
-                        peasant: "You are the son of a peasant family. Hard work has made you strong, but you have little wealth to your name.",
-                        merchant: "You are the son of a merchant family. Your father's trade has taught you to talk and given you coin to start your journey.",
-                        noble: "You are the son of a minor noble. Your bloodline grants you respect and some training in arms."
-                    };
+                    const pronouns = gameState.pronouns || "he";
+                    const culture = gameState.culture || "English";
+                    const age = gameState.age || 18;
+                    const pronounText = pronouns === "she" ? "woman" : pronouns === "they" ? "person" : "man";
+                    const ageText = age >= 16 && age <= 19 ? "young" : age >= 31 && age <= 40 ? "veteran" : "";
                     return `<p>It is the year 1337. The war between England and France has just begun.</p>
-                           <p><strong>${name}</strong>, ${bgText[background]}</p>
-                           <p>You are a young Englishman, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
+                           <p><strong>${name}</strong>, you are a ${ageText ? ageText + " " : ""}${culture} ${pronounText}, ready to make your mark on history. The call to arms has reached you, and you've decided to join a lord's retinue.</p>
                            <p>Your training begins now...</p>`;
                 },
                 choices: [
@@ -1151,32 +1343,172 @@
                         text: "Begin Training",
                         effects: {},
                         nextScene: function() {
-                            const bg = gameState.background || 'peasant';
-                            return {
-                                peasant: "training_peasant",
-                                merchant: "training_merchant",
-                                noble: "training_noble"
-                            }[bg];
+                            const origin = gameState.origin || 'rural_peasant';
+                            const originMap = {
+                                rural_peasant: "training_rural_peasant",
+                                manor_retainer: "training_manor_retainer",
+                                craftsman_apprentice: "training_craftsman_apprentice",
+                                squire: "training_squire",
+                                minor_noble: "training_minor_noble"
+                            };
+                            return originMap[origin] || "training_rural_peasant";
                         }
                     }
                 ],
                 onEnter: function() {
-                    // Apply background bonuses if not already applied
-                    if (!gameState.flags.backgroundApplied) {
-                        const bg = gameState.background || 'peasant';
-                        if (bg === 'peasant') {
-                            applyStatChange('endurance', 2);
-                            applyStatChange('wealth', -5);
-                        } else if (bg === 'merchant') {
-                            applyStatChange('charisma', 2);
-                            applyStatChange('wealth', 10);
-                        } else if (bg === 'noble') {
-                            applyStatChange('strength', 1);
-                            applyStatChange('reputation', 5);
+                    const sceneKey = `start_${gameState.year}`;
+                    if (!gameState.enteredScenes.has(sceneKey)) {
+                        // Apply origin bonuses if not already applied
+                        if (!gameState.flags.originApplied) {
+                            const origin = gameState.origin || 'rural_peasant';
+                            switch(origin) {
+                                case 'rural_peasant':
+                                    applyStatChange('endurance', 2);
+                                    applyStatChange('wealth', -5);
+                                    break;
+                                case 'manor_retainer':
+                                    applyStatChange('strength', 1);
+                                    applyStatChange('charisma', 1);
+                                    break;
+                                case 'craftsman_apprentice':
+                                    applyStatChange('wits', 1);
+                                    applyStatChange('agility', 1);
+                                    break;
+                                case 'squire':
+                                    applyStatChange('strength', 1);
+                                    applyStatChange('wits', 1);
+                                    // Add basic gear
+                                    if (!gameState.inventory) gameState.inventory = [];
+                                    if (!gameState.inventory.find(function(i) { return i.id === 'arming_sword'; })) {
+                                        gameState.inventory.push({id: 'arming_sword', condition: 100, fit: 'off-the-rack', stackCount: 1});
+                                    }
+                                    break;
+                                case 'minor_noble':
+                                    applyStatChange('charisma', 1);
+                                    applyStatChange('wits', 1);
+                                    applyStatChange('reputation', 5);
+                                    break;
+                            }
+                            gameState.flags.originApplied = true;
                         }
-                        gameState.flags.backgroundApplied = true;
+                        gameState.enteredScenes.add(sceneKey);
                     }
                 }
+            },
+            training_rural_peasant: {
+                title: "Training Begins",
+                year: 1338,
+                age: function() { return (gameState.age || 18) + 1; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>You've joined a lord's retinue. The training is harsh, but you're used to hard work from the fields. Your endurance serves you well, though you lack the formal training of those born to higher stations.</p>
+                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Volunteer for the vanguard",
+                        effects: { strength: 1, reputation: 1 },
+                        nextScene: "first_battle_brave"
+                    },
+                    {
+                        text: "Stay with the main force",
+                        effects: { endurance: 1 },
+                        nextScene: "first_battle_cautious"
+                    }
+                ]
+            },
+            training_manor_retainer: {
+                title: "Service and Duty",
+                year: 1338,
+                age: function() { return (gameState.age || 18) + 1; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>Your service on the manor has prepared you for this. You understand the bonds of fealty and duty, and your strength from years of labor serves you well.</p>
+                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Serve faithfully in the ranks",
+                        effects: { charisma: 1, patronFavor: 1 },
+                        nextScene: "first_battle_cautious"
+                    },
+                    {
+                        text: "Prove your worth in the front",
+                        effects: { strength: 1, reputation: 1 },
+                        nextScene: "first_battle_brave"
+                    }
+                ]
+            },
+            training_craftsman_apprentice: {
+                title: "A Craftsman's War",
+                year: 1338,
+                age: function() { return (gameState.age || 18) + 1; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>Your time as an apprentice has sharpened your wits and agility. You see problems others miss and can repair what others break.</p>
+                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Use your skills to help the camp",
+                        effects: { wits: 1, patronFavor: 1 },
+                        nextScene: "first_battle_tactical"
+                    },
+                    {
+                        text: "Focus on combat training",
+                        effects: { strength: 1, agility: 1 },
+                        nextScene: "first_battle_brave"
+                    }
+                ]
+            },
+            training_squire: {
+                title: "A Knight's Service",
+                year: 1338,
+                age: function() { return (gameState.age || 18) + 1; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>Your service as a squire has given you martial training and access to better gear. Your knight's reputation follows you, for good or ill.</p>
+                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Lead a small unit",
+                        effects: { reputation: 2, strength: 1 },
+                        nextScene: "first_battle_leader"
+                    },
+                    {
+                        text: "Prove yourself in the front ranks",
+                        effects: { strength: 1, morale: 1 },
+                        nextScene: "first_battle_brave"
+                    }
+                ]
+            },
+            training_minor_noble: {
+                title: "Noble Expectations",
+                year: 1338,
+                age: function() { return (gameState.age || 18) + 1; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>As a minor noble, much is expected of you. Your education and political connections give you advantages, but errors carry greater weight.</p>
+                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord expects you to lead the response.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Lead a small unit",
+                        effects: { reputation: 2, strength: 1 },
+                        nextScene: "first_battle_leader"
+                    },
+                    {
+                        text: "Prove yourself in the front ranks",
+                        effects: { strength: 1, morale: 1 },
+                        nextScene: "first_battle_brave"
+                    }
+                ]
             },
             training_peasant: {
                 title: "Training Begins",
@@ -5244,6 +5576,139 @@
             updateDisplay();
         }
         
+        function selectPronouns(pronouns) {
+            gameState.pronouns = pronouns;
+            updateDisplay();
+        }
+        
+        function selectCulture(culture) {
+            gameState.culture = culture;
+            updateDisplay();
+        }
+        
+        function setAge(age) {
+            if (age < 16 || age > 40) return;
+            
+            const oldAge = gameState.age || 18;
+            gameState.age = age;
+            
+            // Remove old age modifiers
+            if (oldAge >= 16 && oldAge <= 19) {
+                // Remove younger modifiers: -Initiative, +Endurance
+                if (gameState.stats.initiative !== undefined) {
+                    gameState.stats.initiative = Math.max(5, (gameState.stats.initiative || 5) - 1);
+                }
+                gameState.stats.endurance = Math.max(5, (gameState.stats.endurance || 5) + 1);
+            } else if (oldAge >= 31 && oldAge <= 40) {
+                // Remove older modifiers: -Endurance, +Agility
+                gameState.stats.endurance = Math.max(5, (gameState.stats.endurance || 5) - 1);
+                gameState.stats.agility = Math.max(5, (gameState.stats.agility || 5) + 1);
+            }
+            
+            // Apply new age modifiers
+            if (age >= 16 && age <= 19) {
+                // Younger: +Initiative, -Endurance
+                if (gameState.stats.initiative === undefined) {
+                    gameState.stats.initiative = 5;
+                }
+                gameState.stats.initiative = (gameState.stats.initiative || 5) + 1;
+                gameState.stats.endurance = Math.max(5, (gameState.stats.endurance || 5) - 1);
+            } else if (age >= 31 && age <= 40) {
+                // Older: +Endurance, -Agility
+                gameState.stats.endurance = (gameState.stats.endurance || 5) + 1;
+                gameState.stats.agility = Math.max(5, (gameState.stats.agility || 5) - 1);
+            }
+            
+            // Clamp stats
+            if (gameState.stats.initiative !== undefined) {
+                gameState.stats.initiative = clampStat('initiative', gameState.stats.initiative);
+            }
+            gameState.stats.endurance = clampStat('endurance', gameState.stats.endurance);
+            gameState.stats.agility = clampStat('agility', gameState.stats.agility);
+            
+            updateDisplay();
+        }
+        
+        function selectOrigin(origin) {
+            gameState.origin = origin;
+            // Update button styles
+            const origins = ['rural_peasant', 'manor_retainer', 'craftsman_apprentice', 'squire', 'minor_noble'];
+            origins.forEach(o => {
+                const btn = document.getElementById(`origin-${o}`);
+                if (btn) {
+                    if (o === origin) {
+                        btn.style.background = '#d4af37';
+                        btn.style.color = '#1a0f08';
+                    } else {
+                        btn.style.background = '#2a2a2a';
+                        btn.style.color = '#d4af37';
+                    }
+                }
+            });
+            updateDisplay();
+        }
+        
+        function answerBackgroundQuestion(questionId) {
+            if (!gameState.backgroundQuestionsAnswered) {
+                gameState.backgroundQuestionsAnswered = [];
+            }
+            
+            // Don't allow answering the same question twice
+            if (gameState.backgroundQuestionsAnswered.includes(questionId)) {
+                return;
+            }
+            
+            // Find the question
+            const backgroundQuestions = [
+                {
+                    id: 'hard_father',
+                    effects: { strength: 1, endurance: 1, charisma: -1 }
+                },
+                {
+                    id: 'mangled_hand',
+                    effects: { agility: -1, endurance: -1, wits: 3 }
+                },
+                {
+                    id: 'lost_sibling',
+                    effects: { wits: 1, endurance: 1, morale: -1 }
+                },
+                {
+                    id: 'village_hero',
+                    effects: { charisma: 1, reputation: 2, strength: -1 }
+                },
+                {
+                    id: 'apprentice_master',
+                    effects: { wits: 2, agility: 1, stress: 1 }
+                },
+                {
+                    id: 'first_love',
+                    effects: { charisma: -1, wits: 1, morale: 1 }
+                }
+            ];
+            
+            const question = backgroundQuestions.find(function(q) { return q.id === questionId; });
+            if (!question) return;
+            
+            // Apply stat changes
+            Object.entries(question.effects).forEach(function([stat, value]) {
+                applyStatChange(stat, value);
+            });
+            
+            // Mark as answered
+            gameState.backgroundQuestionsAnswered.push(questionId);
+            
+            // Show notification
+            const effectText = Object.entries(question.effects).map(function([stat, val]) {
+                const sign = val > 0 ? '+' : '';
+                const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+                return sign + val + ' ' + statName;
+            }).join(', ');
+            
+            showNotification('Background Question', 'Your past shapes you: ' + effectText);
+            
+            updateDisplay();
+        }
+        
         // Make a choice
         function makeChoice(choiceIndex) {
             const scene = scenes[gameState.currentScene];
@@ -5253,8 +5718,8 @@
             
             // Handle character creation validation
             if (gameState.currentScene === 'character_creation') {
-                if (choice.requiresBackground && !gameState.background) {
-                    showNotification('Character Creation', 'Please select a background before continuing.');
+                if (choice.requiresOrigin && !gameState.origin) {
+                    showNotification('Character Creation', 'Please select an origin before continuing.');
                     return;
                 }
                 const nameInput = document.getElementById('character-name-input');
@@ -5263,6 +5728,14 @@
                 }
                 if (!gameState.characterName || gameState.characterName === '') {
                     showNotification('Character Creation', 'Please enter your name.');
+                    return;
+                }
+                if (!gameState.culture || gameState.culture === '') {
+                    showNotification('Character Creation', 'Please select your culture.');
+                    return;
+                }
+                if (!gameState.age || gameState.age < 16 || gameState.age > 40) {
+                    showNotification('Character Creation', 'Please set your age (16-40).');
                     return;
                 }
                 const totalPointsSpent = Object.keys(gameState.stats).reduce((sum, s) => {
@@ -5436,7 +5909,8 @@
                     morale: 5,
                     stress: 0,
                     experience: 0,
-                    patronFavor: 0
+                    patronFavor: 0,
+                    initiative: 5
                 },
                 faction: "English",
                 age: 18,
@@ -5445,7 +5919,11 @@
                 region: "England", // Add region for equipment system
                 currentScene: "character_creation",
                 characterName: "",
-                background: null,
+                pronouns: "he",
+                culture: "",
+                origin: null,
+                background: null, // Keep for backward compatibility
+                backgroundQuestionsAnswered: [],
         scenesVisited: [],
         enteredScenes: new Set(),
         inventory: [
@@ -5526,6 +6004,7 @@
             base.scenesVisited = Array.isArray(loaded.scenesVisited) ? loaded.scenesVisited : [];
             base.inventory = Array.isArray(loaded.inventory) ? loaded.inventory : [];
             base.conditions = Array.isArray(loaded.conditions) ? loaded.conditions : [];
+            base.backgroundQuestionsAnswered = Array.isArray(loaded.backgroundQuestionsAnswered) ? loaded.backgroundQuestionsAnswered : [];
             
             // Clamp + coerce numeric stats
             for (const key of Object.keys(base.stats)) {
@@ -5542,7 +6021,10 @@
             // Don't reset currentScene to character_creation if we have a valid saved scene
             base.currentScene = typeof base.currentScene === "string" && base.currentScene !== "" ? base.currentScene : "character_creation";
             base.characterName = typeof base.characterName === "string" ? base.characterName : "";
-            // Preserve background if it exists (don't reset to null)
+            base.pronouns = typeof base.pronouns === "string" ? base.pronouns : "he";
+            base.culture = typeof base.culture === "string" ? base.culture : "";
+            base.origin = base.origin || null;
+            // Preserve background if it exists (don't reset to null) - backward compatibility
             base.background = base.background || null;
             base.rank = typeof base.rank === "string" ? base.rank : "Common Soldier";
             base.faction = typeof base.faction === "string" ? base.faction : "English";
