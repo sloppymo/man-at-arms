@@ -1046,9 +1046,28 @@
                         ageModifiers = "+Endurance, -Agility";
                     }
                     
-                    // Medieval name suggestions by culture
+                    // Medieval name suggestions by region
                     const nameSuggestions = {
-                        "English": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"]
+                        "Yorkshire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Kent": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "London": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Cornwall": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Lancashire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Essex": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Norfolk": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+                        "Somerset": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"]
+                    };
+                    
+                    // Regional flavor text
+                    const regionFlavor = {
+                        "Yorkshire": "You hail from the rugged moors and dales of Yorkshire. The longbow is your birthright, and you know the weight of honest labor. Your northern accent marks you among southerners, but your loyalty to the Crown is unquestioned. You are a Yorkshireman, and you will fight for King Edward and the realm.",
+                        "Kent": "You come from the fertile fields and bustling ports of Kent. The Channel is your neighbor, and you've seen French ships on the horizon. Your accent carries the weight of the south, and your loyalty to the Crown runs deep. You are a Kentishman, and you will fight for King Edward and the realm.",
+                        "London": "You are a son of London—the great city where merchants and nobles mix. You know the value of coin and the weight of reputation. Your speech marks you as a man of the capital, and your loyalty to the Crown is absolute. You are a Londoner, and you will fight for King Edward and the realm.",
+                        "Cornwall": "You hail from the wild coasts and tin mines of Cornwall. The sea is in your blood, and you know the ways of both land and water. Your Cornish heritage sets you apart, but your loyalty to the Crown is steadfast. You are a Cornishman, and you will fight for King Edward and the realm.",
+                        "Lancashire": "You come from the rolling hills and wool towns of Lancashire. The trade routes run through your land, and you know the value of hard work. Your northern roots shape you, and your loyalty to the Crown is unwavering. You are a Lancastrian, and you will fight for King Edward and the realm.",
+                        "Essex": "You hail from the rich farmlands and ports of Essex. The Thames flows near, and you've seen the wealth of London. Your eastern accent marks you, and your loyalty to the Crown is true. You are an Essex man, and you will fight for King Edward and the realm.",
+                        "Norfolk": "You come from the fens and ports of Norfolk. The sea and the land are both your home, and you know the ways of both. Your eastern roots shape you, and your loyalty to the Crown is resolute. You are a Norfolk man, and you will fight for King Edward and the realm.",
+                        "Somerset": "You hail from the green hills and cider country of Somerset. The West Country is your home, and you know the value of honest toil. Your western accent marks you, and your loyalty to the Crown is firm. You are a Somerset man, and you will fight for King Edward and the realm."
                     };
                     
                     // Background questions data structure
@@ -1110,17 +1129,27 @@
                                 </datalist>
                                 
                                 <div>
-                                    <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Your Culture:</label>
+                                    <label style="display: block; color: #d4af37; margin-bottom: 5px; font-weight: bold;">Your Region:</label>
                                     <select id="culture-select" 
                                             onchange="selectCulture(this.value);"
                                             style="width: 100%; padding: 8px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 14px; font-family: 'Crimson Text', serif;">
-                                        <option value="English" ${currentCulture === "English" || !currentCulture ? "selected" : ""}>English</option>
+                                        <option value="">Select Your Region</option>
+                                        <option value="Yorkshire" ${currentCulture === "Yorkshire" ? "selected" : ""}>Yorkshire</option>
+                                        <option value="Kent" ${currentCulture === "Kent" ? "selected" : ""}>Kent</option>
+                                        <option value="London" ${currentCulture === "London" ? "selected" : ""}>London</option>
+                                        <option value="Cornwall" ${currentCulture === "Cornwall" ? "selected" : ""}>Cornwall</option>
+                                        <option value="Lancashire" ${currentCulture === "Lancashire" ? "selected" : ""}>Lancashire</option>
+                                        <option value="Essex" ${currentCulture === "Essex" ? "selected" : ""}>Essex</option>
+                                        <option value="Norfolk" ${currentCulture === "Norfolk" ? "selected" : ""}>Norfolk</option>
+                                        <option value="Somerset" ${currentCulture === "Somerset" ? "selected" : ""}>Somerset</option>
                                     </select>
-                                    <div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;">
-                                        <div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">
-                                            You hail from the green hills and bustling ports of England. The longbow is your birthright, and you know the weight of a shilling. Your accent marks you among the French, but your loyalty to the Crown is unquestioned. You are an Englishman, and you will fight for King Edward and the realm.
-                                        </div>
-                                    </div>
+                                    ${currentCulture && regionFlavor[currentCulture] ? 
+                                        '<div style="margin-top: 10px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-left: 3px solid #d4af37; border-radius: 3px;">' +
+                                            '<div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">' +
+                                                regionFlavor[currentCulture] +
+                                            '</div>' +
+                                        '</div>' :
+                                        '<small style="color: #888; font-size: 12px; display: block; margin-top: 5px;">Select a region to see its description. Affects dialogue options and social interactions.</small>'}
                                 </div>
                             </div>
                             
@@ -5985,7 +6014,7 @@
         }
         
         function selectCulture(culture) {
-            gameState.culture = "English"; // Always English
+            gameState.culture = culture || "";
             updateDisplay();
         }
         
@@ -6393,7 +6422,7 @@
                 region: "England", // Add region for equipment system
                 currentScene: "character_creation",
                 characterName: "",
-                culture: "English",
+                culture: "",
                 origin: null,
                 background: null, // Keep for backward compatibility
                 backgroundQuestionsAnswered: [],
@@ -6523,7 +6552,7 @@
             // Don't reset currentScene to character_creation if we have a valid saved scene
             base.currentScene = typeof base.currentScene === "string" && base.currentScene !== "" ? base.currentScene : "character_creation";
             base.characterName = typeof base.characterName === "string" ? base.characterName : "";
-            base.culture = typeof base.culture === "string" && base.culture !== "" ? base.culture : "English";
+            base.culture = typeof base.culture === "string" ? base.culture : "";
             base.origin = base.origin || null;
             // Preserve background if it exists (don't reset to null) - backward compatibility
             base.background = base.background || null;
