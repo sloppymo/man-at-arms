@@ -6209,9 +6209,10 @@
                     showNotification('Character Creation', priorityValidation.message);
                     return;
                 }
-                // Culture is always English, ensure it's set
-                if (!gameState.culture) {
-                    gameState.culture = 'English';
+                // Validate region is selected
+                if (!gameState.culture || gameState.culture === '') {
+                    showNotification('Character Creation', 'Please select your region.');
+                    return;
                 }
                 if (!gameState.age || gameState.age < 16 || gameState.age > 40) {
                     showNotification('Character Creation', 'Please set your age (16-40).');
