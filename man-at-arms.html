@@ -6111,7 +6111,83 @@
         
         function selectCulture(culture) {
             gameState.culture = culture || "";
+            // Update map visual feedback
+            updateRegionMapHighlight();
             updateDisplay();
+        }
+        
+        // Show tooltip on hover
+        function showRegionTooltip(event, regionName) {
+            const tooltip = document.getElementById('region-tooltip');
+            if (!tooltip) return;
+            
+            const regionFlavor = {
+                "Yorkshire": "You hail from the rugged moors and dales of Yorkshire. The longbow is your birthright, and you know the weight of honest labor. Your northern accent marks you among southerners, but your loyalty to the Crown is unquestioned. You are a Yorkshireman, and you will fight for King Edward and the realm.",
+                "Kent": "You come from the fertile fields and bustling ports of Kent. The Channel is your neighbor, and you've seen French ships on the horizon. Your accent carries the weight of the south, and your loyalty to the Crown runs deep. You are a Kentishman, and you will fight for King Edward and the realm.",
+                "London": "You are a son of London—the great city where merchants and nobles mix. You know the value of coin and the weight of reputation. Your speech marks you as a man of the capital, and your loyalty to the Crown is absolute. You are a Londoner, and you will fight for King Edward and the realm.",
+                "Cornwall": "You hail from the wild coasts and tin mines of Cornwall. The sea is in your blood, and you know the ways of both land and water. Your Cornish heritage sets you apart, but your loyalty to the Crown is steadfast. You are a Cornishman, and you will fight for King Edward and the realm.",
+                "Lancashire": "You come from the rolling hills and wool towns of Lancashire. The trade routes run through your land, and you know the value of hard work. Your northern roots shape you, and your loyalty to the Crown is unwavering. You are a Lancastrian, and you will fight for King Edward and the realm.",
+                "Essex": "You hail from the rich farmlands and ports of Essex. The Thames flows near, and you've seen the wealth of London. Your eastern accent marks you, and your loyalty to the Crown is true. You are an Essex man, and you will fight for King Edward and the realm.",
+                "Norfolk": "You come from the fens and ports of Norfolk. The sea and the land are both your home, and you know the ways of both. Your eastern roots shape you, and your loyalty to the Crown is resolute. You are a Norfolk man, and you will fight for King Edward and the realm.",
+                "Somerset": "You hail from the green hills and cider country of Somerset. The West Country is your home, and you know the value of honest toil. Your western accent marks you, and your loyalty to the Crown is firm. You are a Somerset man, and you will fight for King Edward and the realm."
+            };
+            
+            tooltip.innerHTML = '<div style="font-weight: bold; color: #f4d03f; margin-bottom: 5px; font-size: 14px;">' + regionName + '</div>' +
+                                '<div style="font-style: italic;">' + (regionFlavor[regionName] || '') + '</div>';
+            
+            tooltip.style.display = 'block';
+            
+            // Position tooltip near mouse, but keep it in view
+            const rect = event.target.getBoundingClientRect();
+            const svgRect = event.target.closest('svg').getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            let top = rect.top - tooltipRect.height - 10;
+            
+            // Adjust if tooltip would go off screen
+            if (left < 10) left = 10;
+            if (left + tooltipRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - tooltipRect.width - 10;
+            }
+            if (top < 10) {
+                top = rect.bottom + 10;
+            }
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            
+            // Highlight region on hover
+            const regionPath = document.getElementById('region-' + regionName);
+            if (regionPath && gameState.culture !== regionName) {
+                regionPath.style.fill = '#8b6914';
+            }
+        }
+        
+        function hideRegionTooltip() {
+            const tooltip = document.getElementById('region-tooltip');
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
+            
+            // Restore region colors
+            updateRegionMapHighlight();
+        }
+        
+        function updateRegionMapHighlight() {
+            const regions = ['Yorkshire', 'Kent', 'London', 'Cornwall', 'Lancashire', 'Essex', 'Norfolk', 'Somerset'];
+            regions.forEach(function(region) {
+                const element = document.getElementById('region-' + region);
+                if (element) {
+                    if (gameState.culture === region) {
+                        element.style.fill = '#d4af37';
+                        element.style.strokeWidth = '3';
+                    } else {
+                        element.style.fill = '#3a2a1a';
+                        element.style.strokeWidth = '2';
+                    }
+                }
+            });
         }
         
         function setAge(age) {
