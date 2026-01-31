@@ -740,7 +740,7 @@
     <div class="game-container">
         <div class="header">
             <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v1.3.0</div>
+            <div id="version-display">v1.4.0</div>
             <div class="status-bar">
                 <div class="status-item">
                     <span>📅</span>
@@ -7937,13 +7937,14 @@
             // Now scene is guaranteed to be defined (or we've returned)
             // Update timeline if scene specifies it
             if (scene.year !== undefined && scene.year !== null) {
-                gameState.year = scene.year;
+                gameState.year = typeof scene.year === 'function' ? scene.year() : scene.year;
             }
             if (scene.age !== undefined && scene.age !== null) {
-                gameState.age = scene.age;
+                // Handle both function and number age values
+                gameState.age = typeof scene.age === 'function' ? scene.age() : scene.age;
             }
             if (scene.location !== undefined && scene.location !== null) {
-                gameState.location = scene.location;
+                gameState.location = typeof scene.location === 'function' ? scene.location() : scene.location;
             }
             
             // Update conditions
