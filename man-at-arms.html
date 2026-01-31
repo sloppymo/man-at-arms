@@ -7723,6 +7723,16 @@
             } catch (e) {
                 console.error('updateStatusBar failed:', e);
             }
+            
+            // Hide controls footer on character creation screen
+            const controls = document.querySelector('.controls');
+            if (controls) {
+                if (gameState.currentScene === 'character_creation') {
+                    controls.style.display = 'none';
+                } else {
+                    controls.style.display = 'flex';
+                }
+            }
         }
         
         // Update story text
@@ -7907,6 +7917,19 @@
         // Update stats display
         function updateStats() {
             const statsContainer = document.getElementById('stats');
+            
+            // Hide stats panel on character creation screen
+            if (gameState.currentScene === 'character_creation') {
+                if (statsContainer) {
+                    statsContainer.style.display = 'none';
+                }
+                return; // Exit early, don't update anything
+            } else {
+                if (statsContainer) {
+                    statsContainer.style.display = 'block'; // Show it for other scenes
+                }
+            }
+            
             const stats = gameState.stats;
             
             // Apply condition effects for display
@@ -8048,6 +8071,17 @@
         
         // Update status bar
         function updateStatusBar() {
+            // Hide status bar on character creation screen
+            const statusBar = document.querySelector('.status-bar');
+            if (!statusBar) return;
+            
+            if (gameState.currentScene === 'character_creation') {
+                statusBar.style.display = 'none';
+                return; // Exit early, don't update anything
+            } else {
+                statusBar.style.display = 'flex'; // Show it for other scenes
+            }
+            
             document.getElementById('year').textContent = gameState.year;
             document.getElementById('age').textContent = gameState.age;
             document.getElementById('location').textContent = gameState.location;
@@ -8065,22 +8099,17 @@
             // Display rank in status bar if element exists
             let rankElement = document.getElementById('status-rank');
             if (!rankElement) {
-                const statusBar = document.querySelector('.status-bar');
-                if (statusBar) {
-                    rankElement = document.createElement('div');
-                    rankElement.id = 'status-rank';
-                    rankElement.className = 'status-item';
-                    rankElement.style.cssText = 'color: #d4af37; font-weight: bold;';
-                    statusBar.insertBefore(rankElement, statusBar.firstChild);
-                }
+                rankElement = document.createElement('div');
+                rankElement.id = 'status-rank';
+                rankElement.className = 'status-item';
+                rankElement.style.cssText = 'color: #d4af37; font-weight: bold;';
+                statusBar.insertBefore(rankElement, statusBar.firstChild);
             }
             if (rankElement) {
                 rankElement.textContent = currentRank;
             }
             
             // Add conditions display
-            const statusBar = document.querySelector('.status-bar');
-            if (!statusBar) return;
             
             let conditionsElement = document.getElementById('status-conditions');
             
