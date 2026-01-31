@@ -906,7 +906,9 @@
                 lastInsertedAtIndex: 0,
                 seenIds: [], // Vignette IDs seen
                 returnScene: null, // Where to go after campfire
-                currentVignetteId: null // Currently active vignette
+                currentVignetteId: null, // Currently active vignette
+                currentStep: 0, // Current step in multi-step exchange (0 = opening, 1+ = follow-ups)
+                stepHistory: [] // Track choices made in this exchange
             },
             career: {
                 battles: 0,
@@ -1775,17 +1777,90 @@
                 title: "Wat's Temper",
                 minYear: 1337,
                 maxYear: null,
-                text: function(gs) {
-                    return `
-                        <p>Wat curses at a loose strap. At damp wood. At a pot that won't boil.</p>
-                        <p>Small things. But his anger is real. He stays sharp by staying angry. Complacency kills men. He's seen it.</p>
-                        <p>He looks at you. <em>"Don't drift,"</em> he says. <em>"Drifting gets you killed."</em></p>
-                    `;
-                },
-                choices: [
-                    { text: "Promise you won't drift.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
-                    { text: "Tell him he's burning himself out.", effects: function(gs) { changeRel("wat", -1); if (!gs.flags) gs.flags = {}; gs.flags.wat_called_out = true; } },
-                    { text: "Make a small joke to break the edge.", effects: function(gs) { applyStatChange("morale", 1, {silent:true}); changeRel("wat", 0); applyStatChange("stress", 1, {silent:true}); } }
+                stages: [
+                    {
+                        text: function(gs) {
+                            return `
+                                <p>Wat curses at a loose strap. At damp wood. At a pot that won't boil.</p>
+                                <p>Small things. But his anger is real. He stays sharp by staying angry. Complacency kills men. He's seen it.</p>
+                                <p>He looks at you. <em>"Don't drift,"</em> he says. <em>"Drifting gets you killed."</em></p>
+                            `;
+                        },
+                        choices: [
+                            { 
+                                text: "Promise you won't drift.", 
+                                response: function(gs) {
+                                    return `<p>Wat grunts. <em>"Good. Keep that promise. Men who drift end up dead. Or worse. They end up broken."</em></p>
+                                            <p>He adjusts his sword. The firelight catches the edge. <em>"You see that? Sharp. Always sharp. Because I check. Every day. Every night. That's not drifting."</em></p>`;
+                                },
+                                effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); }
+                            },
+                            { 
+                                text: "Tell him he's burning himself out.", 
+                                response: function(gs) {
+                                    return `<p>Wat's eyes flash. <em>"Burning out? You think I'm burning out?"</em></p>
+                                            <p>He stands. Towers over you. <em>"I've seen men who 'relaxed.' I've seen them die. You want to burn out? Fine. But don't tell me I'm wrong."</em></p>
+                                            <p>He sits back down. The anger doesn't leave. It just settles deeper.</p>`;
+                                },
+                                effects: function(gs) { changeRel("wat", -1); if (!gs.flags) gs.flags = {}; gs.flags.wat_called_out = true; }
+                            },
+                            { 
+                                text: "Make a small joke to break the edge.", 
+                                response: function(gs) {
+                                    return `<p>Wat stares. Then a sound comes out. Not a laugh. Something between a cough and a curse.</p>
+                                            <p><em>"Jokes,"</em> he says. <em>"Jokes are fine. But remember. The enemy doesn't joke. The enemy doesn't drift. The enemy kills."</em></p>
+                                            <p>He looks back at the fire. <em>"Keep your edge. Even when you joke."</em></p>`;
+                                },
+                                effects: function(gs) { applyStatChange("morale", 1, {silent:true}); changeRel("wat", 0); applyStatChange("stress", 1, {silent:true}); }
+                            }
+                        ]
+                    },
+                    {
+                        text: function(gs) {
+                            // This will be set by the previous choice's response
+                            return gs.campfire.currentResponse || '';
+                        },
+                        choices: [
+                            { 
+                                text: "Ask him what happened to make him this way.", 
+                                response: function(gs) {
+                                    return `<p>Wat is quiet for a long time. The fire pops. Sparks fly.</p>
+                                            <p><em>"I watched my brother drift,"</em> he says. <em>"One moment he was there. Next moment he wasn't. Arrow through the throat. He'd stopped paying attention. Just for a second."</em></p>
+                                            <p>He spits. <em>"That's all it takes. One second."</em></p>`;
+                                },
+                                effects: function(gs) { changeRel("wat", 2); if (!gs.flags) gs.flags = {}; gs.flags.wat_brother_story = true; }
+                            },
+                            { 
+                                text: "Nod and say nothing.", 
+                                response: function(gs) {
+                                    return `<p>You sit in silence. Wat watches the fire. The anger fades. Just a little.</p>
+                                            <p>Sometimes silence is the right answer.</p>`;
+                                },
+                                effects: function(gs) { changeRel("wat", 1); applyStatChange("stress", -1, {silent:true}); }
+                            },
+                            { 
+                                text: "Tell him you understand.", 
+                                response: function(gs) {
+                                    return `<p>Wat looks at you. Really looks. Like he's measuring something.</p>
+                                            <p><em>"Maybe you do,"</em> he says. <em>"Maybe you don't. Time will tell."</em></p>
+                                            <p>He turns back to the fire. But something in his posture has changed. Slightly. Like a weight shifted.</p>`;
+                                },
+                                effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); }
+                            }
+                        ]
+                    },
+                    {
+                        text: function(gs) {
+                            return gs.campfire.currentResponse || '';
+                        },
+                        choices: [
+                            {
+                                text: "Turn in for the night.",
+                                effects: function(gs) { applyStatChange("stress", -1, {silent:true}); },
+                                isExit: true
+                            }
+                        ]
+                    }
                 ]
             },
             {
@@ -7671,60 +7746,96 @@
                 artwork: "artwork/campfire.jpg",
                 text: function() {
                     const cf = gameState.campfire || {};
-                    const seenIds = new Set(cf.seenIds || []);
+                    const step = cf.currentStep || 0;
                     
-                    // Pick a vignette: prefer unseen, but allow repeats if all seen
-                    let available = CAMPFIRE_VIGNETTES.filter(v => {
-                        // Check year range if specified
-                        if (v.minYear && gameState.year < v.minYear) return false;
-                        if (v.maxYear && gameState.year > v.maxYear) return false;
-                        return true;
-                    });
-                    
-                    let selectedVignette = null;
-                    
-                    // Prefer unseen vignettes
-                    const unseen = available.filter(v => !seenIds.has(v.id));
-                    if (unseen.length > 0) {
-                        selectedVignette = unseen[Math.floor(Math.random() * unseen.length)];
-                    } else {
-                        // All seen - avoid last 3 seen
-                        const recentSeen = cf.seenIds.slice(-3);
-                        const notRecent = available.filter(v => !recentSeen.includes(v.id));
-                        if (notRecent.length > 0) {
-                            selectedVignette = notRecent[Math.floor(Math.random() * notRecent.length)];
+                    // Initialize vignette on step 0
+                    if (step === 0) {
+                        const seenIds = new Set(cf.seenIds || []);
+                        
+                        // Pick a vignette: prefer unseen, but allow repeats if all seen
+                        let available = CAMPFIRE_VIGNETTES.filter(v => {
+                            // Check year range if specified
+                            if (v.minYear && gameState.year < v.minYear) return false;
+                            if (v.maxYear && gameState.year > v.maxYear) return false;
+                            return true;
+                        });
+                        
+                        let selectedVignette = null;
+                        
+                        // Prefer unseen vignettes
+                        const unseen = available.filter(v => !seenIds.has(v.id));
+                        if (unseen.length > 0) {
+                            selectedVignette = unseen[Math.floor(Math.random() * unseen.length)];
                         } else {
-                            // Fallback to any
-                            selectedVignette = available[Math.floor(Math.random() * available.length)];
+                            // All seen - avoid last 3 seen
+                            const recentSeen = cf.seenIds.slice(-3);
+                            const notRecent = available.filter(v => !recentSeen.includes(v.id));
+                            if (notRecent.length > 0) {
+                                selectedVignette = notRecent[Math.floor(Math.random() * notRecent.length)];
+                            } else {
+                                // Fallback to any
+                                selectedVignette = available[Math.floor(Math.random() * available.length)];
+                            }
+                        }
+                        
+                        if (!selectedVignette) {
+                            return `<p>The fire burns low. Men sleep. The night passes.</p>`;
+                        }
+                        
+                        // Store selected vignette and reset step
+                        cf.currentVignetteId = selectedVignette.id;
+                        cf.currentStep = 0;
+                        cf.stepHistory = [];
+                        
+                        // Add to seen list (limit to last 20)
+                        if (!cf.seenIds) cf.seenIds = [];
+                        cf.seenIds.push(selectedVignette.id);
+                        if (cf.seenIds.length > 20) {
+                            cf.seenIds = cf.seenIds.slice(-20);
                         }
                     }
                     
-                    if (!selectedVignette) {
+                    const vignetteId = cf.currentVignetteId;
+                    const vignette = CAMPFIRE_VIGNETTES.find(v => v.id === vignetteId);
+                    
+                    if (!vignette) {
                         return `<p>The fire burns low. Men sleep. The night passes.</p>`;
                     }
                     
-                    // Store selected vignette
-                    gameState.campfire.currentVignetteId = selectedVignette.id;
-                    
-                    // Add to seen list (limit to last 20)
-                    if (!cf.seenIds) cf.seenIds = [];
-                    cf.seenIds.push(selectedVignette.id);
-                    if (cf.seenIds.length > 20) {
-                        cf.seenIds = cf.seenIds.slice(-20);
-                    }
-                    
-                    // Render vignette
-                    const header = selectedVignette.focus === "wat" ? 
+                    // Render header
+                    const header = vignette.focus === "wat" ? 
                         `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">Wat spits into the fire.</p>` :
-                        selectedVignette.focus === "cook" ?
+                        vignette.focus === "cook" ?
                         `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">The Cook stirs the pot.</p>` :
                         `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">Wat and The Cook sit by the fire.</p>`;
                     
-                    const title = selectedVignette.title || selectedVignette.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    return header + `<h3 style="margin-top:0; color: #f4d03f;">${title}</h3>` + selectedVignette.text(gameState);
+                    const title = vignette.title || vignette.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    // Handle multi-stage vignettes
+                    if (vignette.stages && Array.isArray(vignette.stages)) {
+                        const currentStage = vignette.stages[step];
+                        if (currentStage) {
+                            const stageText = typeof currentStage.text === 'function' ? currentStage.text(gameState) : currentStage.text;
+                            if (step === 0) {
+                                return header + `<h3 style="margin-top:0; color: #f4d03f;">${title}</h3>` + stageText;
+                            } else {
+                                return header + stageText;
+                            }
+                        }
+                    }
+                    
+                    // Fallback to old format (single stage)
+                    const vignetteText = typeof vignette.text === 'function' ? vignette.text(gameState) : vignette.text;
+                    if (step === 0) {
+                        return header + `<h3 style="margin-top:0; color: #f4d03f;">${title}</h3>` + vignetteText;
+                    } else {
+                        // Show response from previous choice
+                        return header + (cf.currentResponse || '');
+                    }
                 },
                 choices: function() {
                     const cf = gameState.campfire || {};
+                    const step = cf.currentStep || 0;
                     const vignetteId = cf.currentVignetteId;
                     const vignette = CAMPFIRE_VIGNETTES.find(v => v.id === vignetteId);
                     
@@ -7737,41 +7848,105 @@
                                 const next = cf.returnScene || "start";
                                 cf.returnScene = null;
                                 cf.currentVignetteId = null;
+                                cf.currentStep = 0;
                                 return next;
                             }
                         }];
                     }
                     
-                    // Convert vignette choices to scene choices format
-                    const choices = vignette.choices.map((c, i) => {
+                    // Handle multi-stage vignettes
+                    if (vignette.stages && Array.isArray(vignette.stages)) {
+                        const currentStage = vignette.stages[step];
+                        if (!currentStage) {
+                            // No more stages, exit
+                            return [{
+                                text: "Turn in for the night.",
+                                effects: { stress: -1 },
+                                nextScene: function() {
+                                    const next = cf.returnScene || "start";
+                                    cf.returnScene = null;
+                                    cf.currentVignetteId = null;
+                                    cf.currentStep = 0;
+                                    return next;
+                                }
+                            }];
+                        }
+                        
+                        // Convert stage choices to scene choices format
+                        const choices = currentStage.choices.map((c, i) => {
+                            return {
+                                text: c.text,
+                                effects: function(gs) {
+                                    const state = gs || gameState;
+                                    // Apply effects
+                                    if (typeof c.effects === 'function') {
+                                        c.effects(state);
+                                    } else if (typeof c.effects === 'object') {
+                                        Object.entries(c.effects).forEach(([key, value]) => {
+                                            applyStatChange(key, value, {silent:true});
+                                        });
+                                    }
+                                },
+                                nextScene: function() {
+                                    // If this is an exit choice, return to next scene
+                                    if (c.isExit) {
+                                        const next = cf.returnScene || "start";
+                                        cf.returnScene = null;
+                                        cf.currentVignetteId = null;
+                                        cf.currentStep = 0;
+                                        return next;
+                                    }
+                                    
+                                    // Otherwise, advance to next stage
+                                    const nextStep = step + 1;
+                                    const nextStage = vignette.stages[nextStep];
+                                    
+                                    if (nextStage) {
+                                        // Store response for next stage
+                                        if (typeof c.response === 'function') {
+                                            cf.currentResponse = c.response(gameState);
+                                        } else if (c.response) {
+                                            cf.currentResponse = c.response;
+                                        }
+                                        cf.currentStep = nextStep;
+                                        cf.stepHistory.push({ step: step, choiceIndex: i });
+                                        return "campfire_interlude"; // Stay in campfire, show next stage
+                                    } else {
+                                        // No more stages, exit
+                                        const next = cf.returnScene || "start";
+                                        cf.returnScene = null;
+                                        cf.currentVignetteId = null;
+                                        cf.currentStep = 0;
+                                        return next;
+                                    }
+                                }
+                            };
+                        });
+                        
+                        return choices;
+                    }
+                    
+                    // Fallback to old format (single stage) - convert to multi-stage format on the fly
+                    const oldChoices = vignette.choices || [];
+                    const choices = oldChoices.map((c, i) => {
                         return {
                             text: c.text,
                             effects: function(gs) {
-                                // Apply effects function (makeChoice calls with gameState)
-                                // But we also support direct call from vignette
                                 const state = gs || gameState;
                                 if (typeof c.effects === 'function') {
                                     c.effects(state);
-                                }
-                                // Show summary notification after all effects (only once per choice)
-                                // Note: This will be called by makeChoice, so we show notification here
-                                const relWat = state.relationships?.wat || 0;
-                                const relCook = state.relationships?.cook || 0;
-                                const relSummary = [];
-                                if (relWat !== 0) relSummary.push(`Wat ${relWat > 0 ? '+' : ''}${relWat}`);
-                                if (relCook !== 0) relSummary.push(`Cook ${relCook > 0 ? '+' : ''}${relCook}`);
-                                // Only show if there were relationship changes (notification handled in makeChoice for object effects)
-                                // For function effects, we show here
-                                if (relSummary.length > 0) {
-                                    setTimeout(() => {
-                                        showNotification("Campfire", `The night passes. (${relSummary.join(', ')})`, 'info');
-                                    }, 100);
+                                } else if (typeof c.effects === 'object') {
+                                    Object.entries(c.effects).forEach(([key, value]) => {
+                                        applyStatChange(key, value, {silent:true});
+                                    });
                                 }
                             },
                             nextScene: function() {
+                                // Old format: exit immediately
                                 const next = cf.returnScene || "start";
                                 cf.returnScene = null;
                                 cf.currentVignetteId = null;
+                                cf.currentStep = 0;
                                 return next;
                             }
                         };
@@ -7785,6 +7960,7 @@
                             const next = cf.returnScene || "start";
                             cf.returnScene = null;
                             cf.currentVignetteId = null;
+                            cf.currentStep = 0;
                             return next;
                         }
                     });
@@ -11227,7 +11403,10 @@
                     lastInsertedAtIndex: 0,
                     seenIds: [],
                     returnScene: null,
-                    currentVignetteId: null
+                    currentVignetteId: null,
+                    currentStep: 0,
+                    stepHistory: [],
+                    currentResponse: null
                 },
                 career: {
                     battles: 0,
