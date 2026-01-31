@@ -716,7 +716,7 @@
     <div class="game-container">
         <div class="header">
             <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v1.2.2</div>
+            <div id="version-display">v1.3.0</div>
             <div class="status-bar">
                 <div class="status-item">
                     <span>📅</span>
@@ -845,8 +845,19 @@
             year: 1337,
             location: "England",
             currentScene: "character_creation",
+            chapter: null, // Current chapter: "chevauchée", "calais", "plague", "poitiers"
+            chapterProgress: {
+                chevauchée: { started: false, completed: false },
+                calais: { started: false, completed: false },
+                plague: { started: false, completed: false },
+                poitiers: { started: false, completed: false }
+            },
             characterCreationStep: 1, // Track which step of character creation (1-6)
             characterName: "",
+            patronId: null, // Patron selection ID (james_olooney, lord_david, duke_caley, count_charles, ashkhan)
+            patron: null, // Legacy field for backward compatibility
+            patronEventPath: null, // Convenience copy of PATRONS[patronId].eventPath
+            startingKitTier: null, // Resolved after priorities + patron
             background: null,
             scenesVisited: [],
             enteredScenes: new Set(), // Track scenes that have had onEnter called
@@ -865,11 +876,84 @@
             conditions: [], // wounds, fatigue, etc.
             flags: {}, // story flags: Resentment, Dishonor, Shaken, etc.
             rank: "Common Soldier",
-            relationships: {}, // NPC relationships
+            relationships: { wat: 0, cook: 0 }, // NPC relationships (clamped -5..+5)
+            campfire: {
+                cooldownScenes: 2, // Must pass at least N scenes before another campfire
+                chance: 0.35, // After cooldown, chance to insert
+                lastInsertedAtIndex: 0,
+                seenIds: [], // Vignette IDs seen
+                returnScene: null, // Where to go after campfire
+                currentVignetteId: null // Currently active vignette
+            },
             career: {
                 battles: 0,
                 wounds: 0,
                 promotions: 0
+            },
+            chapter: null, // Current chapter: "chevauchée", "calais", "plague", "poitiers"
+            chapterProgress: {
+                chevauchée: { started: false, completed: false },
+                calais: { started: false, completed: false },
+                plague: { started: false, completed: false },
+                poitiers: { started: false, completed: false }
+            }
+        };
+        
+        // Patron definitions with stat modifiers
+        // Kit tier mapping: plan names -> actual tier names
+        const KIT_TIER_MAP = {
+            "poor": "Ragged",
+            "standard": "Standard",
+            "well_equipped": "Good",
+            "veteran": "Fine",
+            "raider": "Superior"
+        };
+        
+        const PATRONS = {
+            james_olooney: {
+                id: "james_olooney",
+                name: 'Sir James "The Reaver" de Looney',
+                type: "Free Company",
+                blurb: "Wildcard captain known for murder and pillage. Profitable. Unstable.",
+                statMods: { strength: 1, agility: 1, morale: -1, wealth: 2 },
+                kitTier: "raider",  // maps to "Superior"
+                eventPath: "patron_path_olooney"
+            },
+            lord_david: {
+                id: "lord_david",
+                name: "Sir David de Montfort",
+                type: "Noble Household",
+                blurb: "Timid but fair third son; values his men's lives. Safer, slower.",
+                statMods: { charisma: 1, morale: 1, wits: 1, wealth: -2 },
+                kitTier: "standard",  // maps to "Standard"
+                eventPath: "patron_path_david"
+            },
+            duke_caley: {
+                id: "duke_caley",
+                name: "Baron Caley of Tournai",
+                type: "Noble Household",
+                blurb: "Indifferent to your life; higher glory and plunder if you survive.",
+                statMods: { wealth: 3, reputation: 1, morale: -1, stress: 1 },
+                kitTier: "well_equipped",  // maps to "Good"
+                eventPath: "patron_path_caley"
+            },
+            count_charles: {
+                id: "count_charles",
+                name: 'Count Charles "The Grim" of Suffolk',
+                type: "Noble Household",
+                blurb: "Grizzled leader, drinking hard; veterans, volatility, hard lessons.",
+                statMods: { strength: 1, endurance: 1, morale: -1, stress: 1, wits: -1 },
+                kitTier: "veteran",  // maps to "Fine"
+                eventPath: "patron_path_charles"
+            },
+            ashkhan: {
+                id: "ashkhan",
+                name: "Ashkhan of the Mamluk Guard",
+                type: "Mercenary Company",
+                blurb: "Respected mercenary from the Levant with tactical expertise. Professional and disciplined.",
+                statMods: { agility: 1, wits: 1, reputation: 1 },
+                kitTier: "veteran",  // maps to "Fine"
+                eventPath: "patron_path_ashkhan"
             }
         };
         
@@ -898,11 +982,95 @@
         }
         
         // Apply stat change with clamping
-        function applyStatChange(key, delta) {
-            if (gameState.stats[key] === undefined) return;
+        function applyStatChange(key, delta, opts = {}) {
+            if (gameState.stats[key] === undefined) return 0;
             const oldValue = gameState.stats[key];
             gameState.stats[key] = clampStat(key, oldValue + delta);
-            return gameState.stats[key] - oldValue; // Return actual change
+            const actualChange = gameState.stats[key] - oldValue;
+            
+            // Only show notification if not silent and there was a change
+            if (!opts.silent && actualChange !== 0) {
+                // Notification logic can be added here if needed
+                // Currently notifications are handled elsewhere in the codebase
+            }
+            
+            return actualChange; // Return actual change
+        }
+        
+        // Sanitize HTML to prevent XSS attacks
+        function escapeHTML(text) {
+            if (typeof text !== 'string') return text;
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // ===== CAMPFIRE SYSTEM FUNCTIONS =====
+        
+        /** Clamp relationship value to -5..+5 */
+        function clampRel(n) {
+            return Math.max(-5, Math.min(5, Number(n) || 0));
+        }
+        
+        /** Change relationship with Wat or Cook */
+        function changeRel(who, delta) {
+            if (!gameState.relationships) {
+                gameState.relationships = { wat: 0, cook: 0 };
+            }
+            gameState.relationships[who] = clampRel((gameState.relationships[who] || 0) + delta);
+        }
+        
+        /** Check if campfire should be inserted */
+        function shouldInsertCampfire(nextSceneKey) {
+            // Never interrupt:
+            // - character creation scenes
+            // - combat overlay/active combat
+            // - already-a-campfire scene
+            // - explicit "noCampfire" flagged scenes/choices
+            // - critical scenes like death/ending
+            
+            if (gameState.currentScene === 'character_creation' || 
+                gameState.currentScene === 'campfire_interlude' ||
+                nextSceneKey === 'character_creation' ||
+                nextSceneKey === 'campfire_interlude') {
+                return false;
+            }
+            
+            // Check if scene has noCampfire flag
+            const nextScene = scenes[nextSceneKey];
+            if (nextScene && nextScene.noCampfire) {
+                return false;
+            }
+            
+            const idx = gameState.scenesVisited ? gameState.scenesVisited.length : 0;
+            const cf = gameState.campfire || {};
+            const since = idx - (cf.lastInsertedAtIndex || 0);
+            
+            // Must pass cooldown
+            if (since < (cf.cooldownScenes || 2)) {
+                return false;
+            }
+            
+            // Chance check
+            return Math.random() < (cf.chance || 0.35);
+        }
+        
+        /** Insert campfire interlude if conditions are met */
+        function maybeInsertCampfire(nextSceneKey) {
+            if (!shouldInsertCampfire(nextSceneKey)) {
+                return nextSceneKey;
+            }
+            
+            // Set return scene and mark insertion
+            gameState.campfire.returnScene = nextSceneKey;
+            gameState.campfire.lastInsertedAtIndex = (gameState.scenesVisited ? gameState.scenesVisited.length : 0);
+            
+            return "campfire_interlude";
         }
         
         // Roll dice (1d10 + modifier)
@@ -967,6 +1135,256 @@
                 const yearsPassed = gameState.year - condition.added;
                 return yearsPassed < condition.duration;
             });
+        }
+        
+        // ===== BRUTAL ROGUELIKE MECHANICS =====
+        
+        // Calculate armor protection (0-20, reduces bad outcome chance)
+        function calculateArmorProtection() {
+            let protection = 0;
+            const slots = ['head', 'torso', 'arms', 'legs'];
+            slots.forEach(slot => {
+                const item = gameState.equipment[slot]?.item;
+                if (item) {
+                    // Get item quality/tier (0-10 scale, approximate from item data)
+                    // For now, assume better items have higher protection values
+                    // Equipment system should provide quality/defense values
+                    const quality = item.defense || item.quality || 0;
+                    protection += quality * 0.5; // Each armor piece adds protection
+                }
+            });
+            return Math.min(20, Math.max(0, protection));
+        }
+        
+        // Calculate bad outcome chance (modified by luck and equipment)
+        function calculateBadOutcomeChance(baseChance, stupidity, luck, equipment) {
+            // Base chance: smart=5%, neutral=15%, stupid=40%
+            let chance = baseChance || (stupidity === 'smart' ? 5 : stupidity === 'stupid' ? 40 : 15);
+            
+            // Luck reduces chance: -0.5% per luck point
+            const luckMod = (gameState.stats.luck || 0) * 0.5;
+            chance -= luckMod;
+            
+            // Equipment reduces chance: armor protection * 2%
+            const armorProtection = calculateArmorProtection();
+            chance -= armorProtection * 2; // Up to -40% from full plate
+            
+            // Clamp to 1-50%
+            return Math.max(1, Math.min(50, chance));
+        }
+        
+        // Select which bad outcome triggers (if any)
+        function selectBadOutcome(badOutcomes, baseChance) {
+            if (!badOutcomes || badOutcomes.length === 0) return null;
+            
+            // Sort by chance (highest first) and check each
+            const sorted = [...badOutcomes].sort((a, b) => (b.chance || 0) - (a.chance || 0));
+            
+            for (const outcome of sorted) {
+                const outcomeChance = calculateBadOutcomeChance(
+                    outcome.chance || baseChance,
+                    outcome.stupidity || 'neutral',
+                    gameState.stats.luck,
+                    gameState.equipment
+                );
+                
+                if (Math.random() * 100 < outcomeChance) {
+                    return outcome;
+                }
+            }
+            
+            return null;
+        }
+        
+        // Apply bad outcome (permanent debuffs, conditions, etc.)
+        function applyBadOutcome(outcome) {
+            if (!outcome) return;
+            
+            // Add condition (permanent if specified)
+            if (outcome.condition) {
+                const duration = outcome.permanent ? -1 : (outcome.duration || 2);
+                addCondition(outcome.condition, 'negative', duration);
+                
+                // Apply permanent stat debuffs
+                if (outcome.statDebuffs && outcome.permanent) {
+                    Object.entries(outcome.statDebuffs).forEach(([stat, debuff]) => {
+                        // Permanent stat reduction
+                        gameState.stats[stat] = Math.max(0, (gameState.stats[stat] || 0) + debuff);
+                        gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
+                    });
+                }
+                
+                // Chance of infection for wounds
+                if ((outcome.condition.includes('Wound') || outcome.condition.includes('Cut') || outcome.condition.includes('Injury')) && 
+                    !outcome.condition.includes('Infected')) {
+                    const infectionChance = 0.15; // 15% chance
+                    if (Math.random() < infectionChance) {
+                        const infectedCondition = outcome.condition + ' (Infected)';
+                        addCondition(infectedCondition, 'negative', -1); // Permanent
+                        // Additional permanent debuffs from infection
+                        applyStatChange('strength', -2, { silent: true });
+                        applyStatChange('endurance', -3, { silent: true });
+                        showNotification('Infection', 'The wound becomes infected. The pain is constant.', 'error');
+                    }
+                }
+            }
+            
+            // Apply temporary stat debuffs (if not permanent)
+            if (outcome.statDebuffs && !outcome.permanent) {
+                Object.entries(outcome.statDebuffs).forEach(([stat, debuff]) => {
+                    applyStatChange(stat, debuff);
+                });
+            }
+            
+            // Show outcome text
+            if (outcome.text) {
+                showNotification('Bad Outcome', outcome.text, 'error');
+            }
+        }
+        
+        // Arbitrary death events (camp fever, sepsis, etc.)
+        const ARBITRARY_DEATH_EVENTS = [
+            {
+                id: 'camp_fever',
+                chance: 0.02, // 2% per scene if stress > 5
+                condition: () => gameState.stats.stress > 5,
+                text: "Camp fever takes you. The flux. The fever. It doesn't matter what you call it. You're dead in three days.",
+                nextScene: 'death_camp_fever'
+            },
+            {
+                id: 'septic_wound',
+                baseChance: 0.05, // 5% if wounded (modified by chapter)
+                condition: () => {
+                    return gameState.conditions.some(c => 
+                        c.name.includes('Wound') || 
+                        c.name.includes('Injury') || 
+                        c.name.includes('Cut')
+                    );
+                },
+                text: "The wound turns black. The smell is wrong. Sepsis. Your arm swells. The surgeon takes it. You don't survive the amputation.",
+                nextScene: 'death_sepsis'
+            },
+            {
+                id: 'horse_fall',
+                baseChance: 0.03, // 3% if mounted (modified by chapter)
+                condition: () => gameState.equipment.mount && gameState.equipment.mount.item,
+                text: "Your horse spooks. You're thrown. Both legs break. The campaign is over. You're left behind.",
+                nextScene: 'forced_retirement_broken_legs'
+            },
+            {
+                id: 'dysentery',
+                baseChance: 0.03, // 3% if stress > 7 (modified by chapter)
+                condition: () => gameState.stats.stress > 7,
+                text: "The shits. The bloody shits. You can't keep water down. You're dead in a week.",
+                nextScene: 'death_dysentery'
+            },
+            {
+                id: 'pneumonia',
+                baseChance: 0.02, // 2% if fatigued and stress > 6 (modified by chapter)
+                condition: () => hasCondition('Fatigued') && gameState.stats.stress > 6,
+                text: "The cough won't stop. Your chest burns. Pneumonia. You're dead before the week is out.",
+                nextScene: 'death_pneumonia'
+            },
+            {
+                id: 'plague',
+                baseChance: 0.15, // 15% during plague chapter ONLY (modified by chapter = 30%!)
+                condition: () => gameState.chapter === 'plague',
+                text: "The black boils appear. The fever. The coughing blood. The Black Death. You're dead in days.",
+                nextScene: 'death_plague'
+            },
+            {
+                id: 'starvation',
+                baseChance: 0.04, // 4% during siege (modified by chapter)
+                condition: () => gameState.chapter === 'calais' && gameState.stats.stress > 6,
+                text: "The rations run out. You starve. Your body gives up. You die in the siege lines.",
+                nextScene: 'death_starvation'
+            }
+        ];
+        
+        // Check for arbitrary death events
+        function checkArbitraryDeath() {
+            // Never check during character creation, campfires, or death scenes
+            if (gameState.currentScene === 'character_creation' || 
+                gameState.currentScene === 'campfire_interlude' ||
+                gameState.currentScene.startsWith('death_') ||
+                gameState.currentScene.startsWith('forced_retirement_')) {
+                return null;
+            }
+            
+            // Get chapter death modifier (plague = 2x, calais = 1.5x, etc.)
+            const chapterModifier = getChapterDeathModifier();
+            
+            // Check each death event
+            for (const event of ARBITRARY_DEATH_EVENTS) {
+                if (event.condition && event.condition()) {
+                    // Use baseChance if available, otherwise fall back to chance (for backward compatibility)
+                    const baseChance = event.baseChance !== undefined ? event.baseChance : (event.chance || 0);
+                    const finalChance = baseChance * chapterModifier;
+                    const roll = Math.random();
+                    if (roll < finalChance) {
+                        return event;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        // Psychological disorders at stress cap (10)
+        const PSYCHOLOGICAL_DISORDERS = [
+            {
+                id: 'nightmares',
+                name: 'Nightmares',
+                text: "You can't sleep. When you do, you see the dead. Every night. Every dream.",
+                statDebuffs: { morale: -2, stress: 0 }, // Stress stays at 10
+                condition: 'Nightmares'
+            },
+            {
+                id: 'paranoia',
+                name: 'Paranoia',
+                text: "You trust no one. Every shadow is an enemy. Every whisper is a plot against you.",
+                statDebuffs: { charisma: -2, wits: -1 },
+                condition: 'Paranoia'
+            },
+            {
+                id: 'rage',
+                name: 'Uncontrollable Rage',
+                text: "The anger comes without warning. You break things. You hurt people. You can't stop it.",
+                statDebuffs: { charisma: -3, morale: -1 },
+                condition: 'Uncontrollable Rage'
+            },
+            {
+                id: 'despair',
+                name: 'Despair',
+                text: "Nothing matters. Not victory. Not survival. Not tomorrow. You're already dead.",
+                statDebuffs: { morale: -3, initiative: -2 },
+                condition: 'Despair'
+            }
+        ];
+        
+        // Check for psychological disorders at stress cap
+        function checkStressCapDisorders() {
+            if (gameState.stats.stress >= 10) {
+                // Check if already has a disorder
+                const hasDisorder = gameState.conditions.some(c => 
+                    c.name === 'Nightmares' || 
+                    c.name === 'Paranoia' || 
+                    c.name === 'Uncontrollable Rage' || 
+                    c.name === 'Despair'
+                );
+                
+                if (!hasDisorder) {
+                    // Randomly assign a disorder
+                    const disorder = PSYCHOLOGICAL_DISORDERS[Math.floor(Math.random() * PSYCHOLOGICAL_DISORDERS.length)];
+                    addCondition(disorder.condition, 'negative', -1); // Permanent
+                    
+                    // Apply stat debuffs
+                    Object.entries(disorder.statDebuffs).forEach(([stat, debuff]) => {
+                        applyStatChange(stat, debuff, { silent: true });
+                    });
+                    
+                    showNotification('Psychological Disorder', disorder.text, 'error');
+                }
+            }
         }
         
         // Get condition effects on stats
@@ -1055,6 +1473,524 @@
         }
         
         // Game Scenes with explicit timeline
+        // ===== CAMPFIRE VIGNETTES =====
+        const CAMPFIRE_VIGNETTES = [
+            {
+                id: "wat_knife_humor",
+                focus: "wat",
+                title: "Wat Watches the Fire",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    const name = gs.characterName || "Soldier";
+                    return `
+                        <p>Wat sits with his back to a stump. Knife in hand. Not carving. Just holding it like a thought.</p>
+                        <p>He spits into the coals. <em>"You keep your boots close. A man wakes barefoot, he wakes dead."</em></p>
+                        <p>He looks at you without kindness. Without hate. Like weighing iron.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Nod and check your boots anyway.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Ask him what happened to his first pair.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_boot_story = true; } },
+                    { text: "Say nothing. Let him have his silence.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_salt_01",
+                focus: "cook",
+                title: "The Cook Counts the Salt",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook pours salt into his palm and counts it under his breath. Not prayer. Measure.</p>
+                        <p><em>"Too little and men hate you. Too much and they thirst. Hunger is loud. Thirst is louder."</em></p>
+                        <p>He offers you the pinch like it is evidence.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Taste it and tell him it's right.", effects: function(gs) { changeRel("cook", 2); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Ask how he learned that.", effects: function(gs) { changeRel("cook", 1); if (!gs.flags) gs.flags = {}; gs.flags.cook_apprentice_hint = true; } },
+                    { text: "Joke about boiling your belt instead.", effects: function(gs) { changeRel("cook", 0); applyStatChange("morale", 1, {silent:true}); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_vulgar_02",
+                focus: "wat",
+                title: "Wat on Officers",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat watches the dark beyond the tents. Like it owes him money.</p>
+                        <p><em>"Officers talk about honor. Honor don't stop an arrow. You learn that early or you learn it bleeding."</em></p>
+                        <p>He spits again. Angry at the world for being the world.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what he'd do differently in command.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_command_thoughts = true; } },
+                    { text: "Say you still want honor anyway.", effects: function(gs) { changeRel("wat", -1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Change the subject to tomorrow's march.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_story_home_02",
+                focus: "cook",
+                title: "A Question Asked Plainly",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook stirs the pot until it makes the same sound twice. Then he stops.</p>
+                        <p><em>"Where did you sleep when you were small."</em> he says. Not <em>why</em>. Not <em>with whom</em>. Just the fact.</p>
+                        <p>Wat snorts like the question insults him. The Cook waits anyway.</p>
+                    `;
+                },
+                choices: [
+                    { text: "\"In a crowded room. Always noise.\"", effects: function(gs) { if (!gs.flags) gs.flags = {}; gs.flags.backstory_home = "crowded"; changeRel("cook", 1); } },
+                    { text: "\"In a place that was quiet.\"", effects: function(gs) { if (!gs.flags) gs.flags = {}; gs.flags.backstory_home = "quiet"; changeRel("cook", 1); applyStatChange("stress", -1, {silent:true}); } },
+                    { text: "\"Does it matter.\"", effects: function(gs) { changeRel("cook", -1); changeRel("wat", 1); } }
+                ]
+            },
+            {
+                id: "odd_couple_03",
+                focus: "both",
+                title: "Wat and the Cook Argue About Knives",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat sharpens his blade like he means to cut the whole war open and look inside it.</p>
+                        <p>The Cook says, calm as a ledger: <em>"That edge will fold. You're rushing."</em></p>
+                        <p>Wat growls. <em>"I've killed with worse."</em> The Cook nods. <em>"I know."</em></p>
+                        <p>For a moment the fire is the only thing that speaks.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Side with Wat: \"If it cuts, it cuts.\"", effects: function(gs) { changeRel("wat", 1); changeRel("cook", -1); } },
+                    { text: "Side with the Cook: \"Let him show you.\"", effects: function(gs) { changeRel("cook", 1); changeRel("wat", -1); } },
+                    { text: "Defuse it: \"Both of you are right.\"", effects: function(gs) { changeRel("wat", 0); changeRel("cook", 0); applyStatChange("morale", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_scars_04",
+                focus: "wat",
+                title: "Counting Scars",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat rolls his sleeve and there are old marks on him like tally lines.</p>
+                        <p><em>"This one was a billhook. This one was a dog. This one was my own fault."</em></p>
+                        <p>He puts the sleeve back down like shutting a door.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask which one was 'your own fault.'", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_fault = true; } },
+                    { text: "Say you're glad he's still here.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Look away. Give him dignity.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_rations_04",
+                focus: "cook",
+                title: "Bread Like Stones",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The bread is hard enough to strike sparks. The Cook breaks it anyway.</p>
+                        <p><em>"Men complain. Then they eat. Complaining is a habit. Eating is a law."</em></p>
+                        <p>He hands you the larger piece without looking proud of it.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Take it. Don't insult the gift.", effects: function(gs) { changeRel("cook", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Trade pieces anyway.", effects: function(gs) { changeRel("cook", 2); changeRel("wat", 0); } },
+                    { text: "Give it to Wat instead.", effects: function(gs) { changeRel("wat", 2); changeRel("cook", -1); } }
+                ]
+            },
+            {
+                id: "both_watch_05",
+                focus: "both",
+                title: "Night Watch",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>You draw watch with Wat and the Cook. An odd draw. A hard man and a quiet man and you between them.</p>
+                        <p>Wat listens for trouble. The Cook listens for the wind changing. Both kinds of listening feel useful.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask Wat what he listens for.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_listening = true; } },
+                    { text: "Ask the Cook what the wind means.", effects: function(gs) { changeRel("cook", 1); if (!gs.flags) gs.flags = {}; gs.flags.cook_wind = true; } },
+                    { text: "Say nothing. Just keep watch.", effects: function(gs) { applyStatChange("morale", 1, {silent:true}); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_fury_06",
+                focus: "wat",
+                title: "Wat's Temper",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat is angry at a loose strap, at damp wood, at a pot that won't boil fast enough.</p>
+                        <p>He isn't performing. This is how he stays alive: teeth bared at the world.</p>
+                        <p><em>"Don't drift,"</em> he says. <em>"Drifting gets you killed."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Promise you won't drift.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Tell him he's burning himself out.", effects: function(gs) { changeRel("wat", -1); if (!gs.flags) gs.flags = {}; gs.flags.wat_called_out = true; } },
+                    { text: "Make a small joke to break the edge.", effects: function(gs) { applyStatChange("morale", 1, {silent:true}); changeRel("wat", 0); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_names_06",
+                focus: "cook",
+                title: "Names and Reasons",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook asks, very simply, <em>"Do you like your name."</em></p>
+                        <p>Wat scoffs like names are luxuries. The Cook doesn't argue. He just waits.</p>
+                    `;
+                },
+                choices: [
+                    { text: "\"It's all I've got.\"", effects: function(gs) { if (!gs.flags) gs.flags = {}; gs.flags.backstory_name = "only"; changeRel("cook", 1); } },
+                    { text: "\"I took it from someone.\"", effects: function(gs) { if (!gs.flags) gs.flags = {}; gs.flags.backstory_name = "taken"; changeRel("cook", 1); applyStatChange("stress", 1, {silent:true}); } },
+                    { text: "\"I don't think about it.\"", effects: function(gs) { if (!gs.flags) gs.flags = {}; gs.flags.backstory_name = "none"; changeRel("cook", 0); } }
+                ]
+            },
+            {
+                id: "both_song_07",
+                focus: "both",
+                title: "A Song That Dies Early",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Someone tries to sing. It goes badly and ends fast.</p>
+                        <p>Wat mutters something crude. The Cook, without judgment, says: <em>"Wrong key."</em></p>
+                        <p>And that is the closest thing to laughter you get all week.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Add a verse anyway.", effects: function(gs) { applyStatChange("morale", 2, {silent:true}); changeRel("wat", 0); changeRel("cook", 0); } },
+                    { text: "Ask the Cook what key it should be.", effects: function(gs) { changeRel("cook", 1); if (!gs.flags) gs.flags = {}; gs.flags.cook_music = true; } },
+                    { text: "Sit it out. Rest your voice.", effects: function(gs) { applyStatChange("stress", -2, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_mercy_08",
+                focus: "wat",
+                title: "Mercy, Wat Says",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat stares at the dark and says, like it costs him: <em>"Sometimes you let a man run."</em></p>
+                        <p><em>"Not for him,"</em> he adds. <em>"For you."</em></p>
+                        <p>The Cook nods once, as if this is a rule in a book he's read.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Agree. Keep your hands clean when you can.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Disagree. \"No loose ends.\"", effects: function(gs) { changeRel("wat", 0); changeRel("cook", -1); applyStatChange("reputation", 1, {silent:true}); } },
+                    { text: "Ask who Wat let run.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_mercy_story = true; } }
+                ]
+            },
+            {
+                id: "wat_embers_01",
+                focus: "wat",
+                title: "Wat Watches the Embers",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat watches the fire die. He doesn't feed it. Just watches.</p>
+                        <p><em>"Fire's honest. Burns what you give it. Doesn't lie. Doesn't promise."</em></p>
+                        <p>He spits. The embers hiss.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Feed the fire yourself.", effects: function(gs) { changeRel("wat", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Ask what he means.", effects: function(gs) { changeRel("wat", 0); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Say nothing. Watch with him.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_knife_02",
+                focus: "cook",
+                title: "The Cook's Knife",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook sharpens his knife. Slow. Methodical. Each stroke the same.</p>
+                        <p><em>"A dull knife is dangerous. It slips. Cuts wrong. Hurts more than it should."</em></p>
+                        <p>He tests the edge. Nods. Puts it away.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask if you can borrow it to sharpen yours.", effects: function(gs) { changeRel("cook", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Comment on his technique.", effects: function(gs) { changeRel("cook", 1); } },
+                    { text: "Watch silently.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_dreams_03",
+                focus: "wat",
+                title: "Wat's Dreams",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat wakes with a start. Hand on his knife. Eyes wild.</p>
+                        <p>He sees you watching. Relaxes. Just a little.</p>
+                        <p><em>"Dreams are lies your head tells you. Don't trust them."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what he dreamed.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_dreams = true; } },
+                    { text: "Say you have bad dreams too.", effects: function(gs) { changeRel("wat", 1); applyStatChange("stress", -1, {silent:true}); } },
+                    { text: "Say nothing. Let him settle.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_memory_03",
+                focus: "cook",
+                title: "The Old Recipe",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook talks about a recipe from home. A broth. Barley. A little herb.</p>
+                        <p><em>"People think food is just fuel. It is not. It is memory you can swallow."</em></p>
+                        <p>Wat rolls his eyes but doesn't interrupt.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what home tastes like.", effects: function(gs) { changeRel("cook", 2); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Say you miss home cooking.", effects: function(gs) { changeRel("cook", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Change the subject.", effects: function(gs) { changeRel("cook", -1); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "both_rain_04",
+                focus: "both",
+                title: "The Rain",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Rain comes. Not hard. Just steady. The kind that soaks through.</p>
+                        <p>Wat curses. The Cook moves the pot to keep it dry. Practical.</p>
+                        <p>You huddle under what cover you can find.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Help The Cook move things.", effects: function(gs) { changeRel("cook", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Share your cover with Wat.", effects: function(gs) { changeRel("wat", 1); } },
+                    { text: "Just endure it.", effects: function(gs) { applyStatChange("endurance", 1, {silent:true}); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_weapon_05",
+                focus: "wat",
+                title: "Wat's Blade",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat shows you his blade. Old. Notched. But clean.</p>
+                        <p><em>"This has killed more men than I can count. Some deserved it. Some didn't. The blade don't care."</em></p>
+                        <p>He sheathes it. Like closing a book.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask how long he's had it.", effects: function(gs) { changeRel("wat", 1); if (!gs.flags) gs.flags = {}; gs.flags.wat_weapon_story = true; } },
+                    { text: "Say it's a good blade.", effects: function(gs) { changeRel("wat", 1); } },
+                    { text: "Say nothing. Respect the moment.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_measure_05",
+                focus: "cook",
+                title: "The Measure",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook measures water. Counts. Measures again.</p>
+                        <p><em>"Too much water and it's thin. Too little and it burns. The measure matters."</em></p>
+                        <p>He looks at you. <em>"Everything has a measure. Even war."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what he means.", effects: function(gs) { changeRel("cook", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Nod. You understand.", effects: function(gs) { changeRel("cook", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Say war has no measure.", effects: function(gs) { changeRel("cook", -1); changeRel("wat", 1); } }
+                ]
+            },
+            {
+                id: "wat_fear_06",
+                focus: "wat",
+                title: "Wat on Fear",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat talks about fear. Not his. Yours.</p>
+                        <p><em>"Fear keeps you alive. Too much and you freeze. Too little and you die stupid."</em></p>
+                        <p>He spits. <em>"Find the middle. That's where you live."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask how he found his middle.", effects: function(gs) { changeRel("wat", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Say you're not afraid.", effects: function(gs) { changeRel("wat", -1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Admit you're afraid sometimes.", effects: function(gs) { changeRel("wat", 1); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_quiet_06",
+                focus: "cook",
+                title: "The Quiet",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook works in silence. Wat is loud. The Cook is not.</p>
+                        <p><em>"Noise doesn't help the cooking. Noise doesn't help the thinking."</em></p>
+                        <p>He stirs. Watches. Waits.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask if he likes the quiet.", effects: function(gs) { changeRel("cook", 1); } },
+                    { text: "Say you prefer quiet too.", effects: function(gs) { changeRel("cook", 1); applyStatChange("stress", -1, {silent:true}); } },
+                    { text: "Say nothing. Match his silence.", effects: function(gs) { changeRel("cook", 0); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "both_death_07",
+                focus: "both",
+                title: "The Dead Man",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Someone died today. Not in battle. Sickness. The kind that takes men slow.</p>
+                        <p>Wat says nothing. The Cook says: <em>"He is done. We are not."</em></p>
+                        <p>The fire burns. The night passes.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Say a prayer for him.", effects: function(gs) { applyStatChange("morale", 1, {silent:true}); changeRel("cook", 0); changeRel("wat", 0); } },
+                    { text: "Ask if you knew him.", effects: function(gs) { changeRel("cook", 1); applyStatChange("stress", 1, {silent:true}); } },
+                    { text: "Say nothing. Just sit.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_luck_08",
+                focus: "wat",
+                title: "Wat on Luck",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat talks about luck. Spits.</p>
+                        <p><em>"Luck is for fools. Skill is for men. You want to live? Get skill."</em></p>
+                        <p>He looks at you. <em>"Luck runs out. Skill don't."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Agree. Skill matters more.", effects: function(gs) { changeRel("wat", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Say luck has saved you before.", effects: function(gs) { changeRel("wat", -1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Ask how to get more skill.", effects: function(gs) { changeRel("wat", 1); applyStatChange("wits", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_time_08",
+                focus: "cook",
+                title: "Time and Patience",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook talks about time. How things take the time they take.</p>
+                        <p><em>"Rush the bread and it's raw inside. Rush the stew and it tastes like nothing. Rush the war and men die for no reason."</em></p>
+                        <p>Wat grunts. Doesn't disagree.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask if war can be rushed.", effects: function(gs) { changeRel("cook", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Say sometimes you have to rush.", effects: function(gs) { changeRel("cook", -1); changeRel("wat", 1); } },
+                    { text: "Nod. You understand.", effects: function(gs) { changeRel("cook", 1); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "both_fire_09",
+                focus: "both",
+                title: "Tending the Fire",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The fire needs tending. Wat won't do it. The Cook does.</p>
+                        <p>Wat says: <em>"Fire's your job, Cook."</em></p>
+                        <p>The Cook says: <em>"Everything is my job. That is why you are still alive."</em></p>
+                        <p>Wat has no answer to that.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Help The Cook tend the fire.", effects: function(gs) { changeRel("cook", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Tell Wat to help.", effects: function(gs) { changeRel("wat", -1); changeRel("cook", 1); } },
+                    { text: "Say nothing. Watch them work it out.", effects: function(gs) { applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "wat_truth_10",
+                focus: "wat",
+                title: "A Hard Truth",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat tells you a truth. Hard. Uncomfortable.</p>
+                        <p><em>"Most men die because they believe lies. About honor. About glory. About what matters."</em></p>
+                        <p>He looks at you. <em>"Don't be one of them."</em></p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what the truth is.", effects: function(gs) { changeRel("wat", 1); applyStatChange("wits", 1, {silent:true}); } },
+                    { text: "Say you already know the truth.", effects: function(gs) { changeRel("wat", 0); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Say nothing. Think on it.", effects: function(gs) { applyStatChange("wits", 1, {silent:true}); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "cook_hands_10",
+                focus: "cook",
+                title: "The Cook's Hands",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook shows you his hands. Scars. Burns. Old wounds.</p>
+                        <p><em>"These hands have done many things. Cooked. Mended. Held. Killed."</em></p>
+                        <p>He puts them back to work. Like it's nothing.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask when he killed.", effects: function(gs) { changeRel("cook", 1); if (!gs.flags) gs.flags = {}; gs.flags.cook_killed = true; } },
+                    { text: "Say his hands have done good work.", effects: function(gs) { changeRel("cook", 2); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Say nothing. Respect his past.", effects: function(gs) { changeRel("cook", 0); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            }
+        ];
+        
         const scenes = {
             character_creation: {
                 title: "Character Creation",
@@ -1120,6 +2056,7 @@
                         effects: {},
                         nextScene: "start",
                         requiresOrigin: true,
+                        requiresPatron: true,
                         onChoose: function() {
                             // Only allow if on final step
                             if (gameState.characterCreationStep !== 6) {
@@ -1151,13 +2088,127 @@
                                 return false;
                             }
                             
-                            // Grant starting kit if not already granted
+                            // Resolve final starting kit tier and grant kit if not already granted
                             if (!gameState.startingKitGranted) {
+                                // Ensure all stats are recalculated (includes kit tier resolution)
+                                recalculateCharacterCreationDerivedStats();
                                 const origin = gameState.origin || 'rural_peasant';
-                                const kitTier = gameState.kitTier || "Standard";
-                                grantStartingKit(origin, kitTier);
+                                grantStartingKit(origin, gameState.startingKitTier);
                             }
                         }
+                    }
+                ]
+            },
+            quick_start_review: {
+                title: "Quick Start Character",
+                year: 1337,
+                age: function() { return gameState.age || 27; },
+                location: "England",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    const region = gameState.culture || "Unknown";
+                    const ageRange = gameState.ageRange || 'prime';
+                    const origin = gameState.origin || 'rural_peasant';
+                    const patron = gameState.patron || 'lord_david';
+                    const preset = gameState.quickStartPreset || 'brawny';
+                    
+                    const ageLabels = {
+                        'youth': 'Youth (16-19)',
+                        'young_adult': 'Young Adult (20-24)',
+                        'prime': 'Prime (25-30)',
+                        'veteran': 'Veteran (31-35)',
+                        'old_hand': 'Old Hand (36-40)'
+                    };
+                    
+                    const originLabels = {
+                        'rural_peasant': 'Rural Peasant',
+                        'manor_retainer': 'Manor Retainer',
+                        'craftsman_apprentice': "Craftsman's Apprentice",
+                        'squire': 'Squire to a Knight',
+                        'minor_noble': 'Minor Noble or Garrison\'s Son/Daughter'
+                    };
+                    
+                    const patronLabels = {
+                        'james_olooney': 'Sir James "The Reaver" de Looney',
+                        'lord_david': 'Sir David de Montfort',
+                        'duke_caley': 'Baron Caley of Tournai',
+                        'count_charles': 'Count Charles "The Grim" of Suffolk',
+                        'ashkhan': 'Ashkhan of the Mamluk Guard'
+                    };
+                    
+                    const presetLabels = {
+                        'brawny': '💪 Brawny Footman',
+                        'cunning': '🧠 Cunning Scout',
+                        'court': '👑 Court-Leaned',
+                        'lucky': '🎲 Lucky Bastard'
+                    };
+                    
+                    const playstyleDescriptions = {
+                        'brawny': 'A physical powerhouse focused on strength and endurance. You excel in direct combat and can take punishment. Best for players who want to charge into battle and rely on raw power.',
+                        'cunning': 'A quick and intelligent fighter. You excel at tactics, agility, and outmaneuvering enemies. Best for players who prefer clever solutions and avoiding direct confrontation.',
+                        'court': 'A charismatic leader with political connections. You excel at social situations, leadership, and navigating noble circles. Best for players who want to influence others and build reputation.',
+                        'lucky': 'A well-rounded character with exceptional fortune. You have balanced stats but superior luck and wealth. Best for players who want flexibility and to rely on good fortune.'
+                    };
+                    
+                    const patronDescriptions = {
+                        'james_olooney': 'A wildcard free company known for murder and pillage. High risk, high reward. Expect brutal combat and rich plunder, but little regard for your safety.',
+                        'lord_david': 'A fair and even-handed commander who values his men\'s lives. Lower risk, steady rewards. Expect protection and care, but less opportunity for glory.',
+                        'duke_caley': 'A powerful lord who is indifferent to your wellbeing but offers great opportunities for plunder and advancement. High reward potential, but you\'re expendable.',
+                        'count_charles': 'A grizzled battlefield leader who has taken to drinking heavily. Unpredictable leadership, but strong in combat. Expect both chaos and moments of brilliance.',
+                        'ashkhan': 'A respected mercenary from the Levant with tactical expertise. Professional and disciplined. Expect well-planned operations and fair treatment, but strict standards.'
+                    };
+                    
+                    const stats = gameState.stats || {};
+                    
+                    return `
+                        <div style="max-width: 800px; margin: 0 auto;">
+                            <h2 style="color: #f4d03f; text-align: center; margin-bottom: 30px;">Your Quick Start Character</h2>
+                            
+                            <div style="padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px; margin-bottom: 20px;">
+                                <h3 style="color: #f4d03f; margin-bottom: 15px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Character Details</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                    <div><strong style="color: #d4af37;">Name:</strong> <span style="color: #f4d03f;">${escapeHTML(name)}</span></div>
+                                    <div><strong style="color: #d4af37;">Region:</strong> <span style="color: #f4d03f;">${region}</span></div>
+                                    <div><strong style="color: #d4af37;">Age:</strong> <span style="color: #f4d03f;">${ageLabels[ageRange]}</span></div>
+                                    <div><strong style="color: #d4af37;">Origin:</strong> <span style="color: #f4d03f;">${originLabels[origin]}</span></div>
+                                    <div><strong style="color: #d4af37;">Patron:</strong> <span style="color: #f4d03f;">${patronLabels[patron]}</span></div>
+                                    <div><strong style="color: #d4af37;">Build:</strong> <span style="color: #f4d03f;">${presetLabels[preset]}</span></div>
+                                </div>
+                                
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #555;">
+                                    <div style="color: #d4af37; font-weight: bold; margin-bottom: 10px;">Starting Stats:</div>
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 14px;">
+                                        <div><strong>Strength:</strong> <span style="color: #f4d03f;">${stats.strength || 5}</span></div>
+                                        <div><strong>Agility:</strong> <span style="color: #f4d03f;">${stats.agility || 5}</span></div>
+                                        <div><strong>Endurance:</strong> <span style="color: #f4d03f;">${stats.endurance || 5}</span></div>
+                                        <div><strong>Charisma:</strong> <span style="color: #f4d03f;">${stats.charisma || 5}</span></div>
+                                        <div><strong>Wits:</strong> <span style="color: #f4d03f;">${stats.wits || 5}</span></div>
+                                        <div><strong>Luck:</strong> <span style="color: #f4d03f;">${stats.luck || 5}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px; margin-bottom: 20px;">
+                                <h3 style="color: #f4d03f; margin-bottom: 15px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Playstyle</h3>
+                                <div style="color: #d4af37; line-height: 1.6; margin-bottom: 15px;">
+                                    <p><strong style="color: #f4d03f;">Build:</strong> ${playstyleDescriptions[preset]}</p>
+                                </div>
+                                <div style="color: #d4af37; line-height: 1.6;">
+                                    <p><strong style="color: #f4d03f;">Patron:</strong> ${patronDescriptions[patron]}</p>
+                                </div>
+                            </div>
+                            
+                            <div style="padding: 15px; background: rgba(139, 105, 20, 0.2); border: 1px dashed #8b6914; border-radius: 5px; text-align: center; color: #888; font-size: 13px; font-style: italic;">
+                                Ready to begin your journey? Click below to start the game.
+                            </div>
+                        </div>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Begin Your Journey",
+                        effects: {},
+                        nextScene: "start"
                     }
                 ]
             },
@@ -1204,9 +2255,12 @@
                     if (!gameState.enteredScenes.has(sceneKey)) {
                         // Grant starting kit if not already granted (backward compatibility)
                         if (!gameState.startingKitGranted) {
+                            // Ensure kit tier is resolved
+                            if (!gameState.startingKitTier) {
+                                resolveStartingKitTier();
+                            }
                             const origin = gameState.origin || 'rural_peasant';
-                            const kitTier = gameState.kitTier || "Standard";
-                            grantStartingKit(origin, kitTier);
+                            grantStartingKit(origin, gameState.startingKitTier);
                         }
                         
                         // Apply origin bonuses if not already applied
@@ -1278,6 +2332,16 @@
                             }
                             gameState.flags.originApplied = true;
                         }
+                        
+                        // Apply patron stat modifiers if not already applied (final application at game start)
+                        // Note: Stats should already be correct from recalculateCharacterCreationDerivedStats(),
+                        // but we apply here as a final guard to ensure they're set
+                        if (!gameState.flags.patronApplied) {
+                            // Recalculate to ensure all mods are applied (idempotent)
+                            recalculateCharacterCreationDerivedStats();
+                            gameState.flags.patronApplied = true;
+                        }
+                        
                         gameState.enteredScenes.add(sceneKey);
                     }
                 }
@@ -3404,7 +4468,20 @@
                 choices: [
                     {
                         text: "Dig proper latrines and enforce distance from water",
-                        effects: {},
+                        effects: { reputation: 1 },
+                        stressCost: 2, // Smart action = costs stress
+                        badOutcomeChance: 8, // Low chance (smart action)
+                        badOutcomeStupidity: 'smart',
+                        badOutcomes: [
+                            {
+                                chance: 8,
+                                condition: 'Infected Foot Cut',
+                                statDebuffs: { strength: -2, endurance: -3 },
+                                permanent: true,
+                                text: "You cut your foot on a sharp stone while digging. The cut becomes infected. You're limping now. The pain is constant.",
+                                nextScene: "calais_latrines"
+                            }
+                        ],
                         nextScene: "calais_latrines",
                         requiresResolution: true,
                         resolutionStat: "wits",
@@ -3420,7 +4497,26 @@
                     },
                     {
                         text: "Skim from supply wagons",
-                        effects: {},
+                        effects: { wealth: 5 },
+                        stressCost: 0, // Stupid action = no stress cost
+                        badOutcomeChance: 35, // High chance (stupid action)
+                        badOutcomeStupidity: 'stupid',
+                        badOutcomes: [
+                            {
+                                chance: 30,
+                                condition: 'Caught Stealing',
+                                statDebuffs: { reputation: -2, morale: -1 },
+                                text: "You're caught. The quartermaster has you flogged. Your reputation suffers.",
+                                nextScene: "calais_skim"
+                            },
+                            {
+                                chance: 10,
+                                condition: 'Severely Punished',
+                                statDebuffs: { reputation: -3, morale: -2, endurance: -1 },
+                                text: "You're caught and severely punished. The quartermaster makes an example of you.",
+                                nextScene: "calais_skim"
+                            }
+                        ],
                         nextScene: "calais_skim",
                         requiresResolution: true,
                         resolutionStat: "agility",
@@ -3821,6 +4917,161 @@
                        <p>You have survived Crécy, one of history's great battles. Your choices have shaped who you are.</p>
                        <p><strong>Your Final Stats:</strong></p>
                        <p>You have become a veteran of war. Your story is written in the choices you made.</p>`,
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            // ===== DEATH SCENES (Variable Length Based on Circumstances) =====
+            death_camp_fever: {
+                title: "Camp Fever",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The fever takes you. The flux. The fever. It doesn't matter what you call it.</p>
+                            <p>You're dead in three days. ${name} dies in a tent. Alone. No one remembers your name.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">The campaign continues without you.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_sepsis: {
+                title: "Sepsis",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The wound turns black. The smell is wrong. Sepsis.</p>
+                            <p>Your arm swells. The surgeon takes it. You don't survive the amputation.</p>
+                            <p>${name} dies on the surgeon's table. Screaming.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">The war doesn't care.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_dysentery: {
+                title: "Dysentery",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The shits. The bloody shits. You can't keep water down.</p>
+                            <p>You're dead in a week. ${name} dies in the latrines. No one comes to help.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">This is how most men die.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_pneumonia: {
+                title: "Pneumonia",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The cough won't stop. Your chest burns. Pneumonia.</p>
+                            <p>You're dead before the week is out. ${name} dies in a tent. Alone. Coughing blood.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">The war continues.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_pitchfork: {
+                title: "Pitchfork",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Countryside"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The pitchfork finds your throat. You're dead before you hit the ground.</p>
+                            <p>${name} dies in a French field. A farmer's tool in your neck.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">This is not how you wanted to die.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            forced_retirement_broken_legs: {
+                title: "Broken Legs",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>Your horse spooks. You're thrown. Both legs break.</p>
+                            <p>The campaign is over. You're left behind. ${name} will never walk again.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">At least you're alive.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_plague: {
+                title: "The Black Death",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The black boils appear. The fever. The coughing blood.</p>
+                            <p>The Black Death. You're dead in days.</p>
+                            <p>${name} dies in a tent. Alone. No one comes near. The plague takes you like it takes everyone.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">This is how most men die now.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_starvation: {
+                title: "Starvation",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Calais"; },
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>The rations run out. You starve. Your body gives up.</p>
+                            <p>You die in the siege lines. ${name} dies hungry. The siege continues.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">The siege doesn't care.</p>`;
+                },
                 choices: [
                     {
                         text: "Start a New Game",
@@ -6033,6 +7284,372 @@
                         nextScene: "trust_shown"
                     }
                 ]
+            },
+            
+            campfire_wat_01_the_sharpening: {
+                title: "Campfire — The Sharpening",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>The fire is low and mean. Smoke clings to your hair and the damp sits inside your sleeves like a second skin.</p>
+                        <p>Wat squats close to the coals with his sword across his knees. He works a whetstone along the edge in slow, patient strokes. The sound is small and ugly. Stone. Steel. A promise.</p>
+                        <p><strong>Wat:</strong> Keep your edge honest, ${name}. A blunt blade turns a clean kill into a wrestling match. A wrestling match turns into a grave.</p>
+                        <p>Across from him, The Cook watches the stew-pot as if it might try to escape. He stirs twice. Stops. Listens. Stirs once more.</p>
+                        <p><strong>The Cook:</strong> The fat is rising. That means it will taste like something, which is better than most days.</p>
+                        <p>Wat snorts without looking up.</p>
+                        <p><strong>Wat:</strong> Taste like ash, taste like pig, taste like nothing. It all turns to shit in your gut the same.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask Wat how he learned to fight like this.", effects: { wits: 1, stress: 1 }, nextScene: "start" },
+                    { text: "Say nothing. Warm your hands and listen.", effects: { stress: -1 }, nextScene: "start" },
+                    { text: "Trade a sharp remark with him, just to see if he bites.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
+                    { text: "Watch The Cook instead. Ask what's in the pot.", effects: { morale: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_wat_02_the_rope: {
+                title: "Campfire — The Rope",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>Someone has strung a rope between two stakes near the wagons. Not for laundry. Not for tents. The knot is too careful for that.</p>
+                        <p>Men avoid looking at it. They glance and then look away, like it might look back.</p>
+                        <p>Wat spits into the dirt. He is always spitting, like the world keeps trying to crawl into his mouth.</p>
+                        <p><strong>Wat:</strong> Deserter's rope. Or thief's rope. Or unlucky bastard's rope. Doesn't matter. The rope's always hungry.</p>
+                        <p>The Cook kneels near the fire, mending a split in a canvas sack with neat, identical stitches.</p>
+                        <p><strong>The Cook:</strong> Hunger is predictable. Men are not.</p>
+                        <p>Wat laughs once. It is not a friendly sound.</p>
+                        <p><strong>Wat:</strong> You hear that, ${name}? Cook's got a philosophy. He'll stitch it into your ribs if you stand still.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Tell Wat a man runs when he has no other door.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
+                    { text: "Agree with Wat: discipline is the only thing holding it together.", effects: { morale: -1 }, nextScene: "start" },
+                    { text: "Ask The Cook why he's so calm about it.", effects: { wits: 1 }, nextScene: "start" },
+                    { text: "Change the subject to tomorrow's march.", effects: { stress: -1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_wat_03_the_boy_king: {
+                title: "Campfire — The Boy King",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>A rider came through camp at dusk with news from somewhere important. You did not hear the message. You saw the way men leaned toward it anyway, thirsty for meaning.</p>
+                        <p>Wat pokes the fire until sparks leap and die.</p>
+                        <p><strong>Wat:</strong> They'll tell you it's for England. For the King. For God. They'll sing it pretty, like it's a hymn. But it's men with purses pointing men with spears.</p>
+                        <p>The Cook tastes the stew with the tip of a spoon. He frowns, adds a pinch of salt, and tastes again as if he is conducting a trial.</p>
+                        <p><strong>The Cook:</strong> Salt changes the whole pot. A little decision. A big outcome.</p>
+                        <p>Wat looks at him like he's seen a ghost.</p>
+                        <p><strong>Wat:</strong> Don't start, Cook. Don't start your little lessons.</p>
+                        <p><strong>The Cook:</strong> It is not a lesson. It is cooking.</p>
+                        <p>Wat looks back to you.</p>
+                        <p><strong>Wat:</strong> You still believe in it, ${name}? The grand story?</p>
+                    `;
+                },
+                choices: [
+                    { text: "Say you believe. Better to have a story than none.", effects: { morale: 1 }, nextScene: "start" },
+                    { text: "Say Wat is right. It's about coin and power.", effects: { wits: 1, morale: -1 }, nextScene: "start" },
+                    { text: "Say you don't know. You're here now. That's enough.", effects: { stress: -1 }, nextScene: "start" },
+                    { text: "Ask what Wat thinks happens to men who stop believing.", effects: { wits: 1, stress: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_wat_04_the_dead_mules: {
+                title: "Campfire — The Dead Mules",
+                location: "Camp",
+                text: function () {
+                    return `
+                        <p>There is a smell near the picket line where the animals stand. Not all of them are standing. War eats beasts too.</p>
+                        <p>Wat sits with his back to a wagon wheel, chewing something that might be bread if you squint.</p>
+                        <p><strong>Wat:</strong> Men think battles decide wars. It's mules. It's oats. It's boots that don't rot off your feet. That's what decides it.</p>
+                        <p>The Cook holds up a strip of salted meat to the firelight, inspecting it like a jeweler.</p>
+                        <p><strong>The Cook:</strong> If you boil it long enough, you can pretend it is tender.</p>
+                        <p><strong>Wat:</strong> Pretend's all this is half the time.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Offer to help The Cook tomorrow. Fetch water, chop wood.", effects: { morale: 1 }, nextScene: "start" },
+                    { text: "Ask Wat how he keeps going when it's like this.", effects: { stress: -1 }, nextScene: "start" },
+                    { text: "Complain about rations and the march.", effects: { morale: -1, stress: 1 }, nextScene: "start" },
+                    { text: "Make a joke about mules outranking soldiers.", effects: { morale: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_wat_05_the_prayer: {
+                title: "Campfire — The Prayer",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>Somewhere down the line a man is praying. Quietly. Not for victory. Not for glory. Just for the morning.</p>
+                        <p>Wat watches the shadows as if they owe him money.</p>
+                        <p><strong>Wat:</strong> Prayer won't stop a blade. But men pray anyway. Like God's got time for the likes of us.</p>
+                        <p>The Cook is arranging pebbles in a careful little row beside the pot. Small. Medium. Small. Medium. Like a pattern that calms him.</p>
+                        <p><strong>The Cook:</strong> People do it because it gives their hands a place to go.</p>
+                        <p><strong>Wat:</strong> My hands go on a hilt.</p>
+                        <p><strong>The Cook:</strong> And mine go on a ladle. We all have our ritual.</p>
+                        <p>Wat turns to you.</p>
+                        <p><strong>Wat:</strong> What about you, ${name}? You got a ritual? Or are you just waiting to die?</p>
+                    `;
+                },
+                choices: [
+                    { text: "Say you pray. Quietly. For the morning.", effects: { morale: 1, stress: -1 }, nextScene: "start" },
+                    { text: "Say you don't pray. You prepare.", effects: { wits: 1 }, nextScene: "start" },
+                    { text: "Say you don't know what you believe anymore.", effects: { stress: 1 }, nextScene: "start" },
+                    { text: "Deflect with humor. Better laughing than trembling.", effects: { morale: 1, stress: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_cook_01_onions_and_names: {
+                title: "Campfire — Onions and Names",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>The Cook is cutting onions with a small knife that has seen too many hands. His slices are thin and identical, as if he is measuring time.</p>
+                        <p><strong>The Cook:</strong> Onions keep if you hang them. Not in damp. Damp makes everything soft.</p>
+                        <p>Wat is nearby, arguing with his own bootlaces.</p>
+                        <p><strong>Wat:</strong> This whole country's damp. France is damp. Normandy's damp. Hell's probably damp.</p>
+                        <p>The Cook looks up at you.</p>
+                        <p><strong>The Cook:</strong> ${name}. Is that your real name?</p>
+                        <p>Wat barks a laugh.</p>
+                        <p><strong>Wat:</strong> Don't answer him. He'll put it in the stew. He'll remember it forever.</p>
+                        <p><strong>The Cook:</strong> I remember things that are true. It helps with the cooking. It helps with people.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Tell The Cook the name you were called at home.", effects: { morale: 1 }, nextScene: "start" },
+                    { text: "Lie. Give him a cleaner name than the one you earned.", effects: { stress: 1 }, nextScene: "start" },
+                    { text: "Ask The Cook where he learned to cook for soldiers.", effects: { wits: 1 }, nextScene: "start" },
+                    { text: "Tell Wat to stop heckling him.", effects: { morale: 1, stress: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_cook_02_the_bread_story: {
+                title: "Campfire — The Bread Story",
+                location: "Camp",
+                text: function () {
+                    return `
+                        <p>The Cook has managed bread. Not good bread. Camp bread. But bread all the same. It comes out dark and heavy, like a stone you can chew.</p>
+                        <p><strong>The Cook:</strong> It is not ruined. It is finished.</p>
+                        <p>Wat breaks a piece, tests it with his teeth, and makes a face.</p>
+                        <p><strong>Wat:</strong> Christ. You could build a wall with this.</p>
+                        <p><strong>The Cook:</strong> Walls are useful.</p>
+                        <p>He offers you a piece before he eats. That is a small kindness in a world that forgets kindness.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Share your piece with Wat, even if he doesn't deserve it.", effects: { morale: 1 }, nextScene: "start" },
+                    { text: "Eat it yourself. You'll need the strength tomorrow.", effects: { stress: -1 }, nextScene: "start" },
+                    { text: "Trade it away for something better if you can.", effects: { wealth: 1 }, nextScene: "start" },
+                    { text: "Ask The Cook what bread was like where he came from.", effects: { wits: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_cook_03_counting_buttons: {
+                title: "Campfire — Counting Buttons",
+                location: "Camp",
+                text: function () {
+                    return `
+                        <p>The Cook sits with a shirt in his lap, counting buttons under his breath as he sews. One. Two. Three. Pause. Four. Five. He touches each one like it is an oath.</p>
+                        <p>Wat watches him and shakes his head, disgusted by any calm he doesn't understand.</p>
+                        <p><strong>Wat:</strong> Look at him. Counting like it'll save him. Like a button's going to stop a lance.</p>
+                        <p><strong>The Cook:</strong> Counting keeps my hands steady.</p>
+                        <p><strong>Wat:</strong> Your hands should be holding a spear.</p>
+                        <p><strong>The Cook:</strong> Your hands are already holding enough spears for the both of us.</p>
+                        <p>Wat's jaw tightens. He looks at you like you've been asked to judge a fight.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Tell Wat to leave him be. The Cook keeps you alive too.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
+                    { text: "Laugh along with Wat. Safer than being the target.", effects: { morale: -1 }, nextScene: "start" },
+                    { text: "Ask The Cook what he's counting for, exactly.", effects: { wits: 1 }, nextScene: "start" },
+                    { text: "Change the subject: ask Wat about his last campaign.", effects: { wits: 1, stress: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_cook_04_the_simmer: {
+                title: "Campfire — The Simmer",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>The stew simmers. The surface trembles and settles, trembles and settles, as if it is breathing.</p>
+                        <p><strong>The Cook:</strong> If you boil too hard, it tastes like panic. If you simmer, it tastes like patience.</p>
+                        <p>Wat snorts.</p>
+                        <p><strong>Wat:</strong> Panic keeps you alive.</p>
+                        <p><strong>The Cook:</strong> Panic makes you drop things.</p>
+                        <p>He looks at you as if you are a question he wants to solve carefully.</p>
+                        <p><strong>The Cook:</strong> What do you fear most, ${name}? Be specific. Not "death." That's lazy.</p>
+                        <p>Wat's eyes flick over you. Quick. Hungry. Like he wants the answer too.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Admit something small and true. Heights. Horses. Blood.", effects: { stress: -1, morale: 1 }, nextScene: "start" },
+                    { text: "Refuse to answer. Some things stay behind your teeth.", effects: { stress: 1 }, nextScene: "start" },
+                    { text: "Deflect with a joke. Make it someone else's problem.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
+                    { text: "Ask Wat what he fears most.", effects: { wits: 1, stress: 1 }, nextScene: "start" }
+                ]
+            },
+            
+            campfire_cook_05_the_old_recipe: {
+                title: "Campfire — The Old Recipe",
+                location: "Camp",
+                text: function () {
+                    const name = gameState.characterName || "Soldier";
+                    return `
+                        <p>The Cook talks about a recipe from home as if naming it will summon it. A broth thickened with barley. A little herb if you can steal it from a hedge. A scrap of meat if fortune smiles.</p>
+                        <p><strong>The Cook:</strong> People think food is just fuel. It is not. It is memory you can swallow.</p>
+                        <p>Wat rolls his eyes.</p>
+                        <p><strong>Wat:</strong> Memory doesn't stop steel.</p>
+                        <p><strong>The Cook:</strong> No. But it stops men from turning into animals.</p>
+                        <p>Wat stares at the fire. Quiet for a moment. The flames paint his face like an old bruise.</p>
+                        <p><strong>Wat:</strong> Animals live longer.</p>
+                        <p>The Cook turns to you.</p>
+                        <p><strong>The Cook:</strong> When you think of home, ${name}, what is the first smell?</p>
+                    `;
+                },
+                choices: [
+                    { text: "Answer honestly. Smoke. Bread. Wet earth. Horses.", effects: { morale: 1 }, nextScene: "start" },
+                    { text: "Say you don't remember. Or pretend you don't.", effects: { stress: 1 }, nextScene: "start" },
+                    { text: "Ask The Cook what he misses most.", effects: { wits: 1 }, nextScene: "start" },
+                    { text: "Ask Wat, quietly, what he misses. If anything.", effects: { stress: 1, wits: 1 }, nextScene: "start" }
+                ]
+            },
+            campfire_interlude: {
+                title: "Campfire",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "Camp"; },
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                text: function() {
+                    const cf = gameState.campfire || {};
+                    const seenIds = new Set(cf.seenIds || []);
+                    
+                    // Pick a vignette: prefer unseen, but allow repeats if all seen
+                    let available = CAMPFIRE_VIGNETTES.filter(v => {
+                        // Check year range if specified
+                        if (v.minYear && gameState.year < v.minYear) return false;
+                        if (v.maxYear && gameState.year > v.maxYear) return false;
+                        return true;
+                    });
+                    
+                    let selectedVignette = null;
+                    
+                    // Prefer unseen vignettes
+                    const unseen = available.filter(v => !seenIds.has(v.id));
+                    if (unseen.length > 0) {
+                        selectedVignette = unseen[Math.floor(Math.random() * unseen.length)];
+                    } else {
+                        // All seen - avoid last 3 seen
+                        const recentSeen = cf.seenIds.slice(-3);
+                        const notRecent = available.filter(v => !recentSeen.includes(v.id));
+                        if (notRecent.length > 0) {
+                            selectedVignette = notRecent[Math.floor(Math.random() * notRecent.length)];
+                        } else {
+                            // Fallback to any
+                            selectedVignette = available[Math.floor(Math.random() * available.length)];
+                        }
+                    }
+                    
+                    if (!selectedVignette) {
+                        return `<p>The fire burns low. Men sleep. The night passes.</p>`;
+                    }
+                    
+                    // Store selected vignette
+                    gameState.campfire.currentVignetteId = selectedVignette.id;
+                    
+                    // Add to seen list (limit to last 20)
+                    if (!cf.seenIds) cf.seenIds = [];
+                    cf.seenIds.push(selectedVignette.id);
+                    if (cf.seenIds.length > 20) {
+                        cf.seenIds = cf.seenIds.slice(-20);
+                    }
+                    
+                    // Render vignette
+                    const header = selectedVignette.focus === "wat" ? 
+                        `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">Wat spits into the fire.</p>` :
+                        selectedVignette.focus === "cook" ?
+                        `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">The Cook stirs the pot.</p>` :
+                        `<p style="color: #d4af37; font-style: italic; margin-bottom: 10px;">Wat and The Cook sit by the fire.</p>`;
+                    
+                    const title = selectedVignette.title || selectedVignette.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return header + `<h3 style="margin-top:0; color: #f4d03f;">${title}</h3>` + selectedVignette.text(gameState);
+                },
+                choices: function() {
+                    const cf = gameState.campfire || {};
+                    const vignetteId = cf.currentVignetteId;
+                    const vignette = CAMPFIRE_VIGNETTES.find(v => v.id === vignetteId);
+                    
+                    if (!vignette) {
+                        // Fallback if no vignette selected
+                        return [{
+                            text: "Turn in for the night.",
+                            effects: { stress: -1 },
+                            nextScene: function() {
+                                const next = cf.returnScene || "start";
+                                cf.returnScene = null;
+                                cf.currentVignetteId = null;
+                                return next;
+                            }
+                        }];
+                    }
+                    
+                    // Convert vignette choices to scene choices format
+                    const choices = vignette.choices.map((c, i) => {
+                        return {
+                            text: c.text,
+                            effects: function(gs) {
+                                // Apply effects function (makeChoice calls with gameState)
+                                // But we also support direct call from vignette
+                                const state = gs || gameState;
+                                if (typeof c.effects === 'function') {
+                                    c.effects(state);
+                                }
+                                // Show summary notification after all effects (only once per choice)
+                                // Note: This will be called by makeChoice, so we show notification here
+                                const relWat = state.relationships?.wat || 0;
+                                const relCook = state.relationships?.cook || 0;
+                                const relSummary = [];
+                                if (relWat !== 0) relSummary.push(`Wat ${relWat > 0 ? '+' : ''}${relWat}`);
+                                if (relCook !== 0) relSummary.push(`Cook ${relCook > 0 ? '+' : ''}${relCook}`);
+                                // Only show if there were relationship changes (notification handled in makeChoice for object effects)
+                                // For function effects, we show here
+                                if (relSummary.length > 0) {
+                                    setTimeout(() => {
+                                        showNotification("Campfire", `The night passes. (${relSummary.join(', ')})`, 'info');
+                                    }, 100);
+                                }
+                            },
+                            nextScene: function() {
+                                const next = cf.returnScene || "start";
+                                cf.returnScene = null;
+                                cf.currentVignetteId = null;
+                                return next;
+                            }
+                        };
+                    });
+                    
+                    // Always add "Turn in" option
+                    choices.push({
+                        text: "Turn in for the night.",
+                        effects: { stress: -1 },
+                        nextScene: function() {
+                            const next = cf.returnScene || "start";
+                            cf.returnScene = null;
+                            cf.currentVignetteId = null;
+                            return next;
+                        }
+                    });
+                    
+                    return choices;
+                }
             }
         };
         
@@ -6065,14 +7682,8 @@
             console.log("Final currentScene:", gameState.currentScene);
             console.log("Scene exists:", typeof scenes !== 'undefined' && scenes[gameState.currentScene] ? 'YES' : 'NO');
             
-            // Initialize equipment manager if not already done
-            try {
-                if (typeof EquipmentManager !== 'undefined' && !window.equipmentManager) {
-                    window.equipmentManager = new EquipmentManager(gameState);
-                }
-            } catch (e) {
-                console.error("Error initializing equipment manager:", e);
-            }
+            // Initialize equipment manager if not already done (consolidated to single function)
+            initializeEquipmentSystem();
             
             console.log("Calling updateDisplay");
             try {
@@ -6082,7 +7693,8 @@
                 console.error("updateDisplay threw error:", e);
                 const storyEl = document.getElementById('story');
                 if (storyEl) {
-                    storyEl.innerHTML = '<p style="color: red;">Error initializing game. Check console for details.</p><p>Error: ' + e.message + '</p>';
+                    const safeError = escapeHTML(String(e.message || 'Unknown error'));
+                    storyEl.innerHTML = '<p style="color: red;">Error initializing game. Check console for details.</p><p>Error: ' + safeError + '</p>';
                 }
             }
             console.log("=== INIT GAME END ===");
@@ -6134,6 +7746,8 @@
                 if (typeof scenes === 'undefined') {
                     console.error("scenes object is not defined!");
                     storyElement.innerHTML = '<p>Error: Scenes not loaded. Please refresh the page.</p>';
+                    // Reset to safe state
+                    gameState.currentScene = 'character_creation';
                     return;
                 }
                 
@@ -6144,8 +7758,14 @@
                 if (!scene) {
                     console.error("Scene not found:", gameState.currentScene);
                     console.log("Available scenes:", Object.keys(scenes));
-                    storyElement.innerHTML = `<p>Error: Scene "${gameState.currentScene}" not found. Available scenes: ${Object.keys(scenes).slice(0, 10).join(', ')}...</p>`;
-                    return;
+                    // Reset to safe state instead of showing error
+                    console.warn("Resetting to character_creation scene");
+                    gameState.currentScene = 'character_creation';
+                    scene = scenes['character_creation'];
+                    if (!scene) {
+                        storyElement.innerHTML = '<p style="color: red;">Error: Game state corrupted. Please refresh the page.</p>';
+                        return;
+                    }
                 }
                 
                 // Debug: log character creation scene
@@ -6154,7 +7774,8 @@
                 }
             } catch (error) {
                 console.error("Error in updateStory:", error);
-                storyElement.innerHTML = `<p>Error loading scene: ${error.message}</p><p>Please check the console for details.</p>`;
+                const safeError = escapeHTML(String(error.message || 'Unknown error'));
+                storyElement.innerHTML = `<p>Error loading scene: ${safeError}</p><p>Please check the console for details.</p>`;
                 return;
             }
             
@@ -6277,7 +7898,9 @@
                 console.log("Successfully rendered story for scene:", gameState.currentScene);
             } catch (error) {
                 console.error("Error setting storyElement.innerHTML:", error);
-                storyElement.innerHTML = `<p>Error rendering scene: ${error.message}</p><p>Scene: ${gameState.currentScene}</p>`;
+                const safeError = escapeHTML(String(error.message || 'Unknown error'));
+                const safeScene = escapeHTML(String(gameState.currentScene || 'unknown'));
+                storyElement.innerHTML = `<p>Error rendering scene: ${safeError}</p><p>Scene: ${safeScene}</p>`;
             }
         }
         
@@ -6496,6 +8119,82 @@
         }
         
         // ===== COMBAT SYSTEM FUNCTIONS =====
+        
+        // Combat state - declared globally to persist during combat
+        let combatState = {
+            playerHealth: 100,
+            enemyHealth: 100,
+            currentRound: 1,
+            actionsRemaining: 2,
+            playerState: {
+                stance: 'balanced',
+                counterReady: false,
+                nextActionBonus: 0,
+                fatigue: 0
+            },
+            enemyState: {
+                stance: 'balanced',
+                defenseReduced: 0
+            },
+            playerStats: {
+                strength: 5,
+                agility: 5,
+                initiative: 5,
+                weaponQuality: 0,
+                shield: false
+            },
+            enemyStats: {
+                initiative: 5,
+                strength: 5,
+                agility: 5,
+                archetype: 'balanced',
+                health: 100
+            },
+            conditions: {
+                defending: false,
+                enemyStunned: 0,
+                playerStunned: 0,
+                terrain: 'open',
+                enemyDefense: 5,
+                positioning: 'neutral'
+            },
+            initiative: {
+                playerWon: true,
+                margin: 0,
+                bonusActions: 0,
+                playerActions: 2
+            },
+            combatHistory: [],
+            turnOrder: 'player'
+        };
+        
+        let combatAnimationId = null;
+        
+        // Reset combat state to initial values
+        function resetCombatState() {
+            combatState.playerHealth = 100;
+            combatState.enemyHealth = 100;
+            combatState.currentRound = 1;
+            combatState.actionsRemaining = 2;
+            combatState.playerState.stance = 'balanced';
+            combatState.playerState.counterReady = false;
+            combatState.playerState.nextActionBonus = 0;
+            combatState.playerState.fatigue = 0;
+            combatState.enemyState.stance = 'balanced';
+            combatState.enemyState.defenseReduced = 0;
+            combatState.conditions.defending = false;
+            combatState.conditions.enemyStunned = 0;
+            combatState.conditions.playerStunned = 0;
+            combatState.conditions.terrain = 'open';
+            combatState.conditions.enemyDefense = 5;
+            combatState.conditions.positioning = 'neutral';
+            combatState.combatHistory = [];
+            combatState.turnOrder = 'player';
+            combatState.initiative.playerWon = true;
+            combatState.initiative.margin = 0;
+            combatState.initiative.bonusActions = 0;
+            combatState.initiative.playerActions = 2;
+        }
         
         function updateHealthBars() {
             const playerBar = document.getElementById('player-health-bar');
@@ -7289,18 +8988,10 @@
         }
         
         async function startCombat() {
-            // Reset combat state
-            combatState.playerHealth = 100;
+            // Reset combat state using centralized function
+            resetCombatState();
+            // Set enemy-specific values
             combatState.enemyHealth = combatState.enemyStats.health || 100;
-            combatState.currentRound = 1;
-            combatState.actionsRemaining = 2;
-            combatState.conditions.defending = false;
-            combatState.conditions.enemyStunned = 0;
-            combatState.conditions.playerStunned = 0;
-            combatState.combatHistory = [];
-            combatState.turnOrder = 'player';
-            combatState.playerState.counterReady = false;
-            combatState.playerState.nextActionBonus = 0;
             
             // Clear log (if exists)
             const log = document.getElementById('combat-log');
@@ -7684,14 +9375,20 @@
                 // Transition to appropriate scene
                 if (result.fled) {
                     // Flee doesn't transition to win/lose scenes
+                    resetCombatState(); // Clean up combat state
                     return;
                 }
+                
+                // Reset combat state before transitioning
+                resetCombatState();
                 
                 gameState.currentScene = result.victory ? winScene : loseScene;
                 updateDisplay();
                 
             } catch (error) {
                 console.error('Combat error:', error);
+                // Reset combat state even on error
+                resetCombatState();
                 // Fallback: restore UI and transition to lose scene
                 const gameContainer = document.querySelector('.game-container');
                 if (gameContainer) gameContainer.style.display = 'block';
@@ -7741,8 +9438,113 @@
             }
             
             gameState.priorities[category] = letter || null;
-            recalculateFromPriorities();
+            recalculateCharacterCreationDerivedStats();
             updateDisplay();
+        }
+        
+        /** Recalculate all character creation derived stats from scratch (anti-stacking fix) */
+        function recalculateCharacterCreationDerivedStats() {
+            // Step 1: Start with base stats and apply priorities
+            recalculateFromPriorities();
+            
+            // Step 2: Apply age range stat mods (silent)
+            if (gameState.ageRange) {
+                const ageStatMods = {
+                    'youth': { initiative: 2, agility: 1, endurance: -1, wits: -1 },
+                    'young_adult': { strength: 1, agility: 1, wits: -1 },
+                    'prime': { strength: 1, wits: 1 },
+                    'veteran': { wits: 2, endurance: 1, agility: -1 },
+                    'old_hand': { wits: 2, endurance: 1, charisma: 1, agility: -2, strength: -1 }
+                };
+                const ageMods = ageStatMods[gameState.ageRange];
+                if (ageMods) {
+                    Object.keys(ageMods).forEach(function(stat) {
+                        applyStatChange(stat, ageMods[stat], {silent: true});
+                    });
+                }
+            }
+            
+            // Step 3: Apply origin stat mods (silent)
+            if (gameState.origin) {
+                switch(gameState.origin) {
+                    case 'rural_peasant':
+                        applyStatChange('endurance', 2, {silent: true});
+                        applyStatChange('wealth', -5, {silent: true});
+                        break;
+                    case 'manor_retainer':
+                        applyStatChange('strength', 1, {silent: true});
+                        applyStatChange('charisma', 1, {silent: true});
+                        break;
+                    case 'craftsman_apprentice':
+                        applyStatChange('wits', 1, {silent: true});
+                        applyStatChange('agility', 1, {silent: true});
+                        break;
+                    case 'squire':
+                        applyStatChange('strength', 1, {silent: true});
+                        applyStatChange('wits', 1, {silent: true});
+                        break;
+                    case 'minor_noble':
+                        applyStatChange('charisma', 1, {silent: true});
+                        applyStatChange('wits', 1, {silent: true});
+                        applyStatChange('reputation', 5, {silent: true});
+                        break;
+                }
+            }
+            
+            // Step 4: Apply background question mods (silent)
+            if (gameState.backgroundQuestionsAnswered && Array.isArray(gameState.backgroundQuestionsAnswered)) {
+                const backgroundEffects = {
+                    hard_father: { strength: 1, endurance: 1, charisma: -1 },
+                    mangled_hand: { agility: -1, endurance: -1, wits: 3 },
+                    lost_sibling: { wits: 1, endurance: 1, morale: -1 },
+                    village_hero: { charisma: 1, reputation: 2, strength: -1 },
+                    apprentice_master: { wits: 2, agility: 1, stress: 1 },
+                    first_love: { charisma: -1, wits: 1, morale: 1 }
+                };
+                gameState.backgroundQuestionsAnswered.forEach(function(qId) {
+                    const effects = backgroundEffects[qId];
+                    if (effects) {
+                        Object.keys(effects).forEach(function(stat) {
+                            applyStatChange(stat, effects[stat], {silent: true});
+                        });
+                    }
+                });
+            }
+            
+            // Step 5: Apply patron stat mods (silent)
+            if (gameState.patronId && PATRONS[gameState.patronId]) {
+                const patron = PATRONS[gameState.patronId];
+                if (patron.statMods) {
+                    Object.entries(patron.statMods).forEach(([stat, mod]) => {
+                        applyStatChange(stat, mod, {silent: true});
+                    });
+                }
+            }
+            
+            // Step 6: Resolve starting kit tier
+            resolveStartingKitTier();
+        }
+        
+        /** Resolve final starting kit tier from fortune priority + patron */
+        function resolveStartingKitTier() {
+            const tierOrder = ["Ragged", "Standard", "Good", "Fine", "Superior"];
+            
+            // Get kit tier from fortune priority (already set by recalculateFromPriorities)
+            const fortuneTier = gameState.kitTier || "Standard";
+            const fortuneIdx = tierOrder.indexOf(fortuneTier);
+            
+            // Get kit tier from patron
+            let patronTier = "Standard";
+            if (gameState.patronId && PATRONS[gameState.patronId]) {
+                const patronKitTier = PATRONS[gameState.patronId].kitTier || "standard";
+                const mappedTier = KIT_TIER_MAP[patronKitTier] || "Standard";
+                patronTier = mappedTier;
+            }
+            const patronIdx = tierOrder.indexOf(patronTier);
+            
+            // Use the better (higher) tier
+            const finalIdx = Math.max(fortuneIdx >= 0 ? fortuneIdx : 1, patronIdx >= 0 ? patronIdx : 1);
+            gameState.startingKitTier = tierOrder[finalIdx];
         }
         
         /** Recalculate stats from priorities */
@@ -7860,7 +9662,8 @@
                 gameState.inventory = [];
             }
             
-            const tier = kitTier || "Standard";
+            // Use resolved startingKitTier if available, otherwise fall back to parameter or default
+            const tier = gameState.startingKitTier || kitTier || "Standard";
             
             // Kit shapes by origin
             const originKits = {
@@ -8005,11 +9808,9 @@
                 return;
             }
             
-            // Grant starting kit if not already granted
+            // Grant starting kit (kit tier already resolved by recalculateCharacterCreationDerivedStats)
             if (!gameState.startingKitGranted) {
-                const origin = gameState.origin || 'rural_peasant';
-                const kitTier = gameState.kitTier || "Standard";
-                grantStartingKit(origin, kitTier);
+                grantStartingKit(gameState.origin, gameState.startingKitTier);
             }
             
             // Transition to start scene
@@ -8064,6 +9865,191 @@
             return navHtml;
         }
         
+        // Quick Start Character Generation
+        function generateQuickStartCharacter() {
+            // Ensure stats are initialized
+            if (!gameState.stats) {
+                gameState.stats = {
+                    strength: 5,
+                    agility: 5,
+                    endurance: 5,
+                    charisma: 5,
+                    luck: 5,
+                    wits: 5,
+                    wealth: 10,
+                    reputation: 0,
+                    morale: 5,
+                    stress: 0,
+                    experience: 0,
+                    patronFavor: 0,
+                    initiative: 5
+                };
+            }
+            
+            // Random name from common names
+            const firstNames = ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter", "James", "David", "Michael", "Stephen", "Alan"];
+            const lastNames = ["Thatcher", "Smith", "Miller", "Baker", "Taylor", "Cooper", "Wright", "Carter", "Turner", "Parker", "Clark", "Hill", "Green", "Wood", "Brown"];
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            gameState.characterName = firstName + " " + lastName;
+            
+            // Random region
+            const regions = ["Yorkshire", "Kent", "London", "Cornwall", "Lancashire", "Essex", "Norfolk", "Somerset"];
+            gameState.culture = regions[Math.floor(Math.random() * regions.length)];
+            
+            // Random age range (weighted toward prime/young_adult)
+            const ageRanges = [
+                { id: 'youth', weight: 1 },
+                { id: 'young_adult', weight: 3 },
+                { id: 'prime', weight: 4 },
+                { id: 'veteran', weight: 2 },
+                { id: 'old_hand', weight: 1 }
+            ];
+            const totalWeight = ageRanges.reduce((sum, r) => sum + r.weight, 0);
+            let random = Math.random() * totalWeight;
+            for (let range of ageRanges) {
+                random -= range.weight;
+                if (random <= 0) {
+                    gameState.ageRange = range.id;
+                    break;
+                }
+            }
+            
+            // Random origin
+            const origins = ["rural_peasant", "manor_retainer", "craftsman_apprentice", "squire", "minor_noble"];
+            gameState.origin = origins[Math.floor(Math.random() * origins.length)];
+            
+            // Random priority preset
+            const priorityPresets = ['brawny', 'cunning', 'court', 'lucky'];
+            const preset = priorityPresets[Math.floor(Math.random() * priorityPresets.length)];
+            const presets = {
+                brawny: { might: 'A', finesse: 'C', wits: 'D', presence: 'E', fortune: 'B' },
+                cunning: { might: 'D', finesse: 'A', wits: 'A', presence: 'C', fortune: 'B' },
+                court: { might: 'C', finesse: 'D', wits: 'B', presence: 'A', fortune: 'E' },
+                lucky: { might: 'C', finesse: 'C', wits: 'C', presence: 'C', fortune: 'A' }
+            };
+            if (!gameState.priorities) {
+                gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            }
+            Object.assign(gameState.priorities, presets[preset]);
+            gameState.quickStartPreset = preset;
+            
+            // Recalculate stats from priorities first (this resets to base and applies priority bonuses)
+            if (typeof recalculateFromPriorities === 'function') {
+                recalculateFromPriorities();
+            }
+            
+            // Set age based on age range
+            const ageMap = {
+                'youth': 18,
+                'young_adult': 22,
+                'prime': 27,
+                'veteran': 33,
+                'old_hand': 38
+            };
+            gameState.age = ageMap[gameState.ageRange] || 27;
+            
+            // Apply age range stat mods (after priorities)
+            const ageStatMods = {
+                'youth': { initiative: 2, agility: 1, endurance: -1, wits: -1 },
+                'young_adult': { strength: 1, agility: 1, wits: -1 },
+                'prime': { strength: 1, wits: 1 },
+                'veteran': { wits: 2, endurance: 1, agility: -1 },
+                'old_hand': { wits: 2, endurance: 1, charisma: 1, agility: -2, strength: -1 }
+            };
+            const ageMods = ageStatMods[gameState.ageRange];
+            if (ageMods && typeof applyStatChange === 'function') {
+                Object.keys(ageMods).forEach(function(stat) {
+                    applyStatChange(stat, ageMods[stat]);
+                });
+            }
+            
+            // Random 1-2 background questions (apply after priorities and age)
+            const backgroundQuestions = ['hard_father', 'mangled_hand', 'lost_sibling', 'village_hero', 'apprentice_master', 'first_love'];
+            gameState.backgroundQuestionsAnswered = [];
+            const numQuestions = Math.random() < 0.5 ? 1 : 2;
+            // Fisher-Yates shuffle for proper random distribution
+            const shuffled = [...backgroundQuestions];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            for (let i = 0; i < numQuestions && i < shuffled.length; i++) {
+                gameState.backgroundQuestionsAnswered.push(shuffled[i]);
+            }
+            
+            // Apply background question effects
+            const backgroundEffects = {
+                hard_father: { strength: 1, endurance: 1, charisma: -1 },
+                mangled_hand: { agility: -1, endurance: -1, wits: 3 },
+                lost_sibling: { wits: 1, endurance: 1, morale: -1 },
+                village_hero: { charisma: 1, reputation: 2, strength: -1 },
+                apprentice_master: { wits: 2, agility: 1, stress: 1 },
+                first_love: { charisma: -1, wits: 1, morale: 1 }
+            };
+            if (typeof applyStatChange === 'function') {
+                gameState.backgroundQuestionsAnswered.forEach(function(qId) {
+                    const effects = backgroundEffects[qId];
+                    if (effects) {
+                        Object.keys(effects).forEach(function(stat) {
+                            applyStatChange(stat, effects[stat]);
+                        });
+                    }
+                });
+            }
+            
+            // Random patron
+            const patrons = ['james_olooney', 'lord_david', 'duke_caley', 'count_charles', 'ashkhan'];
+            const selectedPatron = patrons[Math.floor(Math.random() * patrons.length)];
+            gameState.patronId = selectedPatron;
+            gameState.patron = selectedPatron; // Legacy compatibility
+            if (PATRONS[selectedPatron]) {
+                gameState.patronEventPath = PATRONS[selectedPatron].eventPath;
+            }
+            
+            // Apply origin stat bonuses (same as start.onEnter does)
+            if (!gameState.flags.originApplied && typeof applyStatChange === 'function') {
+                switch(gameState.origin) {
+                    case 'rural_peasant':
+                        applyStatChange('endurance', 2);
+                        applyStatChange('wealth', -5);
+                        break;
+                    case 'manor_retainer':
+                        applyStatChange('strength', 1);
+                        applyStatChange('charisma', 1);
+                        break;
+                    case 'craftsman_apprentice':
+                        applyStatChange('wits', 1);
+                        applyStatChange('agility', 1);
+                        break;
+                    case 'squire':
+                        applyStatChange('strength', 1);
+                        applyStatChange('wits', 1);
+                        break;
+                    case 'minor_noble':
+                        applyStatChange('charisma', 1);
+                        applyStatChange('wits', 1);
+                        applyStatChange('reputation', 5);
+                        break;
+                }
+                gameState.flags.originApplied = true;
+            }
+            
+            // Mark character creation as complete
+            gameState.characterCreationStep = 6;
+            gameState.quickStartUsed = true;
+            
+            // Grant starting kit
+            if (!gameState.startingKitGranted) {
+                const kitTier = gameState.kitTier || "Standard";
+                grantStartingKit(gameState.origin, kitTier);
+            }
+            
+            // Go to quick start review scene
+            gameState.currentScene = "quick_start_review";
+            updateDisplay();
+        }
+        
         // Step Renderer Functions
         function renderCharacterCreationStep1(nameDisplay, currentCulture) {
             const nameSuggestions = {
@@ -8092,6 +10078,11 @@
             const englandMapPath = "M 50 50 L 350 50 L 350 450 L 50 450 Z M 100 80 L 300 80 L 300 420 L 100 420 Z"; // Simplified outline
             
             return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+                '<div style="margin-bottom: 20px; padding: 15px; background: rgba(139, 105, 20, 0.3); border: 2px solid #8b6914; border-radius: 5px; text-align: center;">' +
+                    '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">Want to jump right in?</div>' +
+                    '<button onclick="generateQuickStartCharacter()" style="padding: 12px 24px; background: #8b6914; border: 2px solid #d4af37; color: #f4d03f; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s;" onmouseover="this.style.background=\'#d4af37\'; this.style.color=\'#1a0f08\';" onmouseout="this.style.background=\'#8b6914\'; this.style.color=\'#f4d03f\';">⚡ Quick Start</button>' +
+                    '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">We will randomly generate a character for you</div>' +
+                '</div>' +
                 '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 1 — Identity</h3>' +
                 '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
                     '<label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Your Name:</label>' +
@@ -8344,15 +10335,51 @@
         }
         
         function renderCharacterCreationStep6() {
+            const currentPatronId = gameState.patronId;
+            let patronSelectionHtml = '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
+                '<div style="color: #d4af37; font-weight: bold; margin-bottom: 15px; font-size: 16px;">Choose Your Patron</div>' +
+                '<p style="color: #888; font-size: 14px; margin-bottom: 15px;">Select a lord or captain to serve under. Your choice affects your starting stats, equipment, and future opportunities.</p>' +
+                '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">';
+            
+            // Render patron cards
+            Object.keys(PATRONS).forEach(function(patronId) {
+                const patron = PATRONS[patronId];
+                const isSelected = currentPatronId === patronId;
+                const statModsText = Object.entries(patron.statMods || {}).map(([stat, mod]) => {
+                    return (mod > 0 ? '+' : '') + mod + ' ' + stat;
+                }).join(', ');
+                
+                patronSelectionHtml += '<div id="patron-card-' + patronId + '" onclick="setPatron(\'' + patronId + '\')" ' +
+                    'style="padding: 15px; background: ' + (isSelected ? 'rgba(212, 175, 55, 0.3)' : 'rgba(42, 42, 42, 0.8)') + '; ' +
+                    'border: 2px solid ' + (isSelected ? '#f4d03f' : '#8b6914') + '; ' +
+                    'border-radius: 8px; cursor: pointer; transition: all 0.3s;" ' +
+                    'onmouseover="this.style.borderColor=\'#d4af37\'; this.style.background=\'rgba(212, 175, 55, 0.2)\';" ' +
+                    'onmouseout="this.style.borderColor=\'' + (isSelected ? '#f4d03f' : '#8b6914') + '\'; this.style.background=\'' + (isSelected ? 'rgba(212, 175, 55, 0.3)' : 'rgba(42, 42, 42, 0.8)') + '\';">' +
+                    '<div style="color: ' + (isSelected ? '#f4d03f' : '#d4af37') + '; font-weight: bold; font-size: 15px; margin-bottom: 8px;">' + escapeHTML(patron.name) + '</div>' +
+                    '<div style="color: #888; font-size: 12px; margin-bottom: 5px; font-style: italic;">' + escapeHTML(patron.type) + '</div>' +
+                    '<div style="color: #aaa; font-size: 13px; margin-bottom: 8px;">' + escapeHTML(patron.blurb) + '</div>' +
+                    '<div style="color: #d4af37; font-size: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #555;">' +
+                        '<strong>Stat Modifiers:</strong> ' + (statModsText || 'None') +
+                    '</div>' +
+                    (isSelected ? '<div style="color: #f4d03f; font-size: 12px; margin-top: 5px; font-weight: bold;">✓ Selected</div>' : '') +
+                '</div>';
+            });
+            
+            patronSelectionHtml += '</div></div>';
+            
+            // Character summary
+            const patronName = currentPatronId && PATRONS[currentPatronId] ? PATRONS[currentPatronId].name : 'Not selected';
+            
             return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
-                '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 6 — Review & Begin</h3>' +
-                '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Review your character choices and begin your journey.</p>' +
-                '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-bottom: 20px;">' +
+                '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 6 — Choose Patron & Review</h3>' +
+                patronSelectionHtml +
+                '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-top: 20px;">' +
                     '<div style="color: #d4af37; font-weight: bold; margin-bottom: 10px;">Character Summary:</div>' +
-                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Name:</strong> ' + (gameState.characterName || 'Unnamed') + '</div>' +
-                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Region:</strong> ' + (gameState.culture || 'Not selected') + '</div>' +
-                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Age Range:</strong> ' + (gameState.ageRange || 'Not selected') + '</div>' +
-                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Origin:</strong> ' + (gameState.origin || 'Not selected') + '</div>' +
+                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Name:</strong> ' + escapeHTML(gameState.characterName || 'Unnamed') + '</div>' +
+                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Region:</strong> ' + escapeHTML(gameState.culture || 'Not selected') + '</div>' +
+                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Age Range:</strong> ' + escapeHTML(gameState.ageRange || 'Not selected') + '</div>' +
+                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Origin:</strong> ' + escapeHTML(gameState.origin || 'Not selected') + '</div>' +
+                    '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Patron:</strong> ' + escapeHTML(patronName) + '</div>' +
                 '</div>' +
             '</div>';
         }
@@ -8656,10 +10683,15 @@
                     showNotification('Character Creation', 'Please select an origin before continuing.');
                     return;
                 }
+                if (choice.requiresPatron && !gameState.patronId && !gameState.patron) {
+                    showNotification('Character Creation', 'Please select a patron before continuing.');
+                    return;
+                }
                 const nameInput = document.getElementById('character-name-input');
                 if (nameInput) {
                     const trimmedName = nameInput.value.trim();
-                    gameState.characterName = trimmedName || "William Thatcher";
+                    // Sanitize user input to prevent XSS
+                    gameState.characterName = escapeHTML(trimmedName) || "William Thatcher";
                 }
                 if (!gameState.characterName || gameState.characterName === '') {
                     gameState.characterName = "William Thatcher";
@@ -8701,6 +10733,33 @@
                 return; // Exit early, combat will handle scene transition
             }
             
+            // Apply stress cost for smart actions (BEFORE bad outcome check)
+            if (choice.stressCost && choice.stressCost > 0) {
+                applyStatChange('stress', choice.stressCost);
+            }
+            
+            // Check for bad outcomes (if choice has bad outcome chance)
+            let badOutcomeTriggered = false;
+            let badOutcomeScene = null;
+            if (choice.badOutcomeChance && choice.badOutcomes && choice.badOutcomes.length > 0) {
+                const badChance = calculateBadOutcomeChance(
+                    choice.badOutcomeChance,
+                    choice.badOutcomeStupidity || 'neutral',
+                    gameState.stats.luck,
+                    gameState.equipment
+                );
+                
+                const roll = Math.random() * 100;
+                if (roll < badChance) {
+                    const outcome = selectBadOutcome(choice.badOutcomes, badChance);
+                    if (outcome) {
+                        applyBadOutcome(outcome);
+                        badOutcomeTriggered = true;
+                        badOutcomeScene = outcome.nextScene;
+                    }
+                }
+            }
+            
             // Handle resolution system
             if (choice.requiresResolution) {
                 const result = resolveAction(
@@ -8729,7 +10788,8 @@
                         applyStatChange('experience', 10);
                         applyStatChange('reputation', 1);
                         applyStatChange('morale', 1);
-                        applyStatChange('stress', -1); // Success reduces stress
+                        // NOTE: Success no longer automatically reduces stress
+                        // Stress reduction should be explicit in choice effects
                         gameState.career.battles++;
                         // Small chance of patron favor on great success
                         if (result.margin >= 3) {
@@ -8744,27 +10804,44 @@
                 choice.onChoose();
             }
             
-            // Apply effects with clamping
+            // Apply effects with clamping (supports both object and function effects)
             if (choice.effects) {
-                const effects = [];
-                Object.entries(choice.effects).forEach(([key, value]) => {
-                    const actualChange = applyStatChange(key, value);
-                    if (actualChange !== 0) {
-                        effects.push(`${actualChange > 0 ? '+' : ''}${actualChange} ${key}`);
+                if (typeof choice.effects === 'function') {
+                    // Function-based effects (used by campfire vignettes)
+                    try {
+                        choice.effects(gameState);
+                        // Notification is handled inside the function for campfire scenes
+                    } catch (error) {
+                        console.error('Error applying function effects:', error);
                     }
-                });
-                
-                if (effects.length > 0) {
-                    showNotification('Stat Changes', effects.join(', '));
+                } else if (typeof choice.effects === 'object') {
+                    // Object-based effects (standard format)
+                    const effects = [];
+                    Object.entries(choice.effects).forEach(([key, value]) => {
+                        const actualChange = applyStatChange(key, value);
+                        if (actualChange !== 0) {
+                            effects.push(`${actualChange > 0 ? '+' : ''}${actualChange} ${key}`);
+                        }
+                    });
+                    
+                    if (effects.length > 0) {
+                        showNotification('Stat Changes', effects.join(', '));
+                    }
                 }
             }
             
-            // Track scene visited (before moving)
+            // Track scene visited (before moving) - limit to last 100 to prevent unbounded growth
             gameState.scenesVisited.push(gameState.currentScene);
+            if (gameState.scenesVisited.length > 100) {
+                gameState.scenesVisited = gameState.scenesVisited.slice(-100);
+            }
             
-            // Move to next scene - handle both function and string nextScene
+            // Move to next scene - bad outcome scene takes priority
             let nextSceneName;
-            if (typeof choice.nextScene === 'function') {
+            if (badOutcomeTriggered && badOutcomeScene) {
+                // Bad outcome scene overrides normal next scene
+                nextSceneName = badOutcomeScene;
+            } else if (typeof choice.nextScene === 'function') {
                 try {
                     nextSceneName = choice.nextScene();
                     console.log("nextScene function returned:", nextSceneName);
@@ -8791,11 +10868,36 @@
             if (!scenes[nextSceneName]) {
                 console.error("Scene not found:", nextSceneName);
                 console.error("Available scenes:", Object.keys(scenes).slice(0, 20));
-                showNotification('Error', `Scene "${nextSceneName}" not found. Please refresh the page.`);
+                // Reset to safe state instead of breaking
+                console.warn("Invalid scene, resetting to character_creation");
+                gameState.currentScene = 'character_creation';
+                showNotification('Error', 'Invalid scene transition. Resetting to character creation.');
+                updateDisplay();
                 return;
             }
             
-            gameState.currentScene = nextSceneName;
+            // Check if we should insert a campfire interlude
+            const finalNextScene = maybeInsertCampfire(nextSceneName);
+            
+            gameState.currentScene = finalNextScene;
+            
+            // Check for arbitrary death events (after scene transition, before display)
+            const deathEvent = checkArbitraryDeath();
+            if (deathEvent) {
+                gameState.currentScene = deathEvent.nextScene;
+                // Remove fade-in class and re-add for animation
+                document.getElementById('story').classList.remove('fade-in');
+                setTimeout(() => {
+                    updateDisplay();
+                }, 100);
+                return;
+            }
+            
+            // Check for stress cap psychological disorders
+            checkStressCapDisorders();
+            
+            // Check for chapter transitions
+            checkChapterTransition();
             
             // Remove fade-in class and re-add for animation
             document.getElementById('story').classList.remove('fade-in');
@@ -8823,7 +10925,10 @@
             
             const colors = typeColors[type] || typeColors.info;
             
-            notification.innerHTML = `<h3 style="color: white; margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.2em;">${colors.icon}</span> ${title}</h3><p style="color: #e0e0e0; margin: 0;">${message}</p>`;
+            // Sanitize title and message to prevent XSS
+            const safeTitle = escapeHTML(String(title));
+            const safeMessage = escapeHTML(String(message));
+            notification.innerHTML = `<h3 style="color: white; margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.2em;">${colors.icon}</span> ${safeTitle}</h3><p style="color: #e0e0e0; margin: 0;">${safeMessage}</p>`;
             notification.style.backgroundColor = colors.bg;
             notification.style.borderColor = colors.border;
             notification.classList.remove('hidden');
@@ -8877,6 +10982,10 @@
                 characterName: "William Thatcher",
                 culture: "",
                 origin: null,
+                patronId: null, // Patron selection ID
+                patron: null, // Legacy field for backward compatibility
+                patronEventPath: null, // Convenience copy of PATRONS[patronId].eventPath
+                startingKitTier: null, // Resolved after priorities + patron
                 background: null, // Keep for backward compatibility
                 backgroundQuestionsAnswered: [],
         scenesVisited: [],
@@ -8895,11 +11004,26 @@
                 conditions: [],
                 flags: {},
                 rank: "Common Soldier",
-                relationships: {},
+                relationships: { wat: 0, cook: 0 },
+                campfire: {
+                    cooldownScenes: 2,
+                    chance: 0.35,
+                    lastInsertedAtIndex: 0,
+                    seenIds: [],
+                    returnScene: null,
+                    currentVignetteId: null
+                },
                 career: {
                     battles: 0,
                     wounds: 0,
                     promotions: 0
+                },
+                chapter: null, // Current chapter: "chevauchée", "calais", "plague", "poitiers"
+                chapterProgress: {
+                    chevauchée: { started: false, completed: false },
+                    calais: { started: false, completed: false },
+                    plague: { started: false, completed: false },
+                    poitiers: { started: false, completed: false }
                 },
                 lastResolution: null,
                 priorities: {
@@ -8932,6 +11056,7 @@
             // Deep-merge nested objects you rely on
             base.stats = { ...base.stats, ...(loaded.stats || {}) };
             base.flags = { ...base.flags, ...(loaded.flags || {}) };
+            base.chapterProgress = { ...base.chapterProgress, ...(loaded.chapterProgress || {}) };
             base.relationships = { ...base.relationships, ...(loaded.relationships || {}) };
             base.career = { ...base.career, ...(loaded.career || {}) };
             
@@ -8978,6 +11103,32 @@
             
             base.kitTier = typeof base.kitTier === "string" ? base.kitTier : "Standard";
             base.startingKitGranted = typeof base.startingKitGranted === "boolean" ? base.startingKitGranted : false;
+            
+            // Patron fields hydration
+            base.patronId = (typeof base.patronId === "string") ? base.patronId : null;
+            // Backward compatibility: if old 'patron' field exists but patronId doesn't, migrate it
+            if (!base.patronId && base.patron && typeof base.patron === "string") {
+                base.patronId = base.patron;
+            }
+            base.patronEventPath = (typeof base.patronEventPath === "string") ? base.patronEventPath : null;
+            base.startingKitTier = (typeof base.startingKitTier === "string") ? base.startingKitTier : null;
+            
+            // Relationships hydration
+            base.relationships = base.relationships && typeof base.relationships === "object"
+                ? { 
+                    wat: Math.max(-5, Math.min(5, Number(base.relationships.wat) || 0)),
+                    cook: Math.max(-5, Math.min(5, Number(base.relationships.cook) || 0))
+                }
+                : { wat: 0, cook: 0 };
+            
+            // Campfire hydration
+            base.campfire = base.campfire && typeof base.campfire === "object" ? base.campfire : {};
+            base.campfire.cooldownScenes = Number(base.campfire.cooldownScenes) || 2;
+            base.campfire.chance = Number(base.campfire.chance) || 0.35;
+            base.campfire.lastInsertedAtIndex = Number(base.campfire.lastInsertedAtIndex) || 0;
+            base.campfire.seenIds = Array.isArray(base.campfire.seenIds) ? base.campfire.seenIds : [];
+            base.campfire.returnScene = (typeof base.campfire.returnScene === "string") ? base.campfire.returnScene : null;
+            base.campfire.currentVignetteId = (typeof base.campfire.currentVignetteId === "string") ? base.campfire.currentVignetteId : null;
             
             // Recalculate stats from priorities if priorities are set (for loaded saves)
             if (base.priorities && Object.values(base.priorities).some(function(p) { return p !== null && p !== ''; })) {
@@ -9088,6 +11239,11 @@
                 gameState.enteredScenes = new Set(Array.isArray(gameState.enteredScenes) ? gameState.enteredScenes : []);
             }
             
+            // Sanitize user-controlled fields from save data to prevent XSS
+            if (gameState.characterName) {
+                gameState.characterName = escapeHTML(String(gameState.characterName));
+            }
+            
             // Reinitialize equipment manager if it exists (will migrate old format)
             if (typeof EquipmentManager !== 'undefined') {
                 try {
@@ -9191,7 +11347,7 @@
                             <pre style="color: #d4af37; white-space: pre-wrap; font-family: inherit; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">${stats}</pre>
                             
                             <h3 style="color: #f4d03f; margin-top: 15px;">Character Info:</h3>
-                            <p>Name: ${gameState.characterName || 'Unnamed'}</p>
+                            <p>Name: ${escapeHTML(gameState.characterName || 'Unnamed')}</p>
                             <p>Age: ${gameState.age}</p>
                             <p>Year: ${gameState.year}</p>
                             <p>Location: ${gameState.location}</p>
@@ -9262,15 +11418,26 @@
         var equipmentManager = null;
         
         function initializeEquipmentSystem() {
-            // Initialize equipment manager
-            if (typeof EquipmentManager !== 'undefined') {
-                equipmentManager = new EquipmentManager(gameState);
-                
-                // Initialize equipment UI
-                if (typeof EquipmentUI !== 'undefined') {
-                    equipmentUI = new EquipmentUI(gameState, equipmentManager);
-                    window.equipmentUI = equipmentUI; // Make globally accessible
+            // Initialize equipment manager - check if already initialized to prevent duplicates
+            if (typeof EquipmentManager !== 'undefined' && 
+                typeof EQUIPMENT_DATABASE !== 'undefined' && 
+                !equipmentManager && !window.equipmentManager) {
+                try {
+                    equipmentManager = new EquipmentManager(gameState);
+                    window.equipmentManager = equipmentManager; // Ensure window reference
+                    
+                    // Initialize equipment UI
+                    if (typeof EquipmentUI !== 'undefined' && !equipmentUI) {
+                        equipmentUI = new EquipmentUI(gameState, equipmentManager);
+                        window.equipmentUI = equipmentUI; // Make globally accessible
+                    }
+                } catch (e) {
+                    console.error("Failed to initialize equipment system:", e);
+                    // Gracefully degrade - game still playable without equipment
                 }
+            } else if (window.equipmentManager && !equipmentManager) {
+                // If window.equipmentManager exists but local doesn't, sync them
+                equipmentManager = window.equipmentManager;
             }
         }
         
@@ -9316,8 +11483,54 @@
         
         // Initialize on load
         window.addEventListener('load', function() {
+            // Check required modules before initialization
+            function checkRequiredModules() {
+                const missing = [];
+                
+                // Check EquipmentManager
+                if (typeof EquipmentManager === 'undefined') {
+                    missing.push('Equipment system not loaded');
+                }
+                
+                // Check EquipmentUI
+                if (typeof EquipmentUI === 'undefined') {
+                    missing.push('Equipment UI not loaded');
+                }
+                
+                // Check EQUIPMENT_DATABASE (global constant)
+                try {
+                    if (typeof EQUIPMENT_DATABASE === 'undefined') {
+                        missing.push('Equipment database not loaded');
+                    }
+                } catch (e) {
+                    missing.push('Equipment database not loaded');
+                }
+                
+                // Check ENEMY_PROFILES (global constant)
+                try {
+                    if (typeof ENEMY_PROFILES === 'undefined') {
+                        missing.push('Enemy profiles not loaded');
+                    }
+                } catch (e) {
+                    missing.push('Enemy profiles not loaded');
+                }
+                
+                if (missing.length > 0) {
+                    showNotification('Missing Modules', 
+                        'Some game files failed to load:\n' + missing.join('\n') + 
+                        '\n\nPlease refresh the page.', 
+                        'error'
+                    );
+                    return false;
+                }
+                return true;
+            }
+            
+            // Check modules, but still try to initialize (game may be partially playable)
+            checkRequiredModules();
+            
             initGame();
-            initializeEquipmentSystem();
+            // Equipment system will be initialized by initGame() or on first use
         });
     </script>
 </body>
