@@ -7,6 +7,15 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
         
+        :root {
+            --bg: #120b07;
+            --panel: rgba(0,0,0,.78);
+            --card: rgba(255,255,255,.04);
+            --line: rgba(212,175,55,.22);
+            --text: rgba(212,175,55,.92);
+            --muted: rgba(212,175,55,.62);
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -15,11 +24,10 @@
         
         body {
             font-family: 'Crimson Text', serif;
-            background: linear-gradient(135deg, #1a0f08 0%, #2c1810 50%, #1a0f08 100%);
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(139, 105, 20, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%);
-            color: #d4af37;
+            background: radial-gradient(1200px 700px at 20% 30%, rgba(212,175,55,.06), transparent 60%),
+                        radial-gradient(1200px 700px at 80% 80%, rgba(212,175,55,.04), transparent 55%),
+                        var(--bg);
+            color: var(--text);
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
@@ -28,23 +36,23 @@
         .game-container {
             max-width: 1000px;
             margin: 0 auto;
-            background: rgba(0, 0, 0, 0.85);
-            border: 3px solid #8b6914;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(139, 105, 20, 0.1);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 18px 60px rgba(0,0,0,.65);
         }
         
         .header {
             text-align: center;
-            border-bottom: 3px solid #8b6914;
-            padding-bottom: 20px;
-            margin-bottom: 25px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 18px;
+            margin-bottom: 18px;
             position: relative;
         }
         
         .header .stats-panel {
-            margin-top: 15px;
+            margin-top: 18px;
             margin-bottom: 0;
         }
         
@@ -52,7 +60,7 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            color: #8b6914;
+            color: var(--muted);
             font-size: 11px;
             font-family: 'Crimson Text', serif;
             opacity: 0.7;
@@ -61,35 +69,28 @@
         }
         
         .header::after {
-            content: '⚔️';
-            position: absolute;
-            left: 50%;
-            bottom: -15px;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            padding: 0 15px;
-            font-size: 1.5em;
+            display: none;
         }
         
         .header h1 {
             font-family: 'Cinzel', serif;
-            font-size: 2.8em;
-            text-shadow: 3px 3px 6px #000, 0 0 10px rgba(212, 175, 55, 0.3);
+            font-size: clamp(28px, 3.4vw, 44px);
+            letter-spacing: .08em;
+            text-shadow: 0 2px 10px rgba(0,0,0,.7);
             margin: 0;
-            letter-spacing: 2px;
         }
         
         .status-bar {
             display: flex;
             justify-content: space-around;
-            background: rgba(139, 105, 20, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
+            background: var(--card);
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 0;
             font-size: 1em;
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(255,255,255,.06);
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         
         .status-item {
@@ -98,16 +99,27 @@
             gap: 8px;
         }
         
+        .status-item span {
+            color: rgba(255,255,255,.78);
+        }
+        
+        .status-item strong {
+            color: var(--text);
+        }
+        
         .story-text {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 30px;
-            border-left: 5px solid #d4af37;
-            margin: 25px 0;
+            background: var(--card);
+            padding: 22px;
+            margin: 18px 0;
             line-height: 1.9;
             font-size: 1.15em;
             min-height: 200px;
-            border-radius: 5px;
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            color: rgba(255,255,255,.82);
+        }
+        
+        .story-text h2 {
+            color: var(--text);
         }
         
         .scene-artwork {
@@ -154,25 +166,25 @@
         .stats-panel {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 8px;
-            margin: 25px 0;
+            gap: 12px;
+            margin: 18px 0;
         }
         
         .header .stats-panel {
-            margin-top: 15px;
+            margin-top: 18px;
             margin-bottom: 0;
-            gap: 6px;
+            gap: 12px;
         }
         
         .stat-item {
-            background: rgba(139, 105, 20, 0.15);
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 12px;
+            padding: 12px;
         }
         
         .header .stat-item {
-            padding: 4px 8px;
+            padding: 12px;
         }
         
         .stat-label {
@@ -182,22 +194,23 @@
             margin-bottom: 8px;
             font-weight: 600;
             font-size: 0.75em;
+            color: var(--text);
         }
         
         .stat-bar {
             background: #1a0f08;
-            height: 18px;
-            border-radius: 9px;
+            height: 14px;
+            border-radius: 999px;
             overflow: hidden;
             margin-top: 5px;
-            border: 1px solid #8b6914;
+            border: 1px solid rgba(212,175,55,.25);
             position: relative;
         }
         
         .header .stat-bar {
             height: 14px;
-            border-radius: 7px;
-            margin-top: 3px;
+            border-radius: 999px;
+            margin-top: 5px;
         }
         
         .stat-fill {
@@ -214,13 +227,14 @@
             transform: translate(-50%, -50%);
             font-weight: bold;
             text-shadow: 1px 1px 2px #000;
-            font-size: 0.7em;
+            font-size: 12px;
+            opacity: .9;
         }
         
         .stat-special {
             font-size: 0.75em;
             margin-top: 5px;
-            color: #f4d03f;
+            color: var(--text);
         }
         
         .choices {
@@ -238,45 +252,33 @@
         .choice-button {
             display: block;
             width: 100%;
-            background: rgba(139, 105, 20, 0.25);
-            border: 2px solid #8b6914;
-            color: #d4af37;
-            padding: 18px 25px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(212,175,55,.25);
+            color: rgba(255,255,255,.82);
+            padding: 16px 18px;
             margin: 12px 0;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 1.05em;
             font-family: 'Crimson Text', serif;
             transition: all 0.3s ease;
             text-align: left;
             position: relative;
-            overflow: hidden;
         }
         
         .choice-button::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 0;
-            background: rgba(212, 175, 55, 0.1);
-            transition: width 0.3s ease;
+            display: none;
         }
         
         .choice-button:hover {
-            background: rgba(212, 175, 55, 0.15);
-            border-color: #d4af37;
-            transform: translateX(8px);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-        }
-        
-        .choice-button:hover::before {
-            width: 100%;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(0,0,0,.35);
+            border-color: rgba(212,175,55,.45);
+            background: rgba(255,255,255,.06);
         }
         
         .choice-button:active {
-            transform: translateX(5px);
+            transform: translateY(0);
         }
         
         .choice-effects {
@@ -8225,9 +8227,11 @@
                 statusBar.style.display = 'flex'; // Show it for other scenes
             }
             
-            document.getElementById('year').textContent = gameState.year;
-            document.getElementById('age').textContent = gameState.age;
-            document.getElementById('location').textContent = gameState.location;
+            document.getElementById('year').textContent = gameState.year || 1337;
+            // Ensure age is always a number, not a function
+            const ageValue = typeof gameState.age === 'function' ? gameState.age() : (gameState.age || 18);
+            document.getElementById('age').textContent = ageValue;
+            document.getElementById('location').textContent = gameState.location || 'Unknown';
             
             // Update rank display
             const currentRank = calculateRank();
