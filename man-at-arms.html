@@ -3588,15 +3588,15 @@
                     const hasWealth = (gs.stats && gs.stats.wealth && gs.stats.wealth > 0) || gs.wealth > 0;
                     if (hasWealth) {
                         return [
-                            { text: "Pay for her company.", effects: function(gs) { changeRel("oana", 1); applyStatChange("wealth", -2, {silent:true}); applyStatChange("morale", 2, {silent:true}); applyStatChange("stress", -1, {silent:true}); } },
-                            { text: "Just buy a bracelet.", effects: function(gs) { changeRel("oana", 0); applyStatChange("wealth", -1, {silent:true}); applyStatChange("morale", 1, {silent:true}); } },
-                            { text: "Decline politely.", effects: function(gs) { changeRel("oana", 0); } }
+                            { text: "Pay for her company.", effects: function(gs) { changeRel("oana", 1); applyStatChange("wealth", -2, {silent:true}); applyStatChange("morale", 2, {silent:true}); applyStatChange("stress", -1, {silent:true}); }, nextScene: "start" },
+                            { text: "Just buy a bracelet.", effects: function(gs) { changeRel("oana", 0); applyStatChange("wealth", -1, {silent:true}); applyStatChange("morale", 1, {silent:true}); }, nextScene: "start" },
+                            { text: "Decline politely.", effects: function(gs) { changeRel("oana", 0); }, nextScene: "start" }
                         ];
                     } else {
                         return [
-                            { text: "Accept the free bracelet.", effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); } },
-                            { text: "Refuse. You don't need charity.", effects: function(gs) { changeRel("oana", -1); applyStatChange("stress", 1, {silent:true}); } },
-                            { text: "Ask why she's being kind.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_kindness = true; } }
+                            { text: "Accept the free bracelet.", effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); }, nextScene: "start" },
+                            { text: "Refuse. You don't need charity.", effects: function(gs) { changeRel("oana", -1); applyStatChange("stress", 1, {silent:true}); }, nextScene: "start" },
+                            { text: "Ask why she's being kind.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_kindness = true; }, nextScene: "start" }
                         ];
                     }
                 }
@@ -4441,7 +4441,7 @@
                 age: 19,
                 location: "Northern France",
                 text: `<p>You fight in formation. Stay close to your comrades. To your shield. To your safety. Or what passes for it. But you hold. Keep formation. Keep discipline. Keep going. Because that's what you do. That's what you're trained to do.</p>
-                       <p>The battle is fierce. Terrible. Deadly. But you emerge unscathed. For now. That's something. That's enough. Your caution served you well. Your discipline. Your care. You've learned the value of discipline. Of formation. Of staying together.</p>
+                       <p>The battle is fierce. Terrible. Deadly. But you emerge unscathed. For now. That's something. That's enough. Your caution served you well. Your discipline. Your care. You've learned the value of discipline and formation. Of staying together.</p>
                        <p>Your first battle. Your first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you. But you survived. That's something. That's enough. Sometimes survival is enough.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 5);
@@ -4461,9 +4461,9 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>Your suggestion works. To flank the French position. Attack from the side. From behind. Where they're not expecting it. Your lord takes notice. Of your thinking. Of your strategy. Not just another sword arm. Someone who sees the field. Who understands how battles are won.</p>
-                       <p>You've earned respect. Through intelligence. Through strategy. Not just force. Not just strength. But thinking. Planning. Seeing what others miss. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
-                       <p>Your first battle. Your first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you. But you survived. Through thinking. Through strategy. Through everything that makes you different. Makes you more than just a soldier. More than just a killer. More than what war wants to make you.</p>`,
+                text: `<p>Your suggestion works. To flank the French position. Attack from the side. From behind. Where they're not expecting it. Your lord takes notice of your thinking. Of your strategy. Not just another sword arm. Someone who sees the field. Who understands how battles are won.</p>
+                       <p>You've earned respect through intelligence. Through strategy. Not just force. Not just strength. But thinking and planning. Seeing what others miss. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
+                       <p>Your first battle. Your first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you. But you survived through thinking. Through strategy. Through everything that makes you different. Makes you more than just a soldier. More than just a killer.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 10);
                     applyStatChange('reputation', 2);
@@ -4484,9 +4484,9 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>You lead them. Your unit. Your men. Your responsibility. Into battle. Into death. But you lead with skill. With courage. They follow you. Trust you. Believe in you. Because you lead. Because you care. Because you do what needs doing when no one else will.</p>
-                       <p>You emerge victorious. Together. As a unit. As a team. You've done right. Done well. Done what needed doing. That's something. That's enough. Sometimes leadership is enough. Sometimes caring is enough.</p>
-                       <p>Your leadership is recognized. By your lord. By your captain. By everyone who matters. You're given more. Responsibility. Men. Trust. You've earned it. Through leadership. Through skill. Through everything that makes you different. Makes you more than just a soldier. More than just a killer.</p>`,
+                text: `<p>You lead them into battle. Your unit. Your men. Your responsibility. But you lead with skill and courage. They follow you and trust you because you lead and because you care. Because you do what needs doing when no one else will.</p>
+                       <p>You emerge victorious. Together. As a unit. As a team. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
+                       <p>Your leadership is recognized by your lord and your captain. By everyone who matters. You're given more. Responsibility. Men. Trust. You've earned it through leadership and skill. Through everything that makes you different. Makes you more than just a soldier. More than just a killer.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 15);
                     applyStatChange('reputation', 2);
