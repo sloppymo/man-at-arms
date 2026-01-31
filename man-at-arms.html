@@ -899,7 +899,7 @@
             conditions: [], // wounds, fatigue, etc.
             flags: {}, // story flags: Resentment, Dishonor, Shaken, etc.
             rank: "Common Soldier",
-            relationships: { wat: 0, cook: 0 }, // NPC relationships (clamped -5..+5)
+            relationships: { wat: 0, cook: 0, oana: 0 }, // NPC relationships (clamped -5..+5)
             campfire: {
                 cooldownScenes: 2, // Must pass at least N scenes before another campfire
                 chance: 0.35, // After cooldown, chance to insert
@@ -1163,7 +1163,7 @@
         /** Change relationship with Wat or Cook */
         function changeRel(who, delta) {
             if (!gameState.relationships) {
-                gameState.relationships = { wat: 0, cook: 0 };
+                gameState.relationships = { wat: 0, cook: 0, oana: 0 };
             }
             gameState.relationships[who] = clampRel((gameState.relationships[who] || 0) + delta);
         }
@@ -2203,6 +2203,166 @@
                     { text: "Ask when he killed.", effects: function(gs) { changeRel("cook", 1); if (!gs.flags) gs.flags = {}; gs.flags.cook_killed = true; } },
                     { text: "Say his hands have done good work.", effects: function(gs) { changeRel("cook", 2); applyStatChange("morale", 1, {silent:true}); } },
                     { text: "Say nothing. Respect his past.", effects: function(gs) { changeRel("cook", 0); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "oana_carving_01",
+                focus: "oana",
+                title: "Oana Carves",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Oana sits by the fire, a Breton girl with dark hair and quick hands. She carves a wooden bracelet, the knife moving in practiced strokes.</p>
+                        <p><em>"They sell better than you'd think,"</em> she says without looking up. <em>"Men buy them for sweethearts back home. Or for themselves. Luck charms."</em></p>
+                        <p>The wood curls away from her blade. She works like she's done this a thousand times. Maybe she has.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask how she learned to carve.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_carving_story = true; } },
+                    { text: "Offer to buy one.", effects: function(gs) { changeRel("oana", 2); applyStatChange("wealth", -1, {silent:true}); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Watch in silence.", effects: function(gs) { changeRel("oana", 0); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "oana_breton_02",
+                focus: "oana",
+                title: "Breton Words",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Oana hums something under her breath. The words are Breton. You don't understand them, but the melody is old. Sad.</p>
+                        <p>She catches you listening. <em>"A lullaby,"</em> she says. <em>"My mother sang it. Her mother before her. Now I sing it to myself when the nights are long."</em></p>
+                        <p>She goes back to carving. The knife doesn't stop. The song doesn't stop. Both keep her company.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask what the words mean.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_breton_story = true; } },
+                    { text: "Say it sounds beautiful.", effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Listen without speaking.", effects: function(gs) { changeRel("oana", 0); applyStatChange("stress", -1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "oana_trade_03",
+                focus: "oana",
+                title: "The Trade",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    const hasWealth = (gs.stats && gs.stats.wealth && gs.stats.wealth > 0) || gs.wealth > 0;
+                    if (hasWealth) {
+                        return `
+                            <p>Oana looks up from her carving. Her eyes are sharp. Assessing.</p>
+                            <p><em>"I have other things to sell,"</em> she says. <em>"Not just bracelets. If you have coin."</em></p>
+                            <p>She doesn't say what. She doesn't need to. You know what she means. The camp follows its own rules. Its own economy.</p>
+                        `;
+                    } else {
+                        return `
+                            <p>Oana looks at you. Really looks. Then she shakes her head.</p>
+                            <p><em>"You're broke,"</em> she says. Not unkind. Just fact. <em>"I can't help you. Not that way. But I can carve you something. For free. This once."</em></p>
+                            <p>She picks up a new piece of wood. Starts working. The offer stands.</p>
+                        `;
+                    }
+                },
+                choices: function(gs) {
+                    const hasWealth = (gs.stats && gs.stats.wealth && gs.stats.wealth > 0) || gs.wealth > 0;
+                    if (hasWealth) {
+                        return [
+                            { text: "Pay for her company.", effects: function(gs) { changeRel("oana", 1); applyStatChange("wealth", -2, {silent:true}); applyStatChange("morale", 2, {silent:true}); applyStatChange("stress", -1, {silent:true}); } },
+                            { text: "Just buy a bracelet.", effects: function(gs) { changeRel("oana", 0); applyStatChange("wealth", -1, {silent:true}); applyStatChange("morale", 1, {silent:true}); } },
+                            { text: "Decline politely.", effects: function(gs) { changeRel("oana", 0); } }
+                        ];
+                    } else {
+                        return [
+                            { text: "Accept the free bracelet.", effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); } },
+                            { text: "Refuse. You don't need charity.", effects: function(gs) { changeRel("oana", -1); applyStatChange("stress", 1, {silent:true}); } },
+                            { text: "Ask why she's being kind.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_kindness = true; } }
+                        ];
+                    }
+                }
+            },
+            {
+                id: "oana_wounds_04",
+                focus: "oana",
+                title: "Oana's Hands",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Oana shows you her hands. Calluses from the knife. Small scars. Old cuts that healed wrong.</p>
+                        <p><em>"Every bracelet costs something,"</em> she says. <em>"Not just the wood. The time. The cuts. The nights I could have been sleeping."</em></p>
+                        <p>She flexes her fingers. The joints are stiff. From carving. From cold. From work that never ends.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask if it's worth it.", effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_worth_it = true; } },
+                    { text: "Say her work is beautiful.", effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Offer to help with the carving.", effects: function(gs) { changeRel("oana", 1); applyStatChange("stress", 1, {silent:true}); } }
+                ]
+            },
+            {
+                id: "oana_camp_life_05",
+                focus: "oana",
+                title: "Camp Life",
+                minYear: 1337,
+                maxYear: null,
+                stages: [
+                    {
+                        text: function(gs) {
+                            return `
+                                <p>Oana sits by the fire, carving. Around her, the camp moves. Men. Women. The business of survival.</p>
+                                <p><em>"You think this is hard?"</em> she asks. <em>"Try being a woman in a war camp. Try being Breton in an English army."</em></p>
+                                <p>She doesn't look up. The knife keeps moving. Like it's the only thing that makes sense.</p>
+                            `;
+                        },
+                        choices: [
+                            {
+                                text: "Ask what she means.",
+                                response: function(gs) {
+                                    return `<p>Oana pauses. The knife stops. Just for a moment.</p>
+                                           <p><em>"I mean I'm always a foreigner here. Always an outsider. Even when I'm useful. Even when I'm needed."</em></p>
+                                           <p>She goes back to carving. The subject is closed.</p>`;
+                                },
+                                effects: function(gs) { changeRel("oana", 1); if (!gs.flags) gs.flags = {}; gs.flags.oana_outsider = true; }
+                            },
+                            {
+                                text: "Say you understand.",
+                                response: function(gs) {
+                                    return `<p>Oana looks at you. Really looks. Like she's measuring your words.</p>
+                                           <p><em>"Do you?"</em> she says. <em>"Maybe. Maybe not. But it's nice that you say it."</em></p>`;
+                                },
+                                effects: function(gs) { changeRel("oana", 2); applyStatChange("morale", 1, {silent:true}); }
+                            },
+                            {
+                                text: "Change the subject to her bracelets.",
+                                response: function(gs) {
+                                    return `<p>Oana smiles. A real smile. The first you've seen.</p>
+                                           <p><em>"Now that's a subject I can talk about,"</em> she says. <em>"Each one is different. Each one tells a story. Even if no one knows what the story is."</em></p>`;
+                                },
+                                effects: function(gs) { changeRel("oana", 1); applyStatChange("stress", -1, {silent:true}); }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: "oana_memory_06",
+                focus: "oana",
+                title: "A Memory",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Oana carves a bracelet. This one is different. More careful. More deliberate.</p>
+                        <p><em>"This one's for my sister,"</em> she says. <em>"Or it would be. If I could get it to her. If I knew where she was. If she's still alive."</em></p>
+                        <p>She holds it up to the firelight. The wood glows. The carving catches the light. It's beautiful. And it will never be delivered.</p>
+                    `;
+                },
+                choices: [
+                    { text: "Ask about her sister.", effects: function(gs) { changeRel("oana", 2); if (!gs.flags) gs.flags = {}; gs.flags.oana_sister_story = true; applyStatChange("stress", 1, {silent:true}); } },
+                    { text: "Say you hope she finds her.", effects: function(gs) { changeRel("oana", 1); applyStatChange("morale", 1, {silent:true}); } },
+                    { text: "Offer to help deliver it someday.", effects: function(gs) { changeRel("oana", 1); applyStatChange("stress", 1, {silent:true}); } }
                 ]
             }
         ];
