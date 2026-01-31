@@ -899,6 +899,124 @@
             }
         };
         
+        // ===== CHAPTER SYSTEM =====
+        // Historical chapters that structure the game's narrative arc
+        const CHAPTERS = {
+            chevauchée: {
+                id: "chevauchée",
+                name: "The Chevauchée",
+                year: 1346,
+                description: "Scorched earth raids through Normandy to provoke French knights.",
+                startYear: 1346,
+                endYear: 1346,
+                victoryCondition: "Survive the raids and reach Calais",
+                deathRate: 0.70, // 70% death rate during brutal raids
+                specialMechanics: ["raiding", "scorched_earth", "high_mortality"]
+            },
+            calais: {
+                id: "calais",
+                name: "Siege of Calais",
+                year: 1346,
+                description: "The subsequent grinding siege after Crécy.",
+                startYear: 1346,
+                endYear: 1347,
+                victoryCondition: "Survive the siege until Calais falls",
+                deathRate: 0.75, // 75% death rate during siege (disease, starvation, combat)
+                specialMechanics: ["siege", "starvation", "disease", "boredom"]
+            },
+            plague: {
+                id: "plague",
+                name: "The Black Death",
+                year: 1348,
+                description: "The pause/plague phase.",
+                startYear: 1348,
+                endYear: 1353,
+                victoryCondition: "Survive the plague years",
+                deathRate: 0.80, // 80% death rate during plague (highest!)
+                specialMechanics: ["plague", "arbitrary_death", "isolation", "despair"]
+            },
+            poitiers: {
+                id: "poitiers",
+                name: "Poitiers/Tours",
+                year: 1356,
+                description: "The Black Prince's chevauchée culminating in capture of King John II.",
+                startYear: 1356,
+                endYear: 1356,
+                victoryCondition: "Survive the campaign and witness the capture of the French king",
+                deathRate: 0.65, // 65% death rate (slightly better, but still brutal)
+                specialMechanics: ["chevauchée", "major_battle", "glory"]
+            }
+        };
+        
+        // Check if player should transition to next chapter
+        function checkChapterTransition() {
+            // Chapter 1: Chevauchée (1346)
+            if (gameState.year >= 1346 && gameState.year < 1347 && gameState.chapter !== 'chevauchée') {
+                if (!gameState.chapterProgress.chevauchée.started) {
+                    gameState.chapter = 'chevauchée';
+                    gameState.chapterProgress.chevauchée.started = true;
+                    showNotification('Chapter 1', CHAPTERS.chevauchée.name + ': ' + CHAPTERS.chevauchée.description, 'info');
+                }
+            }
+            
+            // Chapter 2: Siege of Calais (1346-1347)
+            if (gameState.year >= 1346 && gameState.year <= 1347 && gameState.chapter !== 'calais') {
+                // Transition to Calais after Chevauchée or if year is 1347
+                if (gameState.chapter === 'chevauchée' || (gameState.year === 1347 && !gameState.chapterProgress.calais.started)) {
+                    gameState.chapter = 'calais';
+                    gameState.chapterProgress.chevauchée.completed = true;
+                    gameState.chapterProgress.calais.started = true;
+                    showNotification('Chapter 2', CHAPTERS.calais.name + ': ' + CHAPTERS.calais.description, 'info');
+                }
+            }
+            
+            // Chapter 3: The Black Death (1348-1353)
+            if (gameState.year >= 1348 && gameState.year <= 1353 && gameState.chapter !== 'plague') {
+                if (!gameState.chapterProgress.plague.started) {
+                    gameState.chapter = 'plague';
+                    gameState.chapterProgress.calais.completed = true;
+                    gameState.chapterProgress.plague.started = true;
+                    showNotification('Chapter 3', CHAPTERS.plague.name + ': ' + CHAPTERS.plague.description, 'info');
+                    // Increase arbitrary death chance during plague
+                    // This is handled by the arbitrary death system
+                }
+            }
+            
+            // Chapter 4: Poitiers/Tours (1356)
+            if (gameState.year >= 1356 && gameState.chapter !== 'poitiers') {
+                if (!gameState.chapterProgress.poitiers.started) {
+                    gameState.chapter = 'poitiers';
+                    gameState.chapterProgress.plague.completed = true;
+                    gameState.chapterProgress.poitiers.started = true;
+                    showNotification('Chapter 4', CHAPTERS.poitiers.name + ': ' + CHAPTERS.poitiers.description, 'info');
+                }
+            }
+        }
+        
+        // Get current chapter info
+        function getCurrentChapter() {
+            if (!gameState.chapter) return null;
+            return CHAPTERS[gameState.chapter] || null;
+        }
+        
+        // Modify arbitrary death chances based on chapter
+        function getChapterDeathModifier() {
+            const chapter = getCurrentChapter();
+            if (!chapter) return 1.0;
+            
+            // Plague chapter has much higher death rates
+            if (chapter.id === 'plague') {
+                return 2.0; // Double all death chances
+            }
+            
+            // Calais siege also increases death rates
+            if (chapter.id === 'calais') {
+                return 1.5; // 50% increase
+            }
+            
+            return 1.0; // Normal rates for other chapters
+        }
+        
         // Patron definitions with stat modifiers
         // Kit tier mapping: plan names -> actual tier names
         const KIT_TIER_MAP = {
@@ -7655,10 +7773,14 @@
         
         // Initialize game
         function initGame() {
-            // Hide loading message immediately
-            const loadingMsg = document.getElementById('loading-message');
-            if (loadingMsg) {
-                loadingMsg.style.display = 'none';
+            // Hide loading message immediately (redundant check, but safe)
+            try {
+                const loadingMsg = document.getElementById('loading-message');
+                if (loadingMsg) {
+                    loadingMsg.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Error hiding loading message in initGame:', e);
             }
             
             console.log("=== INIT GAME START ===");
@@ -9830,6 +9952,12 @@
                 return;
             }
             
+            // Validate patron is selected
+            if (!gameState.patronId && !gameState.patron) {
+                showNotification('Character Creation', 'Please select a patron before continuing.');
+                return;
+            }
+            
             // Validate priorities
             const priorityValidation = validatePrioritiesCompleteAndUnique();
             if (!priorityValidation.ok) {
@@ -11512,6 +11640,16 @@
         
         // Initialize on load
         window.addEventListener('load', function() {
+            // Hide loading message immediately, even if initialization fails
+            try {
+                const loadingMsg = document.getElementById('loading-message');
+                if (loadingMsg) {
+                    loadingMsg.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Error hiding loading message:', e);
+            }
+            
             // Check required modules before initialization
             function checkRequiredModules() {
                 const missing = [];
@@ -11556,9 +11694,38 @@
             }
             
             // Check modules, but still try to initialize (game may be partially playable)
-            checkRequiredModules();
+            const modulesOk = checkRequiredModules();
             
-            initGame();
+            // Initialize game with error handling
+            // Even if modules are missing, try to start the game (it may be playable without equipment)
+            try {
+                // Small delay to ensure DOM is fully ready
+                setTimeout(function() {
+                    try {
+                        initGame();
+                    } catch (error) {
+                        console.error('Fatal error during initialization:', error);
+                        const storyEl = document.getElementById('story');
+                        const loadingMsg = document.getElementById('loading-message');
+                        if (loadingMsg) {
+                            loadingMsg.style.display = 'none';
+                        }
+                        if (storyEl) {
+                            storyEl.innerHTML = '<p style="color: red; padding: 20px;">Error initializing game. Please check the browser console for details.</p><p style="color: #d4af37;">Error: ' + escapeHTML(String(error.message || 'Unknown error')) + '</p><p style="margin-top: 20px;"><button onclick="location.reload()" style="padding: 10px 20px; background: #d4af37; border: none; color: #1a0f08; border-radius: 5px; cursor: pointer; font-weight: bold;">Reload Page</button></p>';
+                        }
+                    }
+                }, 100);
+            } catch (error) {
+                console.error('Fatal error setting up initialization:', error);
+                const storyEl = document.getElementById('story');
+                const loadingMsg = document.getElementById('loading-message');
+                if (loadingMsg) {
+                    loadingMsg.style.display = 'none';
+                }
+                if (storyEl) {
+                    storyEl.innerHTML = '<p style="color: red; padding: 20px;">Critical error. Please refresh the page.</p><p>Error: ' + escapeHTML(String(error.message || 'Unknown error')) + '</p>';
+                }
+            }
             // Equipment system will be initialized by initGame() or on first use
         });
     </script>

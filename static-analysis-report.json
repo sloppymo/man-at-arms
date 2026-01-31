@@ -1,0 +1,325 @@
+{
+  "timestamp": "2026-01-31T04:20:43.635Z",
+  "checks": [
+    {
+      "name": "Function exists: calculateBadOutcomeChance",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: selectBadOutcome",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: applyBadOutcome",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: checkArbitraryDeath",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: checkStressCapDisorders",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: checkChapterTransition",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: getChapterDeathModifier",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: calculateArmorProtection",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: makeChoice",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: updateDisplay",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: updateStatusBar",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Function exists: updateStats",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Constant exists: ARBITRARY_DEATH_EVENTS",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Constant exists: PSYCHOLOGICAL_DISORDERS",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Constant exists: CHAPTERS",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Constant exists: PATRONS",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Constant exists: CAMPFIRE_VIGNETTES",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: camp_fever",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: septic_wound",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: horse_fall",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: dysentery",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: pneumonia",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: plague",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death event exists: starvation",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death events use baseChance",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Chapter defined: chevauchée",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Chapter defined: calais",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Chapter defined: plague",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Chapter defined: poitiers",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Disorder defined: nightmares",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Disorder defined: paranoia",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Disorder defined: rage",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Disorder defined: despair",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "makeChoice handles bad outcomes",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Stress cost system implemented",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Chapter transitions checked in makeChoice",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_camp_fever",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_sepsis",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_dysentery",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_pneumonia",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_plague",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_starvation",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Death scene exists: death_pitchfork",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "UI hiding on character creation implemented",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "New field present: chapter",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "New field present: chapterProgress",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "New field present: relationships",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "New field present: campfire",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "New field present: patronId",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Campfire vignettes defined (27 found)",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Patron defined: james_olooney",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Patron defined: lord_david",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Patron defined: duke_caley",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Patron defined: count_charles",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Patron defined: ashkhan",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Example choice \"Dig proper latrines\" has bad outcomes",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Example choice \"Dig proper latrines\" has stress cost",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "Example choice \"Skim from supply wagons\" has bad outcomes",
+      "passed": true,
+      "details": {}
+    }
+  ],
+  "issues": [],
+  "warnings": [
+    {
+      "description": "Patron james_olooney may be missing required properties",
+      "location": "PATRONS"
+    },
+    {
+      "description": "Patron lord_david may be missing required properties",
+      "location": "PATRONS"
+    },
+    {
+      "description": "Patron duke_caley may be missing required properties",
+      "location": "PATRONS"
+    },
+    {
+      "description": "Patron count_charles may be missing required properties",
+      "location": "PATRONS"
+    },
+    {
+      "description": "Patron ashkhan may be missing required properties",
+      "location": "PATRONS"
+    }
+  ],
+  "summary": {
+    "totalChecks": 58,
+    "passed": 58,
+    "failed": 0,
+    "issues": 0,
+    "warnings": 5
+  }
+}

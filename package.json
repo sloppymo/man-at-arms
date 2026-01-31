@@ -1,0 +1,20 @@
+{
+  "name": "man-at-arms-playtest",
+  "version": "1.0.0",
+  "description": "Automated playtesting for A Man-at-Arms' Life",
+  "main": "playtest.js",
+  "scripts": {
+    "test": "node playtest.js",
+    "test:headless": "node -e \"require('./playtest.js').CONFIG.headless=true; require('./playtest.js').runPlaytests()\""
+  },
+  "keywords": [
+    "playtest",
+    "automation",
+    "testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  }
+}
