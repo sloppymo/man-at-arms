@@ -4308,8 +4308,9 @@
                 year: 1338,
                 age: 19,
                 location: "England",
-                text: `<p>You've joined a lord's retinue. The training is harsh, but you're used to hard work. Your endurance serves you well.</p>
-                       <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`,
+                text: `<p>You've joined a lord's retinue. The training is harsh. Brutal. Endless. But you're used to hard work. The fields taught you that. Taught you endurance. Taught you to keep going. When everything hurts. When everything breaks. When nothing matters. But survival. But living. But everything that keeps you going. Keeps you alive. Or tries to. Or hopes to.</p>
+                       <p>Months pass. Training. Drilling. Learning. The ways of war. The ways of death. The ways of survival. Your endurance serves you well. Your strength grows. Your skill sharpens. You're ready. Or think you are. Or hope you are. For what comes next. For what always comes next. For everything that matters. Everything that kills. Everything that saves.</p>
+                       <p>Your first campaign approaches. The French are raiding. The coast. The villages. Everything. Your lord prepares. To respond. To fight. To win. Or try to. Or hope to. You'll be part of it. Whether you want to be or not. Whether you're ready or not. Whether you survive or not. That's how it works. That's how it always works. In war. In life. In everything.</p>`,
                 choices: [
                     {
                         text: "Volunteer for the vanguard",
@@ -4328,8 +4329,8 @@
                 year: 1338,
                 age: 19,
                 location: "England",
-                text: `<p>Your family's wealth has secured you better equipment and some education. You understand tactics better than most.</p>
-                       <p>Your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`,
+                text: `<p>Your family's wealth has secured you. Better equipment. Better armor. Better weapons. And education. Books. Learning. Tactics. Strategy. The ways of war. The ways of thinking. The ways of winning. Or trying to. Or hoping to. You understand tactics. Better than most. Better than the peasants. Better than the common soldiers. But understanding isn't enough. Sometimes. Always. Sometimes knowledge isn't enough. Sometimes everything fails. Sometimes you fail. Always.</p>
+                       <p>Your first campaign approaches. The French are raiding. The coast. The villages. Everything. Your lord prepares. To respond. To fight. To win. Or try to. Or hope to. You'll be part of it. Whether you want to be or not. Whether you're ready or not. Whether you survive or not. That's how it works. That's how it always works. In war. In life. In everything. But you have advantages. Education. Equipment. Tactics. They might help. Might save you. Might matter. Or might not. In war. In battle. In death. Nothing is certain. Nothing is safe. Nothing is enough. Sometimes. Always.</p>`,
                 choices: [
                     {
                         text: "Suggest a tactical approach",
@@ -4348,8 +4349,8 @@
                 year: 1338,
                 age: 19,
                 location: "England",
-                text: `<p>As a noble's son, much is expected of you. Your reputation precedes you, but so do the expectations.</p>
-                       <p>Your first campaign approaches. The French are raiding the coast, and your lord expects you to lead the response.</p>`,
+                text: `<p>As a noble's son, much is expected. Of you. By your family. By your lord. By everyone. Your reputation precedes you. Your name. Your blood. Your everything. But so do the expectations. The pressure. The weight. Of being noble. Of being better. Of being more. Than common men. Than peasants. Than everyone else. But you're not. Not really. Not yet. Maybe never. But you have to try. Have to be. Have to become. What they expect. What they need. What they want. Or try to. Or hope to.</p>
+                       <p>Your first campaign approaches. The French are raiding. The coast. The villages. Everything. Your lord expects you. To lead. To command. To win. Or try to. Or hope to. The pressure is real. The weight is heavy. The expectations are everything. Or nothing. Always. You'll be part of it. Whether you want to be or not. Whether you're ready or not. Whether you survive or not. That's how it works. That's how it always works. In war. In life. In everything. But you have advantages. Name. Reputation. Training. They might help. Might save you. Might matter. Or might not. In war. In battle. In death. Nothing is certain. Nothing is safe. Nothing is enough. Sometimes. Always.</p>`,
                 choices: [
                     {
                         text: "Lead a small unit",
@@ -4370,7 +4371,8 @@
                 location: "Northern France",
                 artwork: "artwork/battle-scene-1.jpg", // French vs English battle scene
                 artworkCaption: "The clash of arms on the field of battle",
-                text: `<p>You charge into battle with courage. The clash of steel rings in your ears.</p>`,
+                text: `<p>You charge. Into battle. With courage. Or what passes for it. Or what you hope is courage. But might be fear. Might be desperation. Might be everything that makes men run. Toward death. Toward danger. Toward everything that kills. That breaks. That destroys. But you charge anyway. Because you have to. Because you need to. Because there's no other choice. No other way. No other path. But forward. But into it. But through it. Or try to. Or hope to.</p>
+                       <p>The clash of steel rings. In your ears. In your head. In your soul. The sound is terrible. Beautiful. Terrifying. Everything. Nothing. Always. Men scream. Die. Fall. Around you. Beside you. Behind you. But you keep going. Keep charging. Keep fighting. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Or tries to. Or hopes to. The first battle. The first blood. The first everything. That changes you. That breaks you. That makes you. Into what you'll become. Into what war makes you. Into everything. Or nothing. Always.</p>`,
                 choices: [
                     {
                         text: "Fight with all your might",
@@ -4389,7 +4391,8 @@
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>The battle rages...</p>`;
+                    if (!result) return `<p>The battle rages. Around you. Through you. In you. The sound is terrible. The sight is worse. Men die. Scream. Fall. Everywhere. But you fight. Keep fighting. Keep going. Because you have to. Because you need to. Because there's no other choice. No other way. No other path. But forward. But into it. But through it. Or try to. Or hope to.</p>
+                                           <p>Your first battle. Your first blood. Your first everything. That changes you. That breaks you. That makes you. Into what you'll become. Into what war makes you. Into everything. Or nothing. Always. You fight. With all your might. With everything you have. With everything you are. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Or tries to. Or hopes to.</p>`;
                     
                     const difficulty = result.baseDifficulty || 6;
                     const neededRoll = difficulty - result.effectiveStat;
@@ -4402,11 +4405,11 @@
                     </div>`;
                     
                     if (result.success) {
-                        return `${rollDisplay}<p>You fight well and drive back the French. You take a minor wound, but your bravery is noted. The French retreat.</p>
-                               <p>You've survived your first battle. Your comrades respect your courage.</p>`;
+                        return `${rollDisplay}<p>You fight well. Drive back the French. Hold your ground. Keep your position. Your bravery shows. Is noted. Is remembered. By your comrades. By your captain. By everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You take a minor wound. But you survive. The French retreat. The battle ends. For now. For this moment. That's something. That's enough.</p>
+                               <p>You've survived. Your first battle. Your first blood. Your first everything. That changes you. That breaks you. That makes you. Into what you'll become. Into what war makes you. Into everything. Or nothing. Always. Your comrades respect you. Your courage. Your skill. Your everything. That matters. That helps. That keeps you alive. Or tries to. Or hopes to.</p>`;
                     } else {
-                        return `${rollDisplay}<p>The battle is fierce. You take a serious wound but manage to survive. The French retreat, but you're left bleeding.</p>
-                               <p>You've learned that war is not as glorious as the songs make it seem.</p>`;
+                        return `${rollDisplay}<p>The battle is fierce. Terrible. Deadly. You take a serious wound. But manage to survive. Barely. The French retreat. But you're left bleeding. Hurting. Broken. By the wound. By the battle. By everything. By nothing. By the knowledge that war is real. That death is real. That everything is real. And terrible. And permanent.</p>
+                               <p>You've learned. That war is not glorious. Not like the songs. Not like the stories. Not like anything you imagined. It's brutal. Terrible. Deadly. Real. You've learned the hard way. The only way that matters. The only way that sticks. The knowledge weighs. Heavy. Real. Permanent. You did what you could. But it wasn't enough. It never is. Never will be. In war. In life. In everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -4437,8 +4440,9 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>You fight in formation, staying close to your comrades. The battle is fierce, but you emerge unscathed.</p>
-                       <p>Your caution served you well. You've learned the value of discipline.</p>`,
+                text: `<p>You fight in formation. Stay close. To your comrades. To your shield. To your safety. Or what passes for it. Or what you hope is safety. But might be death. Might be danger. Might be everything that kills. That breaks. That destroys. But you hold. Keep formation. Keep discipline. Keep going. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Or tries to. Or hopes to.</p>
+                       <p>The battle is fierce. Terrible. Deadly. But you emerge unscathed. Unhurt. Unbroken. For now. For this moment. That's something. That's enough. Your caution served you well. Your discipline. Your care. Your everything. That matters. That helps. That keeps you alive. Or tries to. Or hopes to. You've learned. The value of discipline. Of formation. Of staying together. Of staying alive. Or trying to. Or hoping to.</p>
+                       <p>Your first battle. Your first blood. Your first everything. That changes you. That breaks you. That makes you. Into what you'll become. Into what war makes you. Into everything. Or nothing. Always. But you survived. That's something. That's enough. Sometimes. Always. Sometimes survival is enough. Sometimes that's all you can hope for. In war. In life. In everything.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 5);
                     applyStatChange('stress', 1);
@@ -4457,8 +4461,9 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>Your suggestion to flank the French position proves successful. Your lord takes notice of your strategic thinking.</p>
-                       <p>You've earned respect through intelligence, not just brute force.</p>`,
+                text: `<p>Your suggestion works. To flank. The French position. To attack. From the side. From behind. From everywhere. That kills. That breaks. That destroys. But you suggested it. Thought of it. Made it happen. Your lord takes notice. Of your thinking. Of your strategy. Of your everything. That matters. That helps. That keeps you alive. Or tries to. Or hopes to.</p>
+                       <p>You've earned respect. Through intelligence. Through strategy. Through thinking. Not just force. Not just strength. Not just everything that kills. But everything that wins. That saves. That matters. You've done right. Done well. Done what needed doing. That's something. That's enough. Sometimes. Always. Sometimes thinking is enough. Sometimes strategy is enough. Sometimes that's all you can hope for. In war. In life. In everything.</p>
+                       <p>Your first battle. Your first blood. Your first everything. That changes you. That breaks you. That makes you. Into what you'll become. Into what war makes you. Into everything. Or nothing. Always. But you survived. Through thinking. Through strategy. Through everything that makes you different. Makes you better. Makes you more. Than just a soldier. Than just a killer. Than just everything that makes war terrible. Everything that makes men terrible.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 10);
                     applyStatChange('reputation', 2);
@@ -4479,8 +4484,9 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>You lead your unit with skill. Your men follow you into battle, and you emerge victorious.</p>
-                       <p>Your leadership abilities are recognized. You're given more responsibility.</p>`,
+                text: `<p>You lead them. Your unit. Your men. Your responsibility. Into battle. Into death. Into everything. That kills. That breaks. That destroys. But you lead. With skill. With courage. With everything that matters. That helps. That keeps them alive. Or tries to. Or hopes to. They follow you. Trust you. Believe in you. Because you lead. Because you care. Because you do what needs doing. When no one else will. When no one else could.</p>
+                       <p>You emerge victorious. Together. As a unit. As a team. As everything that makes you strong. Makes you better. Makes you more. Than just a soldier. Than just a killer. Than just everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what needed doing. That's something. That's enough. Sometimes. Always. Sometimes leadership is enough. Sometimes caring is enough. Sometimes that's all you can hope for. In war. In life. In everything.</p>
+                       <p>Your leadership is recognized. By your lord. By your captain. By everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You're given more. Responsibility. Men. Trust. Everything that matters. Everything that helps. Everything that keeps you alive. Or tries to. Or hopes to. You've earned it. Through leadership. Through skill. Through everything that makes you different. Makes you better. Makes you more. Than just a soldier. Than just a killer. Than just everything that makes war terrible. Everything that makes men terrible.</p>`,
                 onEnter: function() {
                     applyStatChange('experience', 15);
                     applyStatChange('reputation', 2);
@@ -4540,8 +4546,9 @@
                 title: "Better Gear",
                 year: 1340,
                 age: 21,
-                text: `<p>You invest in better equipment. The blacksmith crafts you a sturdier sword and reinforced leather armor.</p>
-                       <p>Your gear quality improves. This will serve you well in future battles.</p>`,
+                text: `<p>The blacksmith's forge glows. Hot. Bright. The sound of hammer on steel rings. Steady. Rhythmic. Like a heartbeat. Like war. Like everything that matters. Everything that keeps you alive.</p>
+                       <p>You invest. Coins on the table. Metal in your hands. A sturdier sword. Reinforced leather. Better gear. Better protection. Better chance. Of survival. Of victory. Of living through the next fight. The next battle. The next everything.</p>
+                       <p>Your gear quality improves. The weight feels different. The balance. The confidence. This will serve you well. In future battles. In future dangers. In everything that comes. Everything that always comes. In war. In life. In death.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -4583,8 +4590,9 @@
                 year: 1341,
                 age: 22,
                 location: "Northern France",
-                text: `<p>The years pass in a blur of minor skirmishes and patrols. You've learned the rhythm of war: campaign in spring and summer, winter in quarters.</p>
-                       <p>Your experience grows, and your lord takes notice of your service.</p>`,
+                text: `<p>Winter quarters. Spring campaign. Summer raids. The rhythm becomes familiar. Predictable almost. You march. You fight. You survive. The years blur into seasons. Seasons into months. Months into days.</p>
+                       <p>You've learned the patterns. When to push forward. When to hold back. When to keep your head down. Your lord notices. Your comrades trust you. Experience is the only teacher that matters.</p>
+                       <p>But each season takes something. A friend. A piece of yourself. The man you were fades. The man you're becoming takes shape. Harder. Colder. More careful.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -4598,8 +4606,9 @@
                 year: 1342,
                 age: 23,
                 location: "Northern France",
-                text: `<p>Your consistent service has earned you favor with your lord. You're given command of a small unit of five men.</p>
-                       <p>It's not much, but it's a step up. Your pay increases slightly, and you have more responsibility.</p>`,
+                text: `<p>The captain calls you forward. Five men. That's what you get. Five faces looking to you for orders. For decisions. For leadership you're not sure you have.</p>
+                       <p>But you've earned this. Through service. Through survival. Through doing what needed doing when others wouldn't. The pay is better. Not much. But better. The responsibility is heavier. Much heavier.</p>
+                       <p>You look at your men. They look back. Waiting. Trusting. Or pretending to. Either way, they're yours now. Their lives. Their deaths. That weight settles on you. You carry it. Because you have to.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -4620,8 +4629,9 @@
                 year: 1343,
                 age: 24,
                 location: "Northern France",
-                text: `<p>You participate in several minor campaigns. The French raid, you respond. It's become routine, but war is never truly routine.</p>
-                       <p>You've seen men die from arrows, disease, and simple accidents. Each year makes you more cautious, or perhaps more fatalistic.</p>`,
+                text: `<p>Raids. Skirmishes. Patrols. The French come. You respond. They retreat. You advance. It's become routine. Almost comfortable. Almost.</p>
+                       <p>But routine doesn't mean safe. You've seen men die from arrows. From disease. From a horse that stumbled. From a blade that found a gap. From nothing at all. Just bad luck. Just being in the wrong place at the wrong time.</p>
+                       <p>Each death teaches you something. Each year makes you more careful. Or more resigned. You can't tell which anymore. Maybe both. Maybe that's what survival means. Learning to accept what you can't change. Learning to change what you can.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -4635,8 +4645,9 @@
                 year: 1344,
                 age: 25,
                 location: "England",
-                text: `<p>Rumors spread of a major invasion being planned. King Edward III is gathering a large army to strike at France.</p>
-                       <p>You prepare yourself. This will be no minor skirmish. This will be a real campaign.</p>`,
+                text: `<p>Rumors. Always rumors. But these feel different. More urgent. More real. King Edward is gathering men. Real men. Real armies. Not the small bands you've been fighting with. Something big is coming.</p>
+                       <p>You hear it in taverns. In camps. In the way officers talk. Something is being planned. Something that will change everything. The war. Your life. The way you think about what you do.</p>
+                       <p>You prepare. Check your gear. Sharpen your blade. Say your prayers. Because you know. This won't be a skirmish. This won't be routine. This will be real. This will be history. And you'll be part of it. Whether you want to be or not.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -4879,13 +4890,14 @@
                 location: "Southern England",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You approach the villagers...</p>`;
+                    if (!result) return `<p>The villagers watch you. Hands on tools. Faces hard. They've seen soldiers before. They know what to expect. Taking. Demanding. Threatening.</p>
+                                           <p>You approach slowly. Show your hands. No weapons. Just coins. Just paper. Just the promise of fairness in a world that offers little.</p>`;
                     if (result.success) {
-                        return `<p>You pay fair prices and write proper receipts. The villagers are surprised—and grateful.</p>
-                               <p>Your integrity is noted. This will be remembered.</p>`;
+                        return `<p>You pay fair prices. Write proper receipts. The villagers stare. Disbelieving at first. Then grateful. One old woman weeps. You didn't expect that. Didn't expect how much a small kindness could mean.</p>
+                               <p>Your integrity is noted. The captain sees. The villagers remember. This will matter. Later. When you need it. When they need it. Small acts. Small debts. They add up.</p>`;
                     } else {
-                        return `<p>You try to be fair, but you're accused of skimming. The captain questions your honesty.</p>
-                               <p>Your reputation suffers.</p>`;
+                        return `<p>You try to be fair. Count coins carefully. Write receipts. But someone accuses you of skimming. Of taking more than you paid. The captain questions you. Your honesty. Your judgment.</p>
+                               <p>Your reputation suffers. Even if you're innocent. Even if you did right. Perception matters. Trust matters. And you've lost both.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -4914,13 +4926,14 @@
                 location: "Southern England",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You move quickly...</p>`;
+                    if (!result) return `<p>You move quickly. No time for negotiation. No time for fairness. The unit needs food. The unit needs supplies. That's what matters. That's all that matters.</p>
+                                           <p>The villagers watch. Silent. Resigned. They've seen this before. They'll see it again. This is how war works. Taking. Always taking.</p>`;
                     if (result.success) {
-                        return `<p>You take what's needed efficiently. The unit is fed, and you've secured some extra supplies.</p>
-                               <p>But the villagers' eyes follow you. Resentment grows.</p>`;
+                        return `<p>You take what's needed. Efficiently. Quickly. The unit is fed. Extra supplies secured. The job is done. No fuss. No delay.</p>
+                               <p>But the villagers' eyes follow you. Their faces hard. Their hands clenched. Resentment grows. Hatred takes root. You've fed your men. But you've planted seeds. Seeds that will grow. That will bear fruit. Bitter fruit.</p>`;
                     } else {
-                        return `<p>You take supplies, but clumsily. The villagers' anger is palpable.</p>
-                               <p>You've made enemies. This may come back to haunt you.</p>`;
+                        return `<p>You take supplies. Clumsily. Too fast. Too rough. You break things. Spill things. Waste things. The villagers' anger is palpable. Their rage barely contained.</p>
+                               <p>You've made enemies. Real enemies. People who will remember. Who will wait. Who will find ways to make you pay. This will come back. It always does.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -4947,13 +4960,14 @@
                 location: "Southern England",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You hesitate...</p>`;
+                    if (!result) return `<p>The order comes. Take what's needed. Pay what you can. Or don't pay. The warrant covers it. The law allows it. But your conscience doesn't.</p>
+                                           <p>You hesitate. Look at the villagers. Look at your men. Look at the captain. Everyone waiting. Everyone watching. What you do next will define you. To them. To yourself.</p>`;
                     if (result.success) {
-                        return `<p>You refuse politely, letting others handle it. You avoid the moral weight, but the captain notices your reluctance.</p>
-                               <p>You've avoided creating resentment, but lost some favor.</p>`;
+                        return `<p>You refuse. Politely. Quietly. Let others handle it. Step back. Let the weight fall on someone else. You avoid the moral burden. The guilt. The shame.</p>
+                               <p>But the captain notices. Your reluctance. Your hesitation. Your unwillingness to do what needs doing. You've avoided creating resentment. But you've lost favor. Lost trust. Lost respect. Sometimes the price of a clean conscience is everything else.</p>`;
                     } else {
-                        return `<p>The captain forces you to participate anyway. You do it, but something inside you breaks.</p>
-                               <p>You're shaken by what you've been made to do.</p>`;
+                        return `<p>The captain forces you. No choice. No argument. You do it. Take the supplies. Ignore the protests. Pretend you don't see the tears. Pretend you don't hear the curses.</p>
+                               <p>But something breaks. Inside you. A piece of who you were. A piece of who you wanted to be. You're shaken. Not by danger. Not by fear. By what you've been made to do. By what you've become.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5015,13 +5029,14 @@
                 location: "English Channel",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You approach the horse stalls...</p>`;
+                    if (!result) return `<p>The horses scream. Panic in their eyes. The deck rolls. They stumble. Fall. Get up. Fall again. They don't understand. Can't understand. This isn't their world. This isn't their war.</p>
+                                           <p>You approach the stalls. The smell of fear. Of sweat. Of animal terror. They need someone. Someone to calm them. To steady them. To keep them alive until land. Until they can run again. Until they can be useful again.</p>`;
                     if (result.success) {
-                        return `<p>You guard the horses through the long night, keeping them calm and secure. They'll be ready when you need them.</p>
-                               <p>Your dedication is noted. The captain appreciates reliable men.</p>`;
+                        return `<p>You guard them through the night. Long hours. Dark hours. Talking. Soothing. Keeping them calm. Keeping them secure. They settle. Trust you. Or at least stop fighting you.</p>
+                               <p>Dawn comes. The horses are ready. Calm. Steady. They'll carry you when you need them. They'll carry you into battle. Into death. But for now, they're alive. They're yours. Your dedication is noted. The captain sees. Reliable men are rare. You're one of them.</p>`;
                     } else {
-                        return `<p>The night is exhausting. You do your best, but one of the horses injures itself in the rolling ship.</p>
-                               <p>You're fatigued, and you'll be without a mount when you need one.</p>`;
+                        return `<p>The night is endless. Exhausting. You do your best. Try to keep them calm. Try to keep them safe. But the ship rolls. One horse falls. Breaks a leg. Or maybe just panics. Either way, it's done. Can't be saved. Can't be fixed.</p>
+                               <p>You're fatigued. Empty. And you'll be without a mount when you need one. When the fighting starts. When speed matters. When a horse could save your life. But you tried. That's something. Even if it doesn't feel like enough.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5049,13 +5064,14 @@
                 location: "English Channel",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You check your equipment...</p>`;
+                    if (!result) return `<p>Saltwater everywhere. Spray. Mist. Waves crashing over the side. Your gear is exposed. Vulnerable. Your bow. Your strings. Your arrows. Everything that keeps you alive. Everything that makes you useful.</p>
+                                           <p>You check your equipment. Wrap it. Cover it. Protect it. Because you know. When you land. When the fighting starts. Your gear is all you have. All that stands between you and death. Between you and failure.</p>`;
                     if (result.success) {
-                        return `<p>You carefully protect your bow and strings from saltwater. Your gear will be ready when you need it.</p>
-                               <p>Your foresight preserves your equipment quality.</p>`;
+                        return `<p>You protect it carefully. Wrap the bow. Cover the strings. Keep everything dry. Safe. Secure. Your gear will be ready. When you need it. When your life depends on it. When everything depends on it.</p>
+                               <p>Your foresight preserves your equipment. Your quality. Your edge. In a world where everything breaks. Everything fails. Everything rusts. You've kept something whole. Something useful. Something that might save you.</p>`;
                     } else {
-                        return `<p>Despite your efforts, saltwater damages your bowstrings. Your equipment suffers.</p>
-                               <p>You'll need to repair or replace gear when you land.</p>`;
+                        return `<p>You try. Wrap it. Cover it. Protect it. But saltwater finds a way. Always finds a way. Your bowstrings soak. Stretch. Weaken. Your equipment suffers. Your edge dulls. Your advantage fades.</p>
+                               <p>You'll need to repair. Or replace. When you land. If you land. If you have time. If you have coin. If you have luck. But for now, you're weaker. Less ready. Less able. And you know it.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5081,13 +5097,14 @@
                 location: "English Channel",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You move among the sick...</p>`;
+                    if (!result) return `<p>Men retch. Over the side. On the deck. Everywhere. The smell is terrible. The sound is worse. Groans. Curses. Prayers. The ship rolls. They roll with it. Helpless. Hopeless. Just trying to survive.</p>
+                                           <p>You move among them. The sick. The weak. The broken. Someone has to help. Someone has to keep order. Someone has to keep them from giving up. From giving in. From letting the sea take them.</p>`;
                     if (result.success) {
-                        return `<p>You help the sick and maintain order. Your leadership keeps the men focused despite the misery.</p>
-                               <p>Morale improves, and the risk of desertion decreases.</p>`;
+                        return `<p>You help them. Give them water. Keep them calm. Maintain order. Your leadership holds. Your voice steadies. The men focus. Despite the misery. Despite the fear. Despite everything.</p>
+                               <p>Morale improves. Slowly. Gradually. But it improves. The risk of desertion decreases. The risk of panic fades. You've done something. Something small. Something important. Something that might save lives. Might save the mission. Might save yourself.</p>`;
                     } else {
-                        return `<p>You try to help, but the chaos overwhelms you. The suffering is too much.</p>
-                               <p>You're shaken by what you've seen.</p>`;
+                        return `<p>You try to help. Move among them. Give water. Offer comfort. But the chaos overwhelms you. Too many sick. Too much suffering. Too little you can do. Too little that matters.</p>
+                               <p>You're shaken. Not by danger. Not by fear. By helplessness. By the weight of suffering you can't ease. By the faces of men you can't save. By the knowledge that sometimes trying isn't enough. Sometimes nothing is enough.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5150,13 +5167,14 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You move forward cautiously...</p>`;
+                    if (!result) return `<p>You move forward. Cautiously. Every step measured. Every sound noted. The land is foreign. Unknown. Dangerous. You don't know what's ahead. What's waiting. What's watching.</p>
+                                           <p>You scout. Look for water. Look for threats. Look for anything that might help. Or hurt. Because in this land, everything can be either. Everything can be both.</p>`;
                     if (result.success) {
-                        return `<p>You scout ahead and find a good water source and safe camp site. The unit benefits from your reconnaissance.</p>
-                               <p>Your initiative improves morale and keeps everyone safer.</p>`;
+                        return `<p>You find it. A stream. Clean water. Good ground for a camp. Safe. Or safe enough. You mark the route. Remember the landmarks. The dangers. The advantages.</p>
+                               <p>You return. Report. The unit benefits. Your reconnaissance saves time. Saves lives. Maybe. Your initiative improves morale. Keeps everyone safer. For now. For this moment. That's something. That's enough.</p>`;
                     } else {
-                        return `<p>You stumble into a skirmish with French scouts. You fight your way out, but not without cost.</p>
-                               <p>You've learned the land is not as empty as it seemed.</p>`;
+                        return `<p>You stumble into them. French scouts. Three of them. Maybe four. You don't have time to count. Just fight. Just survive. You fight your way out. But not without cost. Not without blood.</p>
+                               <p>You've learned. The land is not empty. Not safe. Not yours. The enemy is here. Watching. Waiting. Ready. You've learned the hard way. The only way that matters. The only way that sticks.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5188,13 +5206,14 @@
                 artworkCaption: "The first raid on French soil",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You join the raiders...</p>`;
+                    if (!result) return `<p>You join the raiders. Move fast. Move hard. No time for mercy. No time for thought. Just action. Just taking. Just doing what soldiers do. What you've been trained to do. What you're paid to do.</p>
+                                           <p>The village ahead. Small. Defenseless. Full of things you need. Things you want. Things that will make you richer. Make you safer. Make you better. That's what you tell yourself. That's what you have to believe.</p>`;
                     if (result.success) {
-                        return `<p>You join the raid and take what you can. Silver, food, anything of value.</p>
-                               <p>You're richer, but the villagers' hatred follows you. Resentment grows.</p>`;
+                        return `<p>You take what you can. Silver. Food. Cloth. Anything of value. Anything that might help. Anything that might be worth something. You fill your pack. Fill your pockets. Fill your hands.</p>
+                               <p>You're richer. Better equipped. Better prepared. But the villagers' hatred follows you. Their eyes. Their curses. Their silent promises. Resentment grows. Hatred takes root. You've fed yourself. But you've planted seeds. Seeds that will grow. That will bear fruit. Bitter fruit.</p>`;
                     } else {
-                        return `<p>You get separated from the main party in the chaos. You find your way back, but you're shaken by the experience.</p>
-                               <p>The raid was more chaotic than you expected.</p>`;
+                        return `<p>The chaos swallows you. Too many men. Too much noise. Too much confusion. You get separated. Lost. Alone in enemy land. You find your way back. Eventually. But you're shaken. The experience haunts you.</p>
+                               <p>The raid was more chaotic than you expected. More brutal. More real. You thought you were ready. You weren't. You thought you understood. You didn't. War is always worse than you imagine. Always more. Always less.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5241,13 +5260,14 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You stay close to the banner...</p>`;
+                    if (!result) return `<p>The banner waves. Your anchor. Your guide. Your reason. You stay close. Stay disciplined. Stay where you're supposed to be. Where you're ordered to be. Where you're safe.</p>
+                                           <p>Others break ranks. Run forward. Chase plunder. Chase glory. Chase death. But you stay. Hold your position. Do your duty. Because that's what soldiers do. That's what you do. That's who you are.</p>`;
                     if (result.success) {
-                        return `<p>You stay disciplined and close to the banner. The captain notices your reliability.</p>
-                               <p>You've earned favor and avoided the chaos of the raids.</p>`;
+                        return `<p>You stay disciplined. Stay close. Stay ready. The captain notices. Your reliability. Your steadiness. Your willingness to do what's needed. Not what's wanted. Not what's easy. What's needed.</p>
+                               <p>You've earned favor. Avoided chaos. Avoided danger. Avoided the things that kill men. The things that break them. You've done right. Done well. Done what you should. That's something. That's enough.</p>`;
                     } else {
-                        return `<p>You're mocked as timid for staying back. The taunts get under your skin.</p>
-                               <p>Your morale suffers, even though you made the safe choice.</p>`;
+                        return `<p>They mock you. Call you timid. Call you coward. Call you names that cut. That hurt. That make you doubt. The taunts get under your skin. Into your head. Into your heart. You made the safe choice. The smart choice. But it doesn't feel that way.</p>
+                               <p>Your morale suffers. Your confidence wavers. Your certainty fades. You did right. You know you did right. But knowing doesn't help. Doesn't stop the doubt. Doesn't stop the shame. Sometimes doing right feels wrong. Sometimes being safe feels like failure.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5307,13 +5327,14 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You approach the barns...</p>`;
+                    if (!result) return `<p>The barns stand ahead. Full of grain. Full of hay. Full of everything the enemy needs. Everything the villagers need. Everything that keeps people alive. Keeps them fed. Keeps them going.</p>
+                                           <p>You approach. Torch in hand. Orders in mind. Duty in heart. But something else too. Something you don't want to name. Something you don't want to feel. But you feel it anyway. You always feel it.</p>`;
                     if (result.success) {
-                        return `<p>You torch the barns efficiently, denying supplies to the enemy. The captain approves.</p>
-                               <p>But you watched it burn. The weight of what you've done settles on you. Your morale suffers.</p>`;
+                        return `<p>You torch them. Efficiently. Quickly. The fire spreads. Takes hold. Burns bright. Burns hot. Burns everything. The grain. The hay. The hope. The future. You've denied supplies to the enemy. Done your job. Done what you were told.</p>
+                               <p>The captain approves. Nods. Moves on. But you watched it burn. Watched the smoke rise. Watched the light fade. The weight of what you've done settles on you. Heavy. Real. Permanent. Your morale suffers. Your soul suffers. But you did it. You always do it.</p>`;
                     } else {
-                        return `<p>The wind shifts, and your own baggage train catches fire. You've cost the unit supplies.</p>
-                               <p>Your mistake is costly, both in wealth and reputation.</p>`;
+                        return `<p>You torch the barns. But the wind shifts. Changes direction. Turns against you. Your own baggage train catches fire. Your own supplies. Your own food. Your own hope. You've cost the unit. Cost yourself. Cost everything.</p>
+                               <p>Your mistake is costly. In wealth. In reputation. In trust. In everything that matters. Everything you need. You tried to do right. Did what you were told. But it went wrong. It always goes wrong. Eventually. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5341,13 +5362,14 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You approach the villagers...</p>`;
+                    if (!result) return `<p>The villagers stand before you. Fearful. Resigned. Waiting. They know what's coming. They've seen it before. Heard the stories. Lived the nightmares. Now it's their turn. Their moment. Their fate.</p>
+                                           <p>You approach. Sword in hand. Purpose in mind. But something else too. Something you don't want to think about. The faces. The eyes. The humanity. The people. Not enemies. Not targets. People. Just people.</p>`;
                     if (result.success) {
-                        return `<p>You take hostages and negotiate safe passage. They'll pay for their freedom.</p>
-                               <p>You've established a ransom network. This could be very profitable.</p>`;
+                        return `<p>You take them. Hostages. Bargaining chips. Currency. You negotiate. Safe passage. Their freedom. Their lives. They'll pay. They always pay. Because they have to. Because they want to live. Because there's no other choice.</p>
+                               <p>You've established a network. A system. A way to profit from fear. From desperation. From the simple human need to survive. This could be profitable. Very profitable. But it comes with a cost. A weight. A burden. The knowledge of what you've done. What you've become.</p>`;
                     } else {
-                        return `<p>You try to take hostages, but one escapes. He'll tell others about you.</p>
-                               <p>The risk of ambush increases. You've made enemies who know your face.</p>`;
+                        return `<p>You try to take them. Grab them. Hold them. But one escapes. Slippery. Fast. Desperate. He runs. Disappears. Gets away. He'll tell others. Warn them. Prepare them. Make them ready. Make them dangerous.</p>
+                               <p>The risk of ambush increases. The risk of death grows. You've made enemies. Real enemies. People who know your face. Who remember. Who wait. Who plan. Who will find you. Eventually. Always. That's how it works. That's how it always works.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5374,13 +5396,14 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You look at the church...</p>`;
+                    if (!result) return `<p>The church stands. Stone. Ancient. Sacred. Or supposed to be. Supposed to mean something. Supposed to be protected. Respected. Left alone. But war doesn't respect. War doesn't protect. War doesn't care.</p>
+                                           <p>You look at it. The cross. The walls. The silence. The peace. Or what's left of it. What war hasn't taken. What soldiers haven't destroyed. Yet. Because everything gets destroyed. Eventually. Everything gets taken. Everything gets broken.</p>`;
                     if (result.success) {
-                        return `<p>You spare the church and move on. Some of your men respect the gesture.</p>
-                               <p>Your mercy improves morale and reduces local resentment.</p>`;
+                        return `<p>You spare it. Order your men to move on. Leave it alone. Leave it whole. Leave it sacred. Some of your men respect the gesture. Nod. Understand. Or pretend to. Others don't. Others grumble. Others resent. But you did it. You made the choice. The right choice. The hard choice.</p>
+                               <p>Your mercy improves morale. Reduces resentment. Makes you human. Makes you different. Makes you better. Or at least less worse. That's something. That's enough. Sometimes that's all you can hope for. All you can be.</p>`;
                     } else {
-                        return `<p>You try to spare the church, but your squad ignores you and takes what they want anyway.</p>
-                               <p>You've lost control and favor. The captain sees you as weak.</p>`;
+                        return `<p>You try to spare it. Give the order. Make the gesture. But your squad ignores you. Laughs. Moves past. Takes what they want. Does what they want. Does what soldiers do. What you're all supposed to do. What you're all trained to do.</p>
+                               <p>You've lost control. Lost favor. Lost respect. The captain sees you as weak. Your men see you as weak. You see yourself as weak. Because you tried to be good. Tried to be better. Tried to be human. But in war, humanity is weakness. Mercy is failure. And you've failed. Again. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5443,13 +5466,14 @@
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You push forward...</p>`;
+                    if (!result) return `<p>The bridge chokes with bodies. Men pushing. Shoving. Fighting. Dying. The crush is terrible. The noise is worse. Steel on steel. Screams. Curses. Prayers. Everything mixed. Everything loud. Everything terrible.</p>
+                                           <p>You push forward. Hold your file. Keep formation. Keep discipline. Keep moving. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Keeps your men alive. Or tries to. Or hopes to.</p>`;
                     if (result.success) {
-                        return `<p>You hold your file and push the bridge with discipline. Your unit breaks through.</p>
-                               <p>Your leadership and courage earn significant favor. Your men respect you.</p>`;
+                        return `<p>You hold. Push. Break through. Your unit follows. Your discipline holds. Your courage shows. Your leadership matters. You break through. Get across. Get to the other side. Get to safety. Or what passes for safety. In war. In battle. In this.</p>
+                               <p>Your leadership earns favor. Significant favor. Your men respect you. Trust you. Follow you. Because you did it. You got them through. You kept them alive. For now. For this moment. That's something. That's everything.</p>`;
                     } else {
-                        return `<p>You push forward, but the crush of bodies and weapons leaves you wounded.</p>
-                               <p>You've taken a serious injury in the chaos of the bridge fight.</p>`;
+                        return `<p>You push forward. Try to hold. Try to break through. But the crush is too much. Bodies everywhere. Weapons everywhere. Death everywhere. Something finds you. A blade. A spear. A piece of metal. It doesn't matter what. Just that it does. Just that you're wounded. Just that you're hurt.</p>
+                               <p>You've taken a serious injury. In the chaos. In the fight. In the bridge. You're bleeding. Hurting. Broken. But you're alive. For now. For this moment. That's something. That's enough. Sometimes that's all you get. All you can hope for.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5479,13 +5503,14 @@
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You break ranks...</p>`;
+                    if (!result) return `<p>The town opens. Houses. Shops. Wealth. Everything you've been promised. Everything you've been fighting for. Everything that makes this worth it. Worth the risk. Worth the death. Worth the blood.</p>
+                                           <p>You break ranks. Run forward. Grab what you can. Because you can. Because you want to. Because you need to. Because this is your chance. Your moment. Your reward. For everything. For all of it.</p>`;
                     if (result.success) {
-                        return `<p>You break ranks and grab what you can. Silver, cloth, anything valuable.</p>
-                               <p>You're richer, but you've broken discipline. This will be remembered.</p>`;
+                        return `<p>You grab it. Silver. Cloth. Jewelry. Anything valuable. Anything worth something. You fill your hands. Fill your pack. Fill your pockets. You're richer. Better off. Better equipped. Better prepared. For what comes next. For what always comes next.</p>
+                               <p>But you've broken discipline. Broken formation. Broken trust. This will be remembered. Noted. Held against you. When you need it. When it matters. When the captain decides. When your fate is decided. You've gained wealth. But you've lost something. Something that might matter more. Eventually. Always.</p>`;
                     } else {
-                        return `<p>You're caught breaking ranks. The captain is furious, and you may have been injured in the chaos.</p>
-                               <p>You've lost significant favor and possibly your health.</p>`;
+                        return `<p>You're caught. Breaking ranks. Grabbing loot. Doing what you're not supposed to do. What you're not allowed to do. The captain sees. Gets furious. Calls you out. Makes you pay. Makes you regret. Makes you remember.</p>
+                               <p>You've lost favor. Significant favor. And maybe your health. Maybe your life. Because in the chaos, something happened. Something bad. Something that might kill you. Might break you. Might end you. All for loot. All for greed. All for nothing. Everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5519,13 +5544,14 @@
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see a noble in the chaos...</p>`;
+                    if (!result) return `<p>You see him in the chaos. A noble. Fine armor. Rich clothes. Worth something. Worth everything. Worth a fortune. Worth your future. Worth your life. If you can take him. If you can keep him. If you can make him pay.</p>
+                                           <p>The choice is simple. Kill him. Or take him. One ends a life. The other starts a fortune. One is final. The other is opportunity. One is war. The other is business. You have to decide. Now. Before someone else does. Before it's too late.</p>`;
                     if (result.success) {
-                        return `<p>You take a noble prisoner instead of killing him. He's worth a fortune in ransom.</p>
-                               <p>You've secured a valuable captive and established yourself in the ransom trade.</p>`;
+                        return `<p>You take him. Prisoner. Captive. Currency. He's worth a fortune. In ransom. In connections. In everything that matters. In everything you need. You've secured him. Kept him alive. Kept him whole. For now. For later. For when you need him.</p>
+                               <p>You've established yourself. In the ransom trade. In the business of war. In the economy of survival. This could change everything. Your wealth. Your status. Your future. If you can keep him. If you can make him pay. If you can survive long enough to collect.</p>`;
                     } else {
-                        return `<p>You try to take the prisoner, but he gets dragged away by others in the chaos.</p>
-                               <p>You're shaken by the missed opportunity and the violence you witnessed.</p>`;
+                        return `<p>You try to take him. Grab him. Hold him. But the chaos swallows you. Others grab him. Drag him away. Claim him. Take what's yours. What could have been yours. What should have been yours. But isn't. Not anymore. Not ever.</p>
+                               <p>You're shaken. By the missed opportunity. By the violence. By the loss. By everything you've seen. Everything you've done. Everything you've failed to do. The chance is gone. The fortune is lost. The future is dimmer. But you're alive. That's something. That's all you have.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5587,13 +5613,14 @@
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You step forward...</p>`;
+                    if (!result) return `<p>Two men. One prisoner. Two claims. One truth. Or maybe no truth. Just greed. Just want. Just the need to have. To own. To profit. From another man's capture. Another man's life. Another man's value.</p>
+                                           <p>You step forward. Into the dispute. Into the danger. Into the moment. Because someone has to. Because someone must. Because if you don't, blood will flow. Lives will be lost. Everything will break. And you can't let that happen. You won't let that happen.</p>`;
                     if (result.success) {
-                        return `<p>You demand formal witnesses and a fair division. The dispute is resolved without bloodshed.</p>
-                               <p>Your leadership prevents a feud. The captain appreciates your judgment.</p>`;
+                        return `<p>You demand it. Formal witnesses. Fair division. Proper law. Proper order. Proper way. The dispute resolves. Without blood. Without death. Without everything that could have gone wrong. Everything that usually goes wrong.</p>
+                               <p>Your leadership prevents a feud. Stops a war. Saves lives. The captain sees. Appreciates. Notices. Your judgment. Your courage. Your willingness to do what's right. Even when it's hard. Even when it's dangerous. Even when it costs you.</p>`;
                     } else {
-                        return `<p>Both sides turn on you. Your attempt at fairness makes you enemies.</p>
-                               <p>Your morale suffers from the conflict.</p>`;
+                        return `<p>Both sides turn. On you. Against you. Your attempt at fairness makes enemies. Your attempt at justice makes targets. Your attempt at right makes wrong. Everything backfires. Everything goes bad. Everything breaks.</p>
+                               <p>Your morale suffers. From the conflict. From the failure. From the knowledge that trying isn't enough. That doing right isn't enough. That being fair isn't enough. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5619,13 +5646,14 @@
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You propose a split...</p>`;
+                    if (!result) return `<p>The solution is simple. Obvious. Split it. Divide it. Share it. Everyone gets something. No one gets everything. No one gets nothing. Fair. Or fair enough. Or as fair as war allows. As fair as men allow. As fair as you can make it.</p>
+                                           <p>You propose it. The split. The division. The compromise. Because compromise is better than conflict. Because sharing is better than fighting. Because something is better than nothing. For everyone. For you. For them. For the prisoner. Maybe.</p>`;
                     if (result.success) {
-                        return `<p>You split the claim between the two men. Everyone gets something, and the dispute ends.</p>
-                               <p>You've avoided escalation and secured a small share for yourself.</p>`;
+                        return `<p>You split it. The claim. The ransom. The fortune. Between the two men. Everyone gets something. A share. A piece. A part. The dispute ends. The conflict stops. The blood doesn't flow. For now. For this moment. That's something. That's enough.</p>
+                               <p>You've avoided escalation. Prevented death. Saved lives. And secured a share. For yourself. Small. But something. A reward. For doing right. For doing well. For doing what needed doing. When no one else would. When no one else could.</p>`;
                     } else {
-                        return `<p>The prisoner dies in the scuffle before you can resolve it. You're left with nothing but guilt.</p>
-                               <p>You're shaken by the senseless death.</p>`;
+                        return `<p>The scuffle breaks out. Before you can resolve it. Before you can stop it. Before you can do anything. The prisoner dies. In the chaos. In the fight. In the greed. In the moment. You're left with nothing. But guilt. But shame. But the knowledge of what you failed to prevent.</p>
+                               <p>You're shaken. By the death. By the senselessness. By the waste. By everything that went wrong. Everything you couldn't stop. Everything you couldn't save. A man died. For nothing. For greed. For want. For everything that makes war terrible. Everything that makes men terrible.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5652,13 +5680,15 @@
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see an opportunity...</p>`;
+                    if (!result) return `<p>You see it. An opportunity. A chance. A moment. The purse. Full. Heavy. Valuable. Worth something. Worth everything. Worth taking. Worth stealing. Worth betraying. If you're fast. If you're careful. If you're willing. To do what needs doing. To do what you want doing.</p>
+                                           <p>The choice is simple. Take it. Or leave it. Steal it. Or respect it. Betray them. Or honor them. The purse calls. The greed calls. The need calls. Louder than honor. Louder than loyalty. Louder than everything that should matter. But doesn't. Not now. Not here. Not in this moment.</p>`;
                     if (result.success) {
-                        return `<p>You steal the purse and slip away. You're richer, but you've betrayed your comrades.</p>
-                               <p>You've gained wealth but lost honor. This will follow you.</p>`;
+                        return `<p>You steal it. Take it. Slip away. Fast. Quiet. Gone. You're richer. Better off. Better equipped. Better prepared. For what comes next. For what always comes next. For everything that matters. For everything you need.</p>
+                               <p>But you've betrayed them. Your comrades. Your friends. Your brothers. The men who trust you. The men who depend on you. The men who would die for you. And you've stolen from them. Betrayed them. Lost them. For wealth. For greed. For nothing. Everything.</p>
+                               <p>You've gained wealth. But lost honor. Lost trust. Lost everything that matters. Everything that makes you human. Everything that makes you good. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     } else {
-                        return `<p>You're caught stealing. The punishment is severe, and your reputation is ruined.</p>
-                               <p>You've lost significant favor and the trust of your unit.</p>`;
+                        return `<p>You're caught. Stealing. Taking. Betraying. The punishment is severe. The reputation is ruined. The trust is lost. Everything you've built. Everything you've earned. Everything you've become. Gone. In a moment. In a choice. In a mistake. That you can't take back. That you can't undo. That you can't fix.</p>
+                               <p>You've lost favor. Significant favor. And trust. The trust of your unit. The trust of your captain. The trust of everyone who matters. Everyone who cared. Everyone who believed in you. They don't anymore. They won't. Not ever. Not again. You've broken it. Destroyed it. Killed it. For nothing. For greed. For everything that doesn't matter. But does. Always does.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5721,13 +5751,14 @@
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You approach the villagers...</p>`;
+                    if (!result) return `<p>The villagers watch you. Fearful. Resigned. They've seen soldiers before. They know what to expect. Taking. Demanding. Threatening. That's how it works. That's how it always works.</p>
+                                           <p>You approach. Slowly. Show your hands. No weapons. Just coins. Just barter. Just the promise of fairness. In a world that offers little. In a war that takes everything. You try to be different. Try to be better. Try to be human.</p>`;
                     if (result.success) {
-                        return `<p>You forage with restraint, paying or bartering fairly. The villagers are surprised by your decency.</p>
-                               <p>You've reduced local resentment and secured supplies without violence.</p>`;
+                        return `<p>You forage with restraint. Pay. Barter. Trade fairly. The villagers stare. Disbelieving. Then grateful. One old man weeps. You didn't expect that. Didn't expect how much a small kindness could mean. To them. To you. To everyone.</p>
+                               <p>You've reduced resentment. Secured supplies. Without violence. Without blood. Without everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what you should. That's something. That's enough.</p>`;
                     } else {
-                        return `<p>The villagers lie about what they have. You find nothing, and your unit goes hungry.</p>
-                               <p>Your morale suffers from the failure and the hunger.</p>`;
+                        return `<p>They lie. About what they have. About what they need. About everything. You find nothing. Search. Look. Dig. But nothing. Empty. Barren. Stripped. Like the land. Like the people. Like everything. Your unit goes hungry. You go hungry. Everyone goes hungry.</p>
+                               <p>Your morale suffers. From the failure. From the hunger. From the knowledge that trying isn't enough. That being fair isn't enough. That doing right isn't enough. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5756,13 +5787,14 @@
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You look at the horse...</p>`;
+                    if (!result) return `<p>The horse stands. Tired. Thin. But alive. Still useful. Still valuable. Still a friend. Or supposed to be. Supposed to mean something. Supposed to be protected. Respected. Cared for. But hunger changes things. Changes priorities. Changes what matters. Changes what you're willing to do.</p>
+                                           <p>You look at it. The eyes. The trust. The bond. Or what's left of it. What war hasn't broken. What hunger hasn't destroyed. Yet. Because everything gets destroyed. Eventually. Everything gets broken. Everything gets used. Everything gets killed. For food. For survival. For nothing. Everything.</p>`;
                     if (result.success) {
-                        return `<p>You slaughter a horse for the pot. The men are fed, and morale improves.</p>
-                               <p>But you've lost a mount. You'll be on foot when speed matters.</p>`;
+                        return `<p>You do it. Slaughter it. Kill it. For the pot. For the men. For survival. The men are fed. Morale improves. Hunger fades. For now. For this moment. That's something. That's enough. Or supposed to be. Supposed to make it worth it. Supposed to make it right.</p>
+                               <p>But you've lost a mount. A friend. A companion. You'll be on foot. When speed matters. When escape matters. When survival matters. You've traded one advantage for another. One need for another. One life for others. That's how it works. That's how it always works. In war. In hunger. In everything.</p>`;
                     } else {
-                        return `<p>You can't bring yourself to do it, or you watch someone else do it. The sight shakes you.</p>
-                               <p>You're shaken by what you've seen or failed to do.</p>`;
+                        return `<p>You can't do it. Can't bring yourself to kill it. To end it. To destroy it. Or you watch someone else do it. Someone else make the choice. Someone else bear the weight. The sight shakes you. The sound. The smell. The everything. It all shakes you. Breaks you. Changes you.</p>
+                               <p>You're shaken. By what you've seen. By what you've failed to do. By what you've allowed. By everything. The guilt. The shame. The knowledge. That you're part of this. That you're complicit. That you're responsible. For the death. For the waste. For everything that makes war terrible. Everything that makes you terrible.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5790,13 +5822,14 @@
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see a thief being caught...</p>`;
+                    if (!result) return `<p>They catch him. A thief. Stealing rations. Taking what isn't his. What he needs. What everyone needs. What everyone wants. But he took it. Stole it. Betrayed them. For hunger. For greed. For survival. For everything that makes men desperate. Everything that makes men terrible.</p>
+                                           <p>You see him. Caught. Helpless. Waiting. For judgment. For punishment. For death. Maybe. Or maybe something worse. Something that makes an example. Something that teaches. Something that terrifies. Something that works. Or supposed to. Supposed to prevent. Supposed to stop. But never does. Never will.</p>`;
                     if (result.success) {
-                        return `<p>You make an example of the thief. Desertion decreases, and discipline improves.</p>
-                               <p>Your harsh justice earns favor with the captain.</p>`;
+                        return `<p>You make an example. Harsh. Public. Terrible. Desertion decreases. Discipline improves. Fear grows. Respect fades. But order holds. For now. For this moment. That's something. That's enough. Or supposed to be. Supposed to make it worth it. Supposed to make it right.</p>
+                               <p>Your harsh justice earns favor. With the captain. With the officers. With everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You've done what they wanted. What they needed. What they demanded. That's something. That's everything. Sometimes.</p>`;
                     } else {
-                        return `<p>Your attempt backfires. The squad turns cold, seeing you as a tyrant.</p>
-                               <p>Your morale suffers from the isolation.</p>`;
+                        return `<p>Your attempt backfires. The squad turns cold. Sees you as a tyrant. As a monster. As everything they fear. Everything they hate. Everything they don't want to be. But you are. You've become. You've made yourself. Into this. Into them. Into everything that makes war terrible. Everything that makes men terrible.</p>
+                               <p>Your morale suffers. From the isolation. From the fear. From the knowledge. That you've lost them. Lost their trust. Lost their respect. Lost everything that matters. Everything that makes you human. Everything that makes you good. You've gained favor. But lost yourself. Lost everything. For nothing. For order. For everything that doesn't matter. But does. Always does.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5857,13 +5890,14 @@
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You step into the water...</p>`;
+                    if (!result) return `<p>The water is cold. Deep. Dangerous. The mud grabs. Pulls. Holds. The tide is coming. Rising. Threatening. Crossbow bolts skip. Off the water. Off the mud. Off everything. Death is everywhere. Waiting. Watching. Ready.</p>
+                                           <p>You step into it. The water. The danger. The moment. Because someone has to. Because someone must. Because if you don't, no one will. And everyone will die. Or maybe just you. Maybe just your men. But someone will die. That's certain. That's war.</p>`;
                     if (result.success) {
-                        return `<p>You wade first with the forward file, leading the way across the dangerous ford.</p>
-                               <p>Your courage earns significant favor and inspires your comrades.</p>`;
+                        return `<p>You wade first. Lead the way. Across the ford. Through the danger. Through the death. The forward file follows. Your courage shows. Your leadership matters. Your example inspires. Your comrades follow. Trust you. Believe in you. Because you did it. You went first. You risked everything. For them. For everyone.</p>
+                               <p>Your courage earns favor. Significant favor. And respect. And trust. And everything that matters. Everything you need. Everything you want. You've done it. Done right. Done well. Done what needed doing. When no one else would. When no one else could. That's something. That's everything.</p>`;
                     } else {
-                        return `<p>The crossing is brutal. You take a crossbow bolt or fall in the mud, getting injured.</p>
-                               <p>You've been wounded in the dangerous crossing.</p>`;
+                        return `<p>The crossing is brutal. Terrible. Deadly. You take a bolt. Or fall in the mud. Or something else. Something bad. Something that hurts. Something that breaks. You're injured. Wounded. Broken. But you're alive. For now. For this moment. That's something. That's all you have.</p>
+                               <p>You've been wounded. In the crossing. In the danger. In the moment. You're hurt. But you're across. On the other side. Safe. Or safe enough. Or as safe as war allows. As safe as you can be. In this. In everything. In the life you've chosen. The life that's chosen you.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5896,13 +5930,14 @@
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You take position...</p>`;
+                    if (!result) return `<p>You take position. Shield raised. Eyes forward. Watching. Waiting. Ready. Others cross behind you. Trusting you. Depending on you. To hold. To cover. To protect. To keep them alive. To keep them safe. Or try to. Or hope to.</p>
+                                           <p>The water churns. The mud grabs. The bolts fly. Death is everywhere. Waiting. Watching. Ready. But you hold. You cover. You do your job. Because that's what you do. That's what you're trained to do. That's what keeps them alive. Keeps you alive. Or tries to. Or hopes to.</p>`;
                     if (result.success) {
-                        return `<p>You hold formation and cover others crossing. Your tactical sense reduces squad injuries.</p>
-                               <p>Your leadership improves morale and saves lives.</p>`;
+                        return `<p>You hold formation. Cover others. Keep them safe. Your tactical sense shows. Reduces injuries. Saves lives. Makes a difference. In the chaos. In the danger. In the moment. When everything matters. When nothing matters. When only survival matters.</p>
+                               <p>Your leadership improves morale. Saves lives. Makes you human. Makes you good. Or at least less bad. Less terrible. Less everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>`;
                     } else {
-                        return `<p>Chaos erupts despite your efforts. The crossing becomes a disaster.</p>
-                               <p>You're shaken by the failure and the suffering you couldn't prevent.</p>`;
+                        return `<p>Chaos erupts. Despite your efforts. Despite your best. Despite everything. The crossing becomes a disaster. Men fall. Die. Drown. In the water. In the mud. In the danger. In everything. You couldn't stop it. Couldn't prevent it. Couldn't save them.</p>
+                               <p>You're shaken. By the failure. By the suffering. By everything you couldn't prevent. Everything you couldn't stop. Everything you couldn't save. The guilt. The shame. The knowledge. That you failed. That you weren't enough. That nothing is enough. Sometimes. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5929,13 +5964,14 @@
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see a man struggling...</p>`;
+                    if (!result) return `<p>You see him. Struggling. In the water. In the mud. In the danger. Drowning. Dying. Fighting. For air. For life. For everything. For nothing. Just trying to survive. Just trying to live. Just trying. Like you. Like everyone. Like everything that matters.</p>
+                                           <p>The choice is simple. Help him. Or leave him. Save him. Or let him die. Risk yourself. Or save yourself. The water is cold. The danger is real. The choice is yours. The moment is now. The decision is everything. Or nothing. Always.</p>`;
                     if (result.success) {
-                        return `<p>You drag a drowning man to safety. He'll remember this, and you've gained a potential ally.</p>
-                               <p>Your heroism improves morale and may help you later.</p>`;
+                        return `<p>You drag him. To safety. To life. To everything. He'll remember. This moment. This choice. This debt. You've gained an ally. A friend. A brother. Someone who owes you. Someone who will help you. When you need it. When it matters. When everything depends on it.</p>
+                               <p>Your heroism improves morale. Saves a life. Makes a difference. May help you later. May save you. May matter. In the future. In the danger. In everything that comes. Everything that always comes. In war. In life. In death. You've done right. Done well. Done what needed doing. That's something. That's everything.</p>`;
                     } else {
-                        return `<p>You try to rescue him, but the effort exhausts you and you lose time.</p>
-                               <p>You're fatigued, and the enemy pressure increases.</p>`;
+                        return `<p>You try. To rescue him. To save him. To help him. But the effort exhausts you. Drains you. Breaks you. You lose time. Lose ground. Lose everything. The enemy pressure increases. The danger grows. The moment passes. The chance is gone. The opportunity is lost.</p>
+                               <p>You're fatigued. Empty. Broken. And the enemy is coming. The danger is growing. The moment is passing. You tried. That's something. But trying isn't enough. Sometimes. Always. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -5999,7 +6035,8 @@
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You take your position...</p>`;
+                    if (!result) return `<p>You take your position. In the line. In the formation. In the moment. The French come. Thousands. Too many. More than you can count. More than you can imagine. More than you can survive. Maybe. Probably. But you hold. You stand. You do your job. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Or tries to. Or hopes to.</p>
+                                           <p>The longbowmen ready. Arrows nocked. Strings drawn. Waiting. For the signal. For the order. For the moment. When everything changes. When everything breaks. When everything dies. Or lives. Or something in between. Something that matters. Something that doesn't. Always.</p>`;
                     const difficulty = result.baseDifficulty || 9;
                     const neededRoll = difficulty - result.effectiveStat;
                     const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
@@ -6009,11 +6046,11 @@
                         <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
                     </div>`;
                     if (result.success) {
-                        return `${rollDisplay}<p>You stay planted in the defensive line, holding your position with discipline. The English longbowmen do their work, and you survive.</p>
-                               <p>Your courage and discipline earn significant favor. Your morale is strong.</p>`;
+                        return `${rollDisplay}<p>You stay planted. In the line. In the formation. In the moment. Holding your position. With discipline. With courage. With everything you have. Everything you are. The longbowmen do their work. Arrows fly. Death comes. But not for you. Not today. Not here. Not yet.</p>
+                               <p>You survive. The battle. The danger. The moment. Your courage earns favor. Significant favor. Your discipline shows. Your morale is strong. Your will holds. For now. For this moment. That's something. That's everything. Sometimes. Always.</p>`;
                     } else {
-                        return `${rollDisplay}<p>The battle is fierce. You hold as long as you can, but you take a wound.</p>
-                               <p>You've been wounded, but you survived Crécy.</p>`;
+                        return `${rollDisplay}<p>The battle is fierce. Terrible. Deadly. You hold. As long as you can. As hard as you can. As well as you can. But something finds you. A blade. An arrow. A piece of metal. It doesn't matter what. Just that it does. Just that you're wounded. Just that you're hurt.</p>
+                               <p>You've been wounded. But you survived. Crécy. The battle. The danger. The moment. You're alive. For now. For this moment. That's something. That's all you have. Sometimes that's all you get. All you can hope for. In war. In life. In everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6045,7 +6082,8 @@
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see a fallen noble...</p>`;
+                    if (!result) return `<p>You see him. A fallen noble. Rich armor. Fine clothes. Worth something. Worth everything. Worth a fortune. Worth your future. If you can take it. If you can keep it. If you can make it yours. Before someone else does. Before it's too late. Before the moment passes.</p>
+                                           <p>The choice is simple. Strip him. Or leave him. Take his wealth. Or respect his death. Profit from his fall. Or honor his memory. The arrows still fly. The danger is real. But the opportunity calls. The greed calls. The need calls. Louder than honor. Louder than respect. Louder than everything that should matter. But doesn't. Not now. Not here. Not in this moment.</p>`;
                     const difficulty = result.baseDifficulty || 9;
                     const neededRoll = difficulty - result.effectiveStat;
                     const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
@@ -6055,11 +6093,11 @@
                         <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
                     </div>`;
                     if (result.success) {
-                        return `${rollDisplay}<p>You run forward and strip a fallen noble of his valuables. You're richer, but you've dishonored yourself.</p>
-                               <p>You've gained wealth but lost honor. This will follow you.</p>`;
+                        return `${rollDisplay}<p>You run forward. Fast. Desperate. Greedy. Strip him. Take his valuables. His wealth. His everything. You're richer. Better off. Better equipped. Better prepared. For what comes next. For what always comes next. For everything that matters. Everything you need.</p>
+                               <p>But you've dishonored yourself. Lost your honor. Lost your respect. Lost everything that makes you human. Everything that makes you good. You've gained wealth. But lost honor. Lost trust. Lost yourself. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     } else {
-                        return `${rollDisplay}<p>You're nearly hit by arrows or injured in the attempt. You're shaken and possibly wounded.</p>
-                               <p>You've risked everything for nothing.</p>`;
+                        return `${rollDisplay}<p>You're nearly hit. By arrows. By danger. By death. Or injured. In the attempt. In the greed. In the moment. You're shaken. Possibly wounded. Definitely scared. Definitely broken. By the risk. By the failure. By everything that went wrong. Everything you couldn't control.</p>
+                               <p>You've risked everything. For nothing. For greed. For want. For everything that doesn't matter. But does. Always does. You tried. That's something. But trying isn't enough. Sometimes. Always. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6093,7 +6131,8 @@
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see wounded men...</p>`;
+                    if (!result) return `<p>You see them. Wounded men. Bleeding. Dying. Calling. For help. For mercy. For someone. For you. Maybe. If you're willing. If you're able. If you're brave enough. Or stupid enough. Or human enough. To risk yourself. To save them. To do what's right. Even when it's wrong. Even when it's dangerous. Even when it costs you.</p>
+                                           <p>The arrows still fly. The danger is real. The moment is now. The choice is yours. Help them. Or leave them. Save them. Or let them die. Risk yourself. Or save yourself. The decision is everything. Or nothing. Always.</p>`;
                     const difficulty = result.baseDifficulty || 9;
                     const neededRoll = difficulty - result.effectiveStat;
                     const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
@@ -6103,11 +6142,11 @@
                         <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
                     </div>`;
                     if (result.success) {
-                        return `${rollDisplay}<p>You pull wounded men back under fire. Your heroism saves lives and reduces squad losses.</p>
-                               <p>Your courage improves morale and earns respect.</p>`;
+                        return `${rollDisplay}<p>You pull them back. Under fire. Through danger. Through death. Your heroism shows. Saves lives. Reduces losses. Makes a difference. In the chaos. In the moment. When everything matters. When nothing matters. When only survival matters. When only humanity matters.</p>
+                               <p>Your courage improves morale. Earns respect. Makes you human. Makes you good. Or at least less bad. Less terrible. Less everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what needed doing. That's something. That's everything. Sometimes. Always.</p>`;
                     } else {
-                        return `${rollDisplay}<p>You try to rescue them, but you're wounded and exhausted in the attempt.</p>
-                               <p>You've been wounded and fatigued, but you tried to do the right thing.</p>`;
+                        return `${rollDisplay}<p>You try. To rescue them. To save them. To help them. But you're wounded. In the attempt. In the danger. In the moment. And exhausted. Drained. Broken. By the effort. By the risk. By everything. By nothing. By the knowledge that trying isn't enough. Sometimes. Always.</p>
+                               <p>You've been wounded. And fatigued. But you tried. To do the right thing. To be human. To be good. That's something. That's enough. Sometimes. Always. Sometimes trying is enough. Sometimes being human is enough. Sometimes that's all you can do. All you can be. All you can hope for.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6373,13 +6412,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You look at the camp...</p>`;
+                    if (!result) return `<p>You look at the camp. The filth. The stench. The disease. The death. Everything that kills men. Slowly. Quietly. Without glory. Without honor. Just sickness. Just waste. Just the slow mathematics of survival. Of failure. Of everything that makes war terrible. Everything that makes men terrible.</p>
+                                           <p>The latrines overflow. The water tastes wrong. The air smells of death. Of decay. Of everything that shouldn't be. But is. Always is. In war. In camps. In everything. You know what needs doing. What should be done. What might save lives. If anyone listens. If anyone cares. If anyone is willing. To do what needs doing. To be what needs being. To try. To hope. To fail. Or succeed. Maybe.</p>`;
                     if (result.success) {
-                        return `<p>You dig proper latrines and enforce distance from water. Disease decreases in your area.</p>
-                               <p>Your foresight reduces sickness events and earns favor.</p>`;
+                        return `<p>You dig them. Proper latrines. Deep. Far from water. Enforced. Maintained. Clean. Or clean enough. Or as clean as war allows. Disease decreases. In your area. In your section. In your responsibility. Lives are saved. Health improves. Hope returns. For now. For this moment. That's something. That's enough.</p>
+                               <p>Your foresight reduces sickness. Earns favor. Makes a difference. In the chaos. In the death. In everything. You've done right. Done well. Done what needed doing. When no one else would. When no one else could. That's something. That's everything. Sometimes. Always.</p>`;
                     } else {
-                        return `<p>Others ignore your suggestions. Your efforts go unnoticed, and the camp remains unhealthy.</p>
-                               <p>You've tried, but to no effect.</p>`;
+                        return `<p>They ignore you. Your suggestions. Your efforts. Your everything. The camp remains unhealthy. Unclean. Unsafe. Men still die. Still get sick. Still suffer. Because no one listened. No one cared. No one was willing. To do what needs doing. To be what needs being. To try. To hope. To fail. Or succeed. Maybe.</p>
+                               <p>You've tried. That's something. But trying isn't enough. Sometimes. Always. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always. The knowledge weighs. Heavy. Real. Permanent. You did what you could. But it wasn't enough. It never is. Never will be. In war. In life. In everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6403,13 +6443,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You volunteer...</p>`;
+                    if (!result) return `<p>Night duty. Dangerous. Dark. Deadly. The enemy watches. Waits. Plans. Attacks. In the dark. In the silence. In the moment when you're weakest. When you're tired. When you're alone. When you're vulnerable. When you're human.</p>
+                                           <p>You volunteer. Step forward. Take the risk. Because someone has to. Because someone must. Because if you don't, someone else will. And they might not be ready. Might not be able. Might not survive. But you might. You hope. You try. You do what needs doing. What you're trained to do. What keeps you alive. Or tries to. Or hopes to.</p>`;
                     if (result.success) {
-                        return `<p>You volunteer for dangerous night duty and perform well. Your courage is noted.</p>
-                               <p>You've earned significant favor and improved morale through service.</p>`;
+                        return `<p>You perform well. On the duty. In the danger. In the moment. Your courage shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You've done right. Done well. Done what needed doing. That's something. That's everything.</p>
+                               <p>You've earned favor. Significant favor. And improved morale. Through service. Through courage. Through everything that makes you human. Makes you good. Or at least less bad. Less terrible. Less everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what needed doing. That's something. That's enough. Sometimes. Always.</p>`;
                     } else {
-                        return `<p>Night duty is dangerous. You're wounded in a skirmish or accident.</p>
-                               <p>You've been wounded, but you tried to serve.</p>`;
+                        return `<p>Night duty is dangerous. Terrible. Deadly. You're wounded. In a skirmish. Or an accident. Or something else. Something bad. Something that hurts. Something that breaks. You're hurt. But you're alive. For now. For this moment. That's something. That's all you have.</p>
+                               <p>You've been wounded. But you tried. To serve. To do right. To be good. That's something. That's enough. Sometimes. Always. Sometimes trying is enough. Sometimes being human is enough. Sometimes that's all you can do. All you can be. All you can hope for. In war. In life. In everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6439,13 +6480,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You watch the wagons...</p>`;
+                    if (!result) return `<p>You watch them. The wagons. Full. Heavy. Valuable. Worth something. Worth everything. Worth taking. Worth stealing. Worth betraying. If you're fast. If you're careful. If you're willing. To do what needs doing. To do what you want doing. To risk everything. For nothing. For greed. For want. For everything that doesn't matter. But does. Always does.</p>
+                                           <p>The opportunity calls. The greed calls. The need calls. Louder than honor. Louder than loyalty. Louder than everything that should matter. But doesn't. Not now. Not here. Not in this moment. The choice is simple. Take it. Or leave it. Steal it. Or respect it. Betray them. Or honor them. The decision is yours. The moment is now. The consequences are everything. Or nothing. Always.</p>`;
                     if (result.success) {
-                        return `<p>You skim from supply wagons without being caught. You're richer, but you've dishonored yourself.</p>
-                               <p>You've gained wealth but lost honor.</p>`;
+                        return `<p>You skim from them. The wagons. The supplies. The everything. Without being caught. Fast. Quiet. Gone. You're richer. Better off. Better equipped. Better prepared. For what comes next. For what always comes next. For everything that matters. Everything you need.</p>
+                               <p>But you've dishonored yourself. Lost your honor. Lost your respect. Lost everything that makes you human. Everything that makes you good. You've gained wealth. But lost honor. Lost trust. Lost yourself. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     } else {
-                        return `<p>You're caught and punished severely. Your reputation is ruined.</p>
-                               <p>You've lost significant favor and trust.</p>`;
+                        return `<p>You're caught. Stealing. Taking. Betraying. The punishment is severe. The reputation is ruined. The trust is lost. Everything you've built. Everything you've earned. Everything you've become. Gone. In a moment. In a choice. In a mistake. That you can't take back. That you can't undo. That you can't fix.</p>
+                               <p>You've lost favor. Significant favor. And trust. The trust of your unit. The trust of your captain. The trust of everyone who matters. Everyone who cared. Everyone who believed in you. They don't anymore. They won't. Not ever. Not again. You've broken it. Destroyed it. Killed it. For nothing. For greed. For everything that doesn't matter. But does. Always does.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6505,13 +6547,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You start boiling water...</p>`;
+                    if (!result) return `<p>You start boiling it. The water. The life. The everything. Because you know. What happens if you don't. What happens when men drink bad water. When they get sick. When they die. Slowly. Quietly. Without glory. Without honor. Just sickness. Just waste. Just the slow mathematics of survival. Of failure. Of everything that makes war terrible. Everything that makes men terrible.</p>
+                                           <p>You enforce it. Cleanliness. Distance. Order. Everything that might help. Everything that might save. Lives. Health. Hope. If anyone listens. If anyone cares. If anyone is willing. To do what needs doing. To be what needs being. To try. To hope. To fail. Or succeed. Maybe.</p>`;
                     if (result.success) {
-                        return `<p>You boil water and enforce cleanliness. You avoid the sickness that claims so many.</p>
-                               <p>Your discipline saves you from the flux and earns favor.</p>`;
+                        return `<p>You boil it. Enforce it. Maintain it. The water. The cleanliness. The order. You avoid the sickness. That claims so many. That kills so many. That breaks so many. You survive. Stay healthy. Stay whole. For now. For this moment. That's something. That's enough.</p>
+                               <p>Your discipline saves you. From the flux. From the death. From everything. And earns favor. From the captain. From your men. From everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You've done right. Done well. Done what needed doing. That's something. That's everything. Sometimes. Always.</p>`;
                     } else {
-                        return `<p>You try, but you get sick anyway. The flux weakens you.</p>
-                               <p>You're fatigued from the illness.</p>`;
+                        return `<p>You try. To boil it. To enforce it. To maintain it. But you get sick anyway. The flux finds you. Weakens you. Breaks you. Despite your efforts. Despite your best. Despite everything. You're sick. Tired. Broken. By the illness. By the failure. By everything. By nothing. By the knowledge that trying isn't enough. Sometimes. Always.</p>
+                               <p>You're fatigued. From the illness. From the weakness. From everything. You tried. That's something. But trying isn't enough. Sometimes. Always. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always. The knowledge weighs. Heavy. Real. Permanent. You did what you could. But it wasn't enough. It never is. Never will be. In war. In life. In everything.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6540,11 +6583,11 @@
                 text: function() {
                     const cost = 15;
                     if (gameState.stats.wealth >= cost) {
-                        return `<p>You buy better food at ruinous prices. You're fed, and your morale improves.</p>
-                               <p>You've spent wealth to prevent fatigue and maintain your health.</p>`;
+                        return `<p>You buy it. Better food. At ruinous prices. Three times what it should cost. Four times. Five. But you pay. Because you have to. Because you need to. Because hunger kills. Slowly. Quietly. Without glory. Without honor. Just weakness. Just waste. Just the slow mathematics of survival. Of failure. Of everything that makes war terrible. Everything that makes men terrible.</p>
+                               <p>You're fed. Your morale improves. Your health holds. For now. For this moment. That's something. That's enough. You've spent wealth. To prevent fatigue. To maintain health. To stay alive. To stay whole. To stay human. Or what's left of it. What war hasn't broken. What hunger hasn't destroyed. Yet. Because everything gets destroyed. Eventually. Everything gets broken. Everything gets used. Everything gets killed. For food. For survival. For nothing. Everything.</p>`;
                     } else {
-                        return `<p>You can't afford better food. The hunger and despair shake you.</p>
-                               <p>You're shaken by your poverty and the suffering around you.</p>`;
+                        return `<p>You can't afford it. Better food. Better health. Better chance. Of survival. Of living. Of everything. The hunger grows. The despair deepens. The weakness spreads. Through you. Through your men. Through everything. The knowledge weighs. Heavy. Real. Permanent. You don't have enough. You never do. You never will. In war. In life. In everything.</p>
+                               <p>You're shaken. By your poverty. By the suffering. By everything you can't change. Everything you can't fix. Everything you can't save. The guilt. The shame. The knowledge. That you're part of this. That you're complicit. That you're responsible. For the hunger. For the death. For everything that makes war terrible. Everything that makes you terrible.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6573,13 +6616,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You try to ignore it...</p>`;
+                    if (!result) return `<p>You try to ignore it. The suffering. The death. The everything. Because you have to. Because you need to. Because looking means seeing. Seeing means feeling. Feeling means breaking. And you can't break. Not now. Not here. Not when you need to survive. When you need to stay whole. When you need to stay human. Or what's left of it. What war hasn't broken. What death hasn't destroyed. Yet.</p>
+                                           <p>The choice is simple. Look away. Or look. Ignore it. Or see it. Survive through numbness. Or break through feeling. The decision is yours. The moment is now. The consequences are everything. Or nothing. Always. But you know. Deep down. You know. That looking away costs something. That numbness has a price. That survival comes with a burden. A weight. A debt. That you'll pay. Eventually. Always.</p>`;
                     if (result.success) {
-                        return `<p>You look away and survive through numbness. You've hardened yourself.</p>
-                               <p>Your emotional distance improves morale, but at a cost to your humanity.</p>`;
+                        return `<p>You look away. Ignore it. Survive through numbness. Through distance. Through everything that keeps you whole. Keeps you alive. Keeps you going. You've hardened yourself. Made yourself cold. Made yourself strong. Or at least strong enough. To survive. To endure. To keep going. When everything breaks. When everyone dies. When nothing matters. But survival. But living. But everything that keeps you going. Keeps you alive. Or tries to. Or hopes to.</p>
+                               <p>Your emotional distance improves morale. Keeps you whole. Keeps you alive. But at a cost. To your humanity. To your soul. To everything that makes you human. Makes you good. Makes you real. You've gained survival. But lost yourself. Lost your humanity. Lost everything that matters. Everything that makes you human. Everything that makes you good. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     } else {
-                        return `<p>You can't look away. The suffering shakes you to your core.</p>
-                               <p>You're shaken by what you've witnessed.</p>`;
+                        return `<p>You can't look away. Can't ignore it. Can't distance yourself. The suffering shakes you. To your core. To your soul. To everything that makes you human. Makes you good. Makes you real. You see it. Feel it. Break from it. The guilt. The shame. The knowledge. That you're part of this. That you're complicit. That you're responsible. For the suffering. For the death. For everything that makes war terrible. Everything that makes you terrible.</p>
+                               <p>You're shaken. By what you've witnessed. By what you've seen. By what you've felt. By everything. The knowledge weighs. Heavy. Real. Permanent. You can't unsee it. Can't unfee it. Can't undo it. The suffering. The death. The everything. It's part of you now. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6641,13 +6685,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You stand at attention...</p>`;
+                    if (!result) return `<p>You stand at attention. Silent. Still. Professional. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Keeps you whole. Keeps you human. Or what's left of it. What war hasn't broken. What surrender hasn't destroyed. Yet.</p>
+                                           <p>The citizens step forward. With keys. With surrender. With everything. They're thin. Starved. Broken. By the siege. By the hunger. By everything. You watch. Silent. Respectful. Or trying to be. Trying to be human. Trying to be good. In a moment. In a world. That makes it hard. That makes it impossible. Sometimes. Always.</p>`;
                     if (result.success) {
-                        return `<p>You stay disciplined and silent during the surrender. Your professionalism is noted.</p>
-                               <p>You've earned favor and maintained your honor.</p>`;
+                        return `<p>You stay disciplined. Stay silent. During the surrender. The moment. The everything. Your professionalism shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You've done right. Done well. Done what needed doing. That's something. That's everything.</p>
+                               <p>You've earned favor. And maintained honor. Kept your respect. Kept your humanity. Kept yourself. Whole. Good. Human. Or what's left of it. What war hasn't broken. What surrender hasn't destroyed. Yet. You've done right. Done well. Done what needed doing. That's something. That's enough. Sometimes. Always.</p>`;
                     } else {
-                        return `<p>You join the jeering crowd. Your lack of discipline is noted.</p>
-                               <p>You've dishonored yourself through poor behavior.</p>`;
+                        return `<p>You join them. The jeering crowd. The mocking voices. The everything. Your lack of discipline shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. Everyone who decides. Everyone who controls. Your fate. Your future. Your life. You've done wrong. Done poorly. Done what shouldn't be done. That's something. That's everything. Sometimes. Always.</p>
+                               <p>You've dishonored yourself. Through poor behavior. Through lack of respect. Through everything that makes you less. Less human. Less good. Less everything that matters. Everything that makes you whole. Everything that makes you real. You've lost honor. Lost respect. Lost yourself. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6674,13 +6719,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see a citizen...</p>`;
+                    if (!result) return `<p>You see him. A citizen. Thin. Starved. Broken. By the siege. By the hunger. By everything. He stands. With keys. With surrender. With everything. Waiting. For judgment. For mercy. For death. Maybe. Or maybe something else. Something better. Something human. If you're willing. If you're able. If you're brave enough. Or stupid enough. Or human enough. To risk yourself. To help him. To do what's right. Even when it's wrong. Even when it's dangerous. Even when it costs you.</p>
+                                           <p>The choice is simple. Offer water. Or don't. Help him. Or leave him. Show mercy. Or show nothing. The decision is yours. The moment is now. The consequences are everything. Or nothing. Always. But you know. Deep down. You know. That mercy costs something. That kindness has a price. That humanity comes with a burden. A weight. A debt. That you'll pay. Eventually. Always.</p>`;
                     if (result.success) {
-                        return `<p>You offer water to a citizen. The small act of mercy improves your morale.</p>
-                               <p>You've reduced any hardness penalty and maintained your humanity.</p>`;
+                        return `<p>You offer it. Water. Life. Mercy. To a citizen. To a stranger. To a human. The small act matters. Improves morale. Makes you human. Makes you good. Or at least less bad. Less terrible. Less everything that makes war terrible. Everything that makes men terrible. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
+                               <p>You've reduced hardness. Maintained humanity. Kept yourself. Whole. Good. Human. Or what's left of it. What war hasn't broken. What surrender hasn't destroyed. Yet. You've done right. Done well. Done what needed doing. That's something. That's everything. Sometimes. Always.</p>`;
                     } else {
-                        return `<p>You're mocked for showing mercy. The taunts get under your skin.</p>
-                               <p>Your morale suffers from the mockery.</p>`;
+                        return `<p>You're mocked. For showing mercy. For being human. For doing right. The taunts get under your skin. Into your head. Into your heart. They call you weak. Call you soft. Call you names that cut. That hurt. That make you doubt. You did right. You know you did right. But knowing doesn't help. Doesn't stop the doubt. Doesn't stop the shame. Sometimes doing right feels wrong. Sometimes being human feels like failure.</p>
+                               <p>Your morale suffers. From the mockery. From the doubt. From everything. The knowledge weighs. Heavy. Real. Permanent. You tried. To be human. To be good. To do right. But it wasn't enough. It never is. Never will be. In war. In life. In everything. Sometimes trying isn't enough. Sometimes being human isn't enough. Sometimes nothing is enough. Sometimes everything fails. Sometimes you fail. Always.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6709,13 +6755,14 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>You see an opportunity...</p>`;
+                    if (!result) return `<p>You see it. An opportunity. A chance. A moment. Keys. Cloth. Coin. Worth something. Worth everything. Worth taking. Worth stealing. Worth betraying. If you're fast. If you're careful. If you're willing. To do what needs doing. To do what you want doing. To risk everything. For nothing. For greed. For want. For everything that doesn't matter. But does. Always does.</p>
+                                           <p>The surrender is happening. The moment is now. The opportunity is here. The choice is simple. Take it. Or leave it. Steal it. Or respect it. Betray them. Or honor them. The decision is yours. The moment is now. The consequences are everything. Or nothing. Always. But you know. Deep down. You know. That taking costs something. That greed has a price. That dishonor comes with a burden. A weight. A debt. That you'll pay. Eventually. Always.</p>`;
                     if (result.success) {
-                        return `<p>You grab a souvenir—keys, cloth, or coin. You're richer, but you've dishonored yourself.</p>
-                               <p>You've gained wealth but lost honor.</p>`;
+                        return `<p>You grab it. A souvenir. Keys. Cloth. Coin. Something. Anything. Worth something. Worth everything. You're richer. Better off. Better equipped. Better prepared. For what comes next. For what always comes next. For everything that matters. Everything you need.</p>
+                               <p>But you've dishonored yourself. Lost your honor. Lost your respect. Lost everything that makes you human. Everything that makes you good. You've gained wealth. But lost honor. Lost trust. Lost yourself. This will follow you. Haunt you. Define you. Forever. Always. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`;
                     } else {
-                        return `<p>You're caught and punished. Your reputation suffers.</p>
-                               <p>You've lost favor through your greed.</p>`;
+                        return `<p>You're caught. Taking. Stealing. Betraying. The punishment is severe. The reputation is ruined. The trust is lost. Everything you've built. Everything you've earned. Everything you've become. Gone. In a moment. In a choice. In a mistake. That you can't take back. That you can't undo. That you can't fix.</p>
+                               <p>You've lost favor. Through your greed. Through your want. Through everything that doesn't matter. But does. Always does. The knowledge weighs. Heavy. Real. Permanent. You tried. To take. To steal. To profit. But it went wrong. It always goes wrong. Eventually. Always. You've lost everything. For nothing. For greed. For want. For everything that doesn't matter. But does. Always does.</p>`;
                     }
                 },
                 onEnter: function() {
@@ -6740,9 +6787,9 @@
                 year: 1347,
                 age: 28,
                 location: "Calais, France",
-                text: `<p>Crécy was a disaster for the French. Thousands fell to English arrows. But you survived.</p>
-                       <p>The war continues. You've learned that battles are won not just by courage, but by strategy and sometimes, by knowing when to retreat.</p>
-                       <p>Your journey as a man-at-arms continues. The 100 Years War has only just begun...</p>`,
+                text: `<p>Crécy was a disaster. For the French. For everyone. Thousands fell. To arrows. To blades. To death. But you survived. You're alive. For now. For this moment. That's something. That's all you have. Sometimes that's all you get. All you can hope for. In war. In life. In everything.</p>
+                       <p>The war continues. Always continues. Never ends. Never stops. You've learned. That battles are won. Not just by courage. But by strategy. By knowing. When to advance. When to hold. When to retreat. When to survive. When to live. When to die. Or try to. Or hope to.</p>
+                       <p>Your journey continues. As a man-at-arms. As a soldier. As a survivor. The war has only begun. The years stretch ahead. Full of battles. Full of death. Full of everything that makes war terrible. Everything that makes men terrible. You'll face it. Endure it. Survive it. Or try to. Or hope to. That's all you can do. All you can be. All you can hope for. In war. In life. In everything.</p>`,
                 choices: [
                     {
                         text: "Your story continues...",
@@ -6755,10 +6802,10 @@
                 title: "Your Legacy",
                 year: 1347,
                 age: 28,
-                text: `<p>This is but the beginning of your story. The 100 Years War will span your lifetime and beyond.</p>
-                       <p>You have survived Crécy, one of history's great battles. Your choices have shaped who you are.</p>
+                text: `<p>This is but the beginning. Of your story. Of the war. Of everything. The 100 Years War will span. Your lifetime. And beyond. Decades. Generations. Forever. Until it ends. Or doesn't. Or something in between. Something that matters. Something that doesn't. Always.</p>
+                       <p>You have survived. Crécy. One of history's great battles. One of history's great slaughters. One of everything that makes war terrible. Everything that makes men terrible. Your choices have shaped you. Made you. Broken you. Into what you are. Into what you've become. Into everything. Or nothing. Always.</p>
                        <p><strong>Your Final Stats:</strong></p>
-                       <p>You have become a veteran of war. Your story is written in the choices you made.</p>`,
+                       <p>You have become. A veteran. Of war. Of death. Of everything. Your story is written. In the choices you made. In the battles you fought. In the men you killed. In the men you saved. In everything. Or nothing. Always. The war continues. Without you. With you. Around you. Through you. Forever. Until it ends. Or doesn't. Or something in between. Something that matters. Something that doesn't. Always.</p>`,
                 choices: [
                     {
                         text: "Start a New Game",
@@ -7132,7 +7179,8 @@
                 title: "New Beginning",
                 year: null,
                 age: null,
-                text: `<p>Would you like to start a new game?</p>`,
+                text: `<p>The war ends. Or you do. One way or another. The story closes. The journey stops. The life you lived. The choices you made. The man you became. All of it. Done. Finished. Over. Or supposed to be. Supposed to mean something. Supposed to matter. But does it. Does any of it. In war. In life. In death. In everything. Or nothing. Always.</p>
+                       <p>Would you like to start again. A new game. A new life. A new everything. To try again. To be different. To make different choices. To become someone else. Or the same. Or something in between. The choice is yours. The moment is now. The consequences are everything. Or nothing. Always.</p>`,
                 choices: [
                     {
                         text: "Yes, start over",
@@ -7145,7 +7193,8 @@
                 title: "Starting Over",
                 year: 1337,
                 age: 18,
-                text: `<p>Your journey begins anew...</p>`,
+                text: `<p>Your journey begins. Anew. Again. From the start. From the beginning. From everything that was. That is. That will be. The year is 1337. The war is new. You are young. Or think you are. Or hope you are. For what comes next. For what always comes next. For everything that matters. Everything that kills. Everything that saves.</p>
+                       <p>The path stretches ahead. Full of choices. Full of danger. Full of everything that makes war terrible. Everything that makes men terrible. You'll face it. Endure it. Survive it. Or try to. Or hope to. That's all you can do. All you can be. All you can hope for. In war. In life. In everything. The journey begins. Again. Always. Forever. Until you die. Or until you make it right. If you can. If you will. If you're able.</p>`,
                 choices: [
                     {
                         text: "Begin",
@@ -9987,6 +10036,7 @@
                 location: function() { return gameState.location || "Camp"; },
                 noCampfire: true, // Prevent recursion
                 artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function() {
                     const cf = gameState.campfire || {};
                     const step = cf.currentStep || 0;
