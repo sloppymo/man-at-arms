@@ -8137,7 +8137,23 @@
             
             const choicesContainer = document.getElementById('choices-container');
             
-            choicesContainer.innerHTML = scene.choices.map((choice, index) => {
+            // Handle both function and array choices
+            let choices = scene.choices;
+            if (typeof choices === 'function') {
+                try {
+                    choices = choices();
+                } catch (error) {
+                    console.error('Error getting choices from function:', error);
+                    choices = [];
+                }
+            }
+            
+            if (!Array.isArray(choices) || choices.length === 0) {
+                choicesContainer.innerHTML = '<p style="color: #888; font-style: italic;">No choices available.</p>';
+                return;
+            }
+            
+            choicesContainer.innerHTML = choices.map((choice, index) => {
                 let effectsText = '';
                 if (choice.effects) {
                     effectsText = Object.entries(choice.effects)
