@@ -10872,9 +10872,26 @@
         // Make a choice
         function makeChoice(choiceIndex) {
             const scene = scenes[gameState.currentScene];
-            if (!scene || !scene.choices[choiceIndex]) return;
+            if (!scene) return;
             
-            const choice = scene.choices[choiceIndex];
+            // Handle both function and array choices
+            let choices = scene.choices;
+            if (typeof choices === 'function') {
+                try {
+                    choices = choices();
+                } catch (error) {
+                    console.error('Error getting choices from function:', error);
+                    showNotification('Error', 'Failed to get choices. Please refresh the page.');
+                    return;
+                }
+            }
+            
+            if (!Array.isArray(choices) || !choices[choiceIndex]) {
+                console.error('Invalid choice index or choices not an array:', choiceIndex, choices);
+                return;
+            }
+            
+            const choice = choices[choiceIndex];
             
             // Handle character creation validation
             if (gameState.currentScene === 'character_creation') {
