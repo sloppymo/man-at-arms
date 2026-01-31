@@ -43,6 +43,11 @@
             position: relative;
         }
         
+        .header .stats-panel {
+            margin-top: 15px;
+            margin-bottom: 0;
+        }
+        
         #version-display {
             position: absolute;
             top: 10px;
@@ -148,16 +153,26 @@
         
         .stats-panel {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
             margin: 25px 0;
+        }
+        
+        .header .stats-panel {
+            margin-top: 15px;
+            margin-bottom: 0;
+            gap: 6px;
         }
         
         .stat-item {
             background: rgba(139, 105, 20, 0.15);
-            padding: 15px;
-            border-radius: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
             border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        
+        .header .stat-item {
+            padding: 4px 8px;
         }
         
         .stat-label {
@@ -166,16 +181,23 @@
             gap: 8px;
             margin-bottom: 8px;
             font-weight: 600;
+            font-size: 0.75em;
         }
         
         .stat-bar {
             background: #1a0f08;
-            height: 24px;
-            border-radius: 12px;
+            height: 18px;
+            border-radius: 9px;
             overflow: hidden;
             margin-top: 5px;
             border: 1px solid #8b6914;
             position: relative;
+        }
+        
+        .header .stat-bar {
+            height: 14px;
+            border-radius: 7px;
+            margin-top: 3px;
         }
         
         .stat-fill {
@@ -192,11 +214,11 @@
             transform: translate(-50%, -50%);
             font-weight: bold;
             text-shadow: 1px 1px 2px #000;
-            font-size: 0.9em;
+            font-size: 0.7em;
         }
         
         .stat-special {
-            font-size: 0.95em;
+            font-size: 0.75em;
             margin-top: 5px;
             color: #f4d03f;
         }
@@ -731,6 +753,9 @@
                     <span>Location: <strong id="location">France</strong></span>
                 </div>
             </div>
+            <div class="stats-panel" id="stats">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
         </div>
         
         
@@ -740,10 +765,6 @@
         </div>
         <div class="story-text" id="story">
             <p id="loading-message" style="display: none;">Loading...</p>
-        </div>
-        
-        <div class="stats-panel" id="stats">
-            <!-- Stats will be populated by JavaScript -->
         </div>
         
         <div class="choices">
