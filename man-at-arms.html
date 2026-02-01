@@ -910,6 +910,7 @@
                 currentStep: 0, // Current step in multi-step exchange (0 = opening, 1+ = follow-ups)
                 stepHistory: [] // Track choices made in this exchange
             },
+            randomEncounter: { active: false, returnScene: null, cooldown: 0 },
             career: {
                 battles: 0,
                 wounds: 0,
@@ -7921,6 +7922,423 @@
                     }
                 ]
             },
+            // ============================================================================
+            // RANDOM ENCOUNTERS - Small events to break up the march
+            // (Triggered by maybeInsertRandomEncounter; each returns to the stored scene.)
+            // ============================================================================
+
+            random_drunken_song: {
+                title: "A Drunken Song",
+                text: `<p>Porridge Tom is drunk again. He stands on a stump and bellows out a marching song with half the words missing. Men laugh. Men groan. A crust of bread sails past his ear.</p>
+                       <p>Fiddle Jack sits with his fiddle across his knees, not playing. Just watching. "If he finds the tune," he says, "I'll eat your missing boot."</p>
+                       <p>Tom hits a note that makes the horses sidestep. Somebody laughs until he starts coughing.</p>`,
+                choices: [
+                    {
+                        text: "Join in and make it worse",
+                        effects: { morale: 1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tell him to stop before someone throws a pot at him",
+                        effects: { stress: -1, morale: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Walk off and let the noise have them",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_lost_boot: {
+                title: "The Missing Boot",
+                text: `<p>You wake with one boot. The other is gone. Your sock is wet through and black with mud.</p>
+                       <p>Hoary Bill squats by your bedroll and grins. "Somebody's got a fine foot tonight," he says. "Check the piss trench. Things turn up there."</p>
+                       <p>Soot-Eyed Billy looks over the camp like he's counting heads. "Or a lad's wearing it. Watch who limps."</p>`,
+                choices: [
+                    {
+                        text: "Search the camp and the ditches",
+                        effects: { stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ask around and take the laughter",
+                        effects: { stress: 1, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Find a replacement and swallow the cost",
+                        effects: { wealth: -2, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_gambling_debt: {
+                title: "A Debt Called In",
+                text: `<p>Sixpence Tom finds you. The bowman with the dice cup and the easy grin. The grin is gone.</p>
+                       <p>"You owe me three shillings," he says. "From the bones. Don't look at me like that. You threw the same as me and you called it luck."</p>
+                       <p>Hammer-hand Harry stands behind him, arms folded, knuckles like stones. "Pay him or he'll follow you all day," Harry says. "That's worse than a French spear."</p>`,
+                choices: [
+                    {
+                        text: "Pay the three and be done with it",
+                        effects: { wealth: -3, stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Refuse and see what that buys you",
+                        effects: { stress: 2, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Try to talk him down",
+                        effects: { stress: 1 },
+                        nextScene: "random_gambling_debt_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "charisma",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+
+            random_gambling_debt_resolve: {
+                title: "Terms",
+                text: function() {
+                    const r = gameState.lastResolution;
+                    if (!r) return `<p>Sixpence Tom waits. Hammer-hand Harry watches.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${r.effectiveStat} = ${r.roll} (vs ${r.difficulty})
+                        <br><strong>${r.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (r.success) {
+                        return `${rollDisplay}<p>You keep your voice low and your face plain. You remind him what he won off you last month. You remind him whose turn it is to be decent. He chews on that.</p>
+                               <p>"Two, then," he says. "And don't play if you can't lose."</p>`;
+                    }
+
+                    return `${rollDisplay}<p>You try it. He shakes his head before you're finished. "Three," he says. "And you're not as clever as you think."</p>`;
+                },
+                onEnter: function() {
+                    const r = gameState.lastResolution;
+                    if (!r) return;
+                    if (r.success) {
+                        applyStatChange('wealth', -2);
+                        applyStatChange('stress', -1);
+                        applyStatChange('reputation', 1);
+                    } else {
+                        applyStatChange('wealth', -3);
+                        applyStatChange('stress', 1);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Move on",
+                        effects: {},
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_campfire_tale: {
+                title: "A Tall Tale",
+                text: `<p>Rat-Catcher Ned is telling a story again. He swears he once saw a French knight fall off his horse and get beaten to death by a flock of geese.</p>
+                       <p>Men laugh into their bowls. Somebody says Ned should sell his stories to the king and buy the lot of you new boots.</p>
+                       <p>Ned spreads his hands. "I'm only saying what I saw," he says. "The geese were organized. Like soldiers."</p>`,
+                choices: [
+                    {
+                        text: "Add a detail and make the geese sound braver than you",
+                        effects: { morale: 1, stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Call him a liar and enjoy the shouting",
+                        effects: { morale: -1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Just listen and let it be stupid for a moment",
+                        effects: { morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_broken_sword: {
+                title: "A Bad Blade",
+                text: `<p>Your sword isn't right. The edge has a bite out of it. The hilt wiggles when you test it. You don't remember doing it. You just notice it now.</p>
+                       <p>Hammer-hand Harry looks it over and snorts. "That'll last one good hit," he says. "Maybe."</p>
+                       <p>Fiddle Jack says, "If it breaks, you can use the pieces as a dagger. That's what my uncle did. He died, but he did it."</p>`,
+                choices: [
+                    {
+                        text: "Try to peen the hilt tight and hope",
+                        effects: { stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Pay for a better blade",
+                        effects: { wealth: -5, stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Find a replacement in the next pile of dead",
+                        effects: { stress: 1, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_stolen_horse: {
+                title: "Where's the Horse?",
+                text: `<p>The horse you were meant to mind is gone. The rope is still there, neatly cut. No hoofprints you can trust in the churned mud.</p>
+                       <p>Lloyd the Welshman sucks his teeth. "Either a thief or a saint," he says. "A thief takes the horse. A saint takes the rope too."</p>
+                       <p>Soot-Eyed Billy says, "Captain's going to ask. Don't make up a pretty lie. Make up a fast one."</p>`,
+                choices: [
+                    {
+                        text: "Search the hedges and fields",
+                        effects: { stress: 2 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tell the captain and take what comes",
+                        effects: { reputation: -1, stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Point at someone else and walk away",
+                        effects: { reputation: -2, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_food_poisoning: {
+                title: "Bad Stew",
+                text: `<p>The stew tastes wrong. Sour at the back of the tongue. You eat it anyway because you're hungry and because hunger makes a man brave in stupid ways.</p>
+                       <p>An hour later you're bent over the ditch, heaving. The world sways. Your gut feels like it's trying to crawl out.</p>
+                       <p>Ladle Martin pats your shoulder like he's doing you a favor. "Should've waited," he says. "The rats always try it first."</p>`,
+                choices: [
+                    {
+                        text: "Lie down and let it pass",
+                        effects: { stress: 1, endurance: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ask someone for water and keep your pride quiet",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tough it out and rejoin the line",
+                        effects: { stress: 2, endurance: -2, morale: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_weather_complaint: {
+                title: "The Weather",
+                text: `<p>It's raining again. The camp is mud. Your socks are mud. The bread tastes like mud because someone dropped it and ate it anyway.</p>
+                       <p>Men complain like it's a job. One swears the sky over France is lower than in England. Another says the rain is French too and ought to be stabbed.</p>
+                       <p>Fiddle Jack tugs at a wet string and sighs. "If this keeps up," he says, "I'll be playing a puddle."</p>`,
+                choices: [
+                    {
+                        text: "Join in and make it everybody's problem",
+                        effects: { morale: -1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ignore it and keep your head down",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Help someone rig a bit of cover",
+                        effects: { morale: 1, reputation: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_insult_battle: {
+                title: "Words as Weapons",
+                text: `<p>Two men are at it by the cookfire. Not blades. Tongues. They're close enough to smell each other.</p>
+                       <p>"Your mother sells turnips to pigs," one says.</p>
+                       <p>The other laughs too loud. "Better than your father, who couldn't sell a pisspot at a feast."</p>`,
+                choices: [
+                    {
+                        text: "Watch and let it stay words",
+                        effects: { morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Throw in an insult and take a side",
+                        effects: { morale: 1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Break it up before somebody remembers he has a knife",
+                        effects: { reputation: 1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_misplaced_gear: {
+                title: "Misplaced",
+                text: `<p>You can't find your whetstone. You turned your pack inside out. You checked under your blanket twice. It's gone.</p>
+                       <p>Granny Six-Teeth is crouched by the ashes, warming her hands. She watches you look and look again.</p>
+                       <p>"If you want your stone," she says, "stop looking like you're about to cry and ask."</p>`,
+                choices: [
+                    {
+                        text: "Ask her where it is",
+                        effects: { stress: -1, reputation: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Keep searching and pretend you didn't hear",
+                        effects: { stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Give up and accept the loss",
+                        effects: { stress: -1, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_dice_game: {
+                title: "Bones",
+                text: `<p>A board goes down on a barrel. Coins clink. A dice cup rattles like teeth in a skull.</p>
+                       <p>Sixpence Tom nods at you. "Two shillings to sit," he says. "If you haven't got two, you haven't got luck either."</p>
+                       <p>Men lean in. Not because they care who wins. Because watching someone lose is free.</p>`,
+                choices: [
+                    {
+                        text: "Play (bet 2 shillings)",
+                        effects: { wealth: -2, stress: 1 },
+                        nextScene: function() {
+                            const win = Math.random() > 0.5;
+                            if (win) {
+                                applyStatChange('wealth', 4);
+                                applyStatChange('morale', 1);
+                            } else {
+                                applyStatChange('stress', 1);
+                                applyStatChange('morale', -1);
+                            }
+                            return returnFromRandomEncounter();
+                        }
+                    },
+                    {
+                        text: "Watch but keep your coin",
+                        effects: { morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Walk away before you start thinking about home",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_cooking_disaster: {
+                title: "Spilled",
+                text: `<p>Somebody trips. The pot tips. Stew goes into the dirt like a sacrifice.</p>
+                       <p>For a heartbeat nobody speaks. Then the shouting starts. Hungry men have good lungs.</p>
+                       <p>Ladle Martin stares at the mud where supper used to be. "That's it," he says. "We're eating regret."</p>`,
+                choices: [
+                    {
+                        text: "Help scrape together what you can",
+                        effects: { reputation: 1, morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Join the complaints and make it louder",
+                        effects: { morale: -1, stress: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Stay out of it",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_sleepwalking: {
+                title: "Out Past the Lines",
+                text: `<p>You come awake in the dark with cold grass under your hands. The camp is behind you. The sentries are somewhere to your left, talking low.</p>
+                       <p>You must have walked. You don't remember getting up. You don't remember anything between sleep and this.</p>
+                       <p>A voice calls softly. "Who's there?" The question is not friendly.</p>`,
+                choices: [
+                    {
+                        text: "Answer and show your hands",
+                        effects: { stress: 1, reputation: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Try to creep back without being seen",
+                        effects: { stress: 2 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Sit tight until you hear the watch pass",
+                        effects: { stress: 1, endurance: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_animal_encounter: {
+                title: "An Unwanted Guest",
+                text: `<p>A pig has wandered into camp. Or maybe it belongs to somebody and is trying to get home. It noses into packs and knocks over a bowl like it owns the place.</p>
+                       <p>Men chase it. It jukes like a trained fighter. Somebody falls in the mud and the pig squeals like it's laughing.</p>
+                       <p>Hoary Bill points. "Catch it," he says. "That's tomorrow's meat if the captain doesn't see."</p>`,
+                choices: [
+                    {
+                        text: "Help catch it",
+                        effects: { reputation: 1, morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ignore it and let fools run",
+                        effects: { stress: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Try to shoo it out quietly",
+                        effects: { morale: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_betrayal_joke: {
+                title: "A Joke at Your Expense",
+                text: `<p>Somebody's moved your kit. Not far. Just enough. Your belt is under another blanket. Your cup is hanging from a spear rack.</p>
+                       <p>A few men are watching too hard, waiting for you to notice. Waiting for you to give them a reason to laugh.</p>
+                       <p>Soot-Eyed Billy shrugs. "If you swing, swing at the right lad," he says. "Or you'll be paying for it twice."</p>`,
+                choices: [
+                    {
+                        text: "Laugh it off",
+                        effects: { morale: 1, reputation: 1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Confront them and risk a real fight",
+                        effects: { stress: 1, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Plan something small and mean for later",
+                        effects: { morale: 1, stress: 1, reputation: -1 },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
             restart: {
                 title: "New Beginning",
                 year: null,
@@ -11018,6 +11436,109 @@
                 }
             }
         };
+
+        // ============================================================================
+        // RANDOM ENCOUNTER SYSTEM
+        // ============================================================================
+        // Fires between normal scene transitions to add small, optional camp-life moments.
+        // Uses a cooldown to avoid frequent interruptions.
+
+        const RANDOM_ENCOUNTER_CHANCE = 0.12; // 12% per eligible transition
+        const RANDOM_ENCOUNTER_COOLDOWN_SCENES = 3;
+
+        const RANDOM_ENCOUNTERS = [
+            'random_drunken_song',
+            'random_lost_boot',
+            'random_gambling_debt',
+            'random_campfire_tale',
+            'random_broken_sword',
+            'random_stolen_horse',
+            'random_food_poisoning',
+            'random_weather_complaint',
+            'random_insult_battle',
+            'random_misplaced_gear',
+            'random_dice_game',
+            'random_cooking_disaster',
+            'random_sleepwalking',
+            'random_animal_encounter',
+            'random_betrayal_joke'
+        ];
+
+        function returnFromRandomEncounter(fallback = 'start') {
+            const rs = gameState?.randomEncounter?.returnScene;
+            const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
+            if (gameState.randomEncounter) {
+                gameState.randomEncounter.active = false;
+                gameState.randomEncounter.returnScene = null;
+            }
+            return target;
+        }
+
+        function isCriticalSceneKey(sceneKey) {
+            if (!sceneKey || typeof sceneKey !== 'string') return true;
+
+            const criticalPrefixes = [
+                'character_creation',
+                'first_battle',
+                'tutorial',
+                'campfire',
+                'death',
+                'ending',
+                'restart',
+                'reset'
+            ];
+
+            for (const p of criticalPrefixes) {
+                if (sceneKey.startsWith(p)) return true;
+            }
+
+            // Avoid interrupting resolution / combat plumbing.
+            if (sceneKey.endsWith('_resolve')) return true;
+
+            // Allow scenes to opt out explicitly.
+            if (scenes[sceneKey] && scenes[sceneKey].noRandomEncounter) return true;
+
+            return false;
+        }
+
+        function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+            // Never chain random encounters or interrupt a random return.
+            if ((fromSceneKey || '').startsWith('random_')) return false;
+            if ((nextSceneKey || '').startsWith('random_')) return false;
+
+            // Cooldown
+            if (gameState.randomEncounter && gameState.randomEncounter.cooldown > 0) return false;
+
+            // Exclusions (important scenes / transitions)
+            if (isCriticalSceneKey(fromSceneKey) || isCriticalSceneKey(nextSceneKey)) return false;
+
+            return true;
+        }
+
+        function tickRandomEncounterCooldown(fromSceneKey) {
+            if (!gameState.randomEncounter) return;
+            if ((fromSceneKey || '').startsWith('random_')) return;
+            if (gameState.randomEncounter.cooldown > 0) {
+                gameState.randomEncounter.cooldown -= 1;
+            }
+        }
+
+        function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+            if (!shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
+            if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
+
+            const encounterId = RANDOM_ENCOUNTERS[Math.floor(Math.random() * RANDOM_ENCOUNTERS.length)];
+
+            if (!gameState.randomEncounter) {
+                gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+            }
+
+            gameState.randomEncounter.active = true;
+            gameState.randomEncounter.returnScene = nextSceneKey;
+            gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
+
+            return encounterId;
+        }
         
         // Initialize game
         function initGame() {
@@ -14386,7 +14907,11 @@
             }
             
             // Check if we should insert a campfire interlude
-            const finalNextScene = maybeInsertCampfire(nextSceneName);
+            const afterCampfire = maybeInsertCampfire(nextSceneName);
+
+            // Random encounter insertion (with cooldown to avoid back-to-back interruptions)
+            tickRandomEncounterCooldown(gameState.currentScene);
+            const finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, afterCampfire);
             
             gameState.currentScene = finalNextScene;
             
@@ -14538,6 +15063,7 @@
                     stepHistory: [],
                     currentResponse: null
                 },
+                randomEncounter: { active: false, returnScene: null, cooldown: 0 },
                 career: {
                     battles: 0,
                     wounds: 0,
