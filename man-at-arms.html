@@ -1228,7 +1228,60 @@
             if (!gameState.relationships) {
                 gameState.relationships = { wat: 0, cook: 0, oana: 0 };
             }
-            gameState.relationships[who] = clampRel((gameState.relationships[who] || 0) + delta);
+            const oldValue = gameState.relationships[who] || 0;
+            gameState.relationships[who] = clampRel(oldValue + delta);
+            
+            // Immediate feedback - show relationship change
+            if (delta !== 0) {
+                const npcNames = {
+                    wat: "Wat",
+                    cook: "Cook",
+                    oana: "Oana"
+                };
+                const npcName = npcNames[who] || who;
+                const newValue = gameState.relationships[who];
+                
+                let feedback = "";
+                if (delta > 0) {
+                    if (newValue >= 3) {
+                        feedback = `${npcName} looks at you with respect.`;
+                    } else if (newValue > 0) {
+                        feedback = `${npcName} seems more friendly.`;
+                    } else {
+                        feedback = `${npcName} seems less hostile.`;
+                    }
+                } else {
+                    if (newValue <= -3) {
+                        feedback = `${npcName} glares at you with suspicion.`;
+                    } else if (newValue < 0) {
+                        feedback = `${npcName} seems displeased.`;
+                    } else {
+                        feedback = `${npcName} seems less friendly.`;
+                    }
+                }
+                
+                // Add feedback to story text if possible
+                const storyElement = document.getElementById('story');
+                if (storyElement && feedback) {
+                    const feedbackDiv = document.createElement('div');
+                    feedbackDiv.className = 'relationship-feedback';
+                    feedbackDiv.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(212,175,55,0.1); border-left: 3px solid #d4af37; font-style: italic; color: #d4af37;';
+                    feedbackDiv.textContent = feedback;
+                    storyElement.appendChild(feedbackDiv);
+                    
+                    // Remove after 5 seconds
+                    setTimeout(() => {
+                        if (feedbackDiv.parentNode) {
+                            feedbackDiv.style.opacity = '0';
+                            feedbackDiv.style.transition = 'opacity 0.5s';
+                            setTimeout(() => feedbackDiv.remove(), 500);
+                        }
+                    }, 5000);
+                }
+                
+                // Update relationship display
+                updateRelationshipDisplay();
+            }
         }
         
         /** Check if campfire should be inserted */
@@ -3923,6 +3976,10 @@
                                 showNotification('Character Creation', 'Please select your origin.');
                                 return false;
                             }
+                            if (!gameState.patronId) {
+                                showNotification('Character Creation', 'Please select a patron before beginning your journey.');
+                                return false;
+                            }
                             
                             // Validate priorities
                             const priorityValidation = validatePrioritiesCompleteAndUnique();
@@ -4373,15 +4430,31 @@
                 artwork: "artwork/battle-scene-1.jpg", // French vs English battle scene
                 artworkCaption: "The clash of arms on the field of battle",
                 text: `<p>You charge into battle. With courage. Or what passes for it. Or what you hope is courage. But might be fear. Might be desperation. Might be everything that makes men run toward death. But you charge anyway. Because you have to. Because there's no other choice.</p>
-                       <p>The clash of steel rings in your ears. The sound is terrible. Beautiful. Terrifying. Men scream. Die. Fall around you. But you keep going. Keep charging. Keep fighting. Because that's what you do. That's what you're trained to do. The first battle. The first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you.</p>`,
+                       <p>The clash of steel rings in your ears. The sound is terrible. Beautiful. Terrifying. Men scream. Die. Fall around you. A French soldier breaks through the line. Coming at you. Sword raised. What do you do?</p>`,
                 choices: [
                     {
-                        text: "Fight with all your might",
-                        effects: {},
+                        text: "Meet him head-on - Strength against strength",
+                        effects: { stress: 1 },
                         nextScene: "first_battle_brave_resolve",
                         requiresResolution: true,
                         resolutionStat: "strength",
                         resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Dodge and counter - Use agility",
+                        effects: { stress: 1 },
+                        nextScene: "first_battle_brave_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Fall back and let comrades help - Tactical retreat",
+                        effects: { stress: 1, morale: -1 },
+                        nextScene: "first_battle_brave_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 6
                     }
                 ]
             },
@@ -4485,15 +4558,75 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
-                text: `<p>You lead them into battle. Your unit. Your men. Your responsibility. But you lead with skill and courage. They follow you and trust you because you lead and because you care. Because you do what needs doing when no one else will.</p>
-                       <p>You emerge victorious. Together. As a unit. As a team. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
-                       <p>Your leadership is recognized by your lord and your captain. By everyone who matters. You're given more. Responsibility. Men. Trust. You've earned it through leadership and skill. Through everything that makes you different. Makes you more than just a soldier. More than just a killer.</p>`,
+                text: `<p>You lead them into battle. Your unit. Your men. Your responsibility. The French line ahead. Your men look to you. For orders. For courage. For something to follow.</p>
+                       <p>The battle begins. Steel clashes. Men shout. The chaos of war surrounds you. Can you lead them through this? Can you keep them together? Can you make the right choices when everything is happening at once?</p>`,
+                choices: [
+                    {
+                        text: "Charge the center - Break their line",
+                        effects: { stress: 1 },
+                        nextScene: "first_battle_leader_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Flank from the left - Tactical advantage",
+                        effects: { stress: 1 },
+                        nextScene: "first_battle_leader_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 6
+                    },
+                    {
+                        text: "Hold the line - Defensive formation",
+                        effects: { stress: 1 },
+                        nextScene: "first_battle_leader_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "charisma",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+            first_battle_leader_resolve: {
+                title: "The Price of Leadership",
+                year: 1338,
+                age: 19,
+                location: "Northern France",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The battle rages. Your men fight. You lead. Or try to. The outcome hangs in the balance.</p>`;
+                    
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+                    
+                    if (result.success) {
+                        return `${rollDisplay}<p>You lead them well. Your unit holds. Fights. Wins. Together. As a team. The French break. Retreat. You've done right. Done well. Your leadership is recognized. By your lord. By your captain. By everyone who matters.</p>
+                               <p>You're given more. Responsibility. Men. Trust. You've earned it through leadership and skill. Through everything that makes you different. Makes you more than just a soldier.</p>`;
+                    } else {
+                        return `${rollDisplay}<p>The battle goes wrong. Your orders are misunderstood. Or ignored. Or simply wrong. Men die. Your men. Good men. Because of you. Because of your choices. Because you failed them.</p>
+                               <p>You survive. Barely. But the weight of failure sits heavy. Your reputation suffers. Your men look at you differently. With doubt. With blame. You led them into disaster. That knowledge burns. Permanent. Real.</p>
+                               <p>You've learned. That leadership is not just giving orders. It's making the right choices. At the right time. When everything depends on it. You failed. But you survived. That's something. That's enough. For now.</p>`;
+                    }
+                },
                 onEnter: function() {
-                    applyStatChange('experience', 15);
-                    applyStatChange('reputation', 2);
-                    applyStatChange('patronFavor', 1);
-                    applyStatChange('stress', 1);
-                    gameState.career.battles++;
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 15);
+                        applyStatChange('reputation', 2);
+                        applyStatChange('patronFavor', 1);
+                        applyStatChange('stress', 1);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        // Failure consequences
+                        applyStatChange('experience', 5); // Less experience for failure
+                        applyStatChange('reputation', -2); // Reputation loss
+                        applyStatChange('morale', -1); // Morale loss
+                        applyStatChange('stress', 2); // Higher stress
+                        addCondition('Shaken', 'negative', 3); // Temporary condition
+                        gameState.career.battles++;
+                    }
                 },
                 choices: [
                     {
@@ -7936,16 +8069,28 @@
                     {
                         text: "Join in and make it worse",
                         effects: { morale: 1, stress: 1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_drunken_song_end"
                     },
                     {
                         text: "Tell him to stop before someone throws a pot at him",
                         effects: { stress: -1, morale: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_drunken_song_end"
                     },
                     {
                         text: "Walk off and let the noise have them",
                         effects: { stress: -1 },
+                        nextScene: "random_drunken_song_end"
+                    }
+                ]
+            },
+            random_drunken_song_end: {
+                title: "A Drunken Song",
+                text: `<p>The moment passes. The noise fades. Tom stumbles off his stump. Men return to their tasks. Their thoughts. Their silence.</p>
+                       <p>The march continues. Boots on dirt. The rhythm of movement. The rhythm of war. Another moment. Another day. Nothing more. Nothing less.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
                         nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
@@ -7960,16 +8105,28 @@
                     {
                         text: "Search the camp and the ditches",
                         effects: { stress: 1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_lost_boot_end"
                     },
                     {
                         text: "Ask around and take the laughter",
                         effects: { stress: 1, reputation: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_lost_boot_end"
                     },
                     {
                         text: "Find a replacement and swallow the cost",
                         effects: { wealth: -2, stress: 1 },
+                        nextScene: "random_lost_boot_end"
+                    }
+                ]
+            },
+            random_lost_boot_end: {
+                title: "The Missing Boot",
+                text: `<p>The matter is settled. One way or another. You have two boots again. Or you don't. Either way, the march doesn't wait. The column moves. You move with it.</p>
+                       <p>Small problems. Small solutions. Or no solutions. The war doesn't care about boots. About comfort. About anything but movement. Forward. Always forward.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
                         nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
@@ -7984,12 +8141,12 @@
                     {
                         text: "Pay the three and be done with it",
                         effects: { wealth: -3, stress: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_gambling_debt_end"
                     },
                     {
                         text: "Refuse and see what that buys you",
                         effects: { stress: 2, reputation: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_gambling_debt_end"
                     },
                     {
                         text: "Try to talk him down",
@@ -7998,6 +8155,18 @@
                         requiresResolution: true,
                         resolutionStat: "charisma",
                         resolutionDifficulty: 7
+                    }
+                ]
+            },
+            random_gambling_debt_end: {
+                title: "A Debt Called In",
+                text: `<p>The matter is settled. One way or another. Coins change hands. Or they don't. Words are exchanged. Or they aren't.</p>
+                       <p>Tom moves on. Harry moves on. You move on. The debt is paid. Or it isn't. Either way, the march continues. The war continues. Debts are small things in the face of that.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
+                        nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
             },
@@ -8015,10 +8184,12 @@
 
                     if (r.success) {
                         return `${rollDisplay}<p>You keep your voice low and your face plain. You remind him what he won off you last month. You remind him whose turn it is to be decent. He chews on that.</p>
-                               <p>"Two, then," he says. "And don't play if you can't lose."</p>`;
+                               <p>"Two, then," he says. "And don't play if you can't lose."</p>
+                               <p>You pay. He nods. The matter is settled. The march continues. Debts. Payments. Settlements. All part of the life.</p>`;
                     }
 
-                    return `${rollDisplay}<p>You try it. He shakes his head before you're finished. "Three," he says. "And you're not as clever as you think."</p>`;
+                    return `${rollDisplay}<p>You try it. He shakes his head before you're finished. "Three," he says. "And you're not as clever as you think."</p>
+                           <p>You pay. The coins leave your hand. The debt is settled. But the sting remains. The march continues. That's how it goes.</p>`;
                 },
                 onEnter: function() {
                     const r = gameState.lastResolution;
@@ -8050,16 +8221,29 @@
                     {
                         text: "Add a detail and make the geese sound braver than you",
                         effects: { morale: 1, stress: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_campfire_tale_end"
                     },
                     {
                         text: "Call him a liar and enjoy the shouting",
                         effects: { morale: -1, stress: 1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_campfire_tale_end"
                     },
                     {
                         text: "Just listen and let it be stupid for a moment",
                         effects: { morale: 1 },
+                        nextScene: "random_campfire_tale_end"
+                    }
+                ]
+            },
+            random_campfire_tale_end: {
+                title: "A Tall Tale",
+                text: `<p>The story ends. Or it doesn't. Ned keeps talking. Or he stops. Men laugh. Or they don't. The fire burns low.</p>
+                       <p>Stories. Tales. Lies. Truth. In camp, they all blur together. What matters is the moment. The warmth. The company. The brief escape from what's real. What's coming.</p>
+                       <p>The night passes. The march continues. Another day. Another story. Another moment of peace before the war finds you again.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
                         nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
@@ -8074,16 +8258,28 @@
                     {
                         text: "Try to peen the hilt tight and hope",
                         effects: { stress: 1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_broken_sword_end"
                     },
                     {
                         text: "Pay for a better blade",
                         effects: { wealth: -5, stress: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_broken_sword_end"
                     },
                     {
                         text: "Find a replacement in the next pile of dead",
                         effects: { stress: 1, reputation: -1 },
+                        nextScene: "random_broken_sword_end"
+                    }
+                ]
+            },
+            random_broken_sword_end: {
+                title: "A Bad Blade",
+                text: `<p>The matter is settled. You've fixed it or replaced it or made your peace with what you have. The blade in your hand is what it is. Good enough or not, but it's yours for now.</p>
+                       <p>Steel breaks. Steel bends. Steel serves until it doesn't. You've learned that much. The march continues and the war continues and your blade will be tested soon enough.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
                         nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
@@ -8098,16 +8294,28 @@
                     {
                         text: "Search the hedges and fields",
                         effects: { stress: 2 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_stolen_horse_end"
                     },
                     {
                         text: "Tell the captain and take what comes",
                         effects: { reputation: -1, stress: -1 },
-                        nextScene: function() { return returnFromRandomEncounter(); }
+                        nextScene: "random_stolen_horse_end"
                     },
                     {
                         text: "Point at someone else and walk away",
                         effects: { reputation: -2, stress: 1 },
+                        nextScene: "random_stolen_horse_end"
+                    }
+                ]
+            },
+            random_stolen_horse_end: {
+                title: "Where's the Horse?",
+                text: `<p>The matter is handled. One way or another. The horse is found or it isn't. The captain is told or he isn't. The blame is placed or it isn't.</p>
+                       <p>Horses disappear. That's how it goes. In war, things go missing. Animals. Gear. Men. The march doesn't wait for explanations. The column moves forward and you move with it, whatever the cost.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
                         nextScene: function() { return returnFromRandomEncounter(); }
                     }
                 ]
@@ -11749,6 +11957,23 @@
                 // Scene has artwork - display it
                 artworkImage.src = scene.artwork;
                 artworkImage.alt = scene.artworkCaption || scene.title || 'Scene artwork';
+                
+                // Add error handling for broken images
+                artworkImage.onerror = function() {
+                    console.warn('Failed to load image:', scene.artwork);
+                    // Hide the image but keep the caption if it exists
+                    artworkImage.style.display = 'none';
+                    if (artworkCaption && scene.artworkCaption) {
+                        artworkCaption.style.display = 'block';
+                        artworkCaption.textContent = scene.artworkCaption;
+                    }
+                };
+                
+                artworkImage.onload = function() {
+                    // Image loaded successfully
+                    artworkImage.style.display = 'block';
+                };
+                
                 if (artworkCaption && scene.artworkCaption) {
                     artworkCaption.textContent = scene.artworkCaption;
                     artworkCaption.style.display = 'block';
@@ -11834,7 +12059,7 @@
                 { key: 'charisma', label: '💬 Charisma', max: 10 },
                 { key: 'luck', label: '🍀 Luck', max: 10 },
                 { key: 'wits', label: '🧠 Wits', max: 10 },
-                { key: 'morale', label: '💪 Morale', max: 10 },
+                { key: 'morale', label: '💪 Morale', max: 10, tooltip: 'Affected by social choices and relationships' },
                 { key: 'stress', label: '😰 Stress', max: 10 },
                 { key: 'wealth', label: '💰 Wealth', max: 24000, isSpecial: true }, // Max 100 pounds (24000 pence)
                 { key: 'reputation', label: '⭐ Reputation', max: 50, isSpecial: true },
@@ -11864,9 +12089,10 @@
                 const effectiveValue = getEffectiveStat(stat.key);
                 const effectiveDisplay = effectiveValue !== value ? ` (Effective: ${effectiveValue})` : '';
                 
+                const tooltip = stat.tooltip ? `<span title="${stat.tooltip}" style="cursor: help; margin-left: 5px; color: #d4af37; font-size: 0.8em;">ℹ️</span>` : '';
                 return `
                     <div class="stat-item">
-                        <div class="stat-label">${stat.label}${effectiveDisplay}</div>
+                        <div class="stat-label">${stat.label}${tooltip}${effectiveDisplay}</div>
                         <div class="stat-bar">
                             <div class="stat-fill" style="width: ${percentage}%"></div>
                             <div class="stat-value">${value}/${stat.max}</div>
@@ -11874,6 +12100,9 @@
                     </div>
                 `;
             }).join('');
+            
+            // Add relationship display after stats
+            updateRelationshipDisplay();
         }
         
         // Update choices
@@ -11905,6 +12134,10 @@
                     effectsText = Object.entries(choice.effects)
                         .map(([key, value]) => {
                             const sign = value > 0 ? '+' : '';
+                            // Highlight morale changes with special styling
+                            if (key === 'morale') {
+                                return `<span style="color: #4a9; font-weight: bold;">${sign}${value} ${key} (social choice)</span>`;
+                            }
                             return `${sign}${value} ${key}`;
                         })
                         .join(', ');
@@ -11977,6 +12210,60 @@
             return "Raw Recruit";
         }
         
+        // Update relationship display
+        function updateRelationshipDisplay() {
+            if (gameState.currentScene === 'character_creation') return;
+            
+            const statsPanel = document.getElementById('stats');
+            if (!statsPanel) return;
+            
+            let relContainer = document.getElementById('relationships-container');
+            if (!relContainer) {
+                relContainer = document.createElement('div');
+                relContainer.id = 'relationships-container';
+                relContainer.style.cssText = 'grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(212,175,55,0.2);';
+                statsPanel.appendChild(relContainer);
+            }
+            
+            if (!gameState.relationships) {
+                gameState.relationships = { wat: 0, cook: 0, oana: 0 };
+            }
+            
+            const npcs = [
+                { key: 'wat', name: 'Wat' },
+                { key: 'cook', name: 'Cook' },
+                { key: 'oana', name: 'Oana' }
+            ];
+            
+            relContainer.innerHTML = `
+                <div style="font-weight: 600; color: #d4af37; margin-bottom: 8px; font-size: 0.9em;">Relationships</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                    ${npcs.map(npc => {
+                        const value = gameState.relationships[npc.key] || 0;
+                        const percentage = ((value + 5) / 10) * 100; // Convert -5..+5 to 0..100%
+                        let color = '#d4af37'; // Neutral
+                        if (value >= 3) color = '#4a9'; // Friendly
+                        else if (value >= 1) color = '#6b8'; // Positive
+                        else if (value <= -3) color = '#c44'; // Hostile
+                        else if (value <= -1) color = '#a66'; // Negative
+                        
+                        return `
+                            <div style="background: var(--card); border: 1px solid rgba(255,255,255,.06); border-radius: 8px; padding: 8px;">
+                                <div style="font-size: 0.85em; color: #d4af37; margin-bottom: 4px;">${npc.name}</div>
+                                <div style="background: #1a0f08; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(212,175,55,.25); position: relative;">
+                                    <div style="height: 100%; width: ${percentage}%; background: linear-gradient(90deg, ${color}, ${color}dd); transition: width 0.5s ease; position: relative;">
+                                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; font-weight: bold; color: ${value >= 0 ? '#fff' : '#fff'}; text-shadow: 0 0 3px #000;">
+                                            ${value > 0 ? '+' : ''}${value}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+        
         // Update status bar
         function updateStatusBar() {
             // Hide status bar on character creation screen
@@ -12030,6 +12317,9 @@
                 conditionsElement.style.cssText = 'display: flex; gap: 5px; flex-wrap: wrap; align-items: center;';
                 statusBar.appendChild(conditionsElement);
             }
+            
+            // Update relationship display
+            updateRelationshipDisplay();
             
             if (gameState.conditions && gameState.conditions.length > 0) {
                 conditionsElement.innerHTML = '<span style="color: #d4af37; font-weight: bold;">Status:</span>' +
@@ -14579,6 +14869,34 @@
                     }
                 }
             });
+            updateDisplay();
+        }
+        
+        function setPatron(patronId) {
+            gameState.patronId = patronId;
+            // Set legacy patron field for backward compatibility
+            gameState.patron = patronId;
+            
+            // Update patron event path if PATRONS object exists
+            if (typeof PATRONS !== 'undefined' && PATRONS[patronId]) {
+                gameState.patronEventPath = PATRONS[patronId].eventPath || null;
+            }
+            
+            // Update card styles to show selection
+            const patronIds = ['james_olooney', 'lord_david', 'duke_caley', 'count_charles', 'ashkhan'];
+            patronIds.forEach(pId => {
+                const card = document.getElementById(`patron-card-${pId}`);
+                if (card) {
+                    if (pId === patronId) {
+                        card.style.background = 'rgba(212, 175, 55, 0.3)';
+                        card.style.borderColor = '#f4d03f';
+                    } else {
+                        card.style.background = 'rgba(42, 42, 42, 0.8)';
+                        card.style.borderColor = '#8b6914';
+                    }
+                }
+            });
+            
             updateDisplay();
         }
         
