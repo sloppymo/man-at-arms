@@ -11465,7 +11465,7 @@
         ];
 
         function returnFromRandomEncounter(fallback = 'start') {
-            const rs = gameState?.randomEncounter?.returnScene;
+            const rs = (gameState && gameState.randomEncounter && gameState.randomEncounter.returnScene) ? gameState.randomEncounter.returnScene : null;
             const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
             if (gameState.randomEncounter) {
                 gameState.randomEncounter.active = false;
