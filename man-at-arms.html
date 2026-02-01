@@ -14076,11 +14076,16 @@
                 updateDisplay();
             } else if (currentStep === maxStep) {
                 // On step 6, clicking Next creates the character
-                completeCharacterCreation();
+                window.completeCharacterCreation();
             }
         }
         
-        function completeCharacterCreation() {
+        // Make completeCharacterCreation globally accessible
+        window.completeCharacterCreation = function() {
+            console.log('completeCharacterCreation called');
+            console.log('Current patronId:', gameState.patronId);
+            console.log('Current patron:', gameState.patron);
+            
             // Validate required fields
             if (!gameState.characterName || gameState.characterName.trim() === '') {
                 gameState.characterName = "William Thatcher";
@@ -14111,15 +14116,18 @@
                 return;
             }
             
-            // Grant starting kit (kit tier already resolved by recalculateCharacterCreationDerivedStats)
+            // Resolve final starting kit tier and grant kit if not already granted
             if (!gameState.startingKitGranted) {
-                grantStartingKit(gameState.origin, gameState.startingKitTier);
+                // Ensure all stats are recalculated (includes kit tier resolution)
+                recalculateCharacterCreationDerivedStats();
+                const origin = gameState.origin || 'rural_peasant';
+                grantStartingKit(origin, gameState.startingKitTier);
             }
             
             // Transition to start scene
             gameState.currentScene = "start";
             updateDisplay();
-        }
+        };
         
         function prevCharacterCreationStep() {
             const currentStep = gameState.characterCreationStep || 1;
@@ -14872,7 +14880,14 @@
             updateDisplay();
         }
         
-        function setPatron(patronId) {
+        // Make setPatron globally accessible
+        window.setPatron = function(patronId) {
+            console.log('setPatron called with:', patronId);
+            if (!patronId) {
+                console.error('setPatron called with invalid patronId:', patronId);
+                return;
+            }
+            
             gameState.patronId = patronId;
             // Set legacy patron field for backward compatibility
             gameState.patron = patronId;
@@ -14882,23 +14897,12 @@
                 gameState.patronEventPath = PATRONS[patronId].eventPath || null;
             }
             
-            // Update card styles to show selection
-            const patronIds = ['james_olooney', 'lord_david', 'duke_caley', 'count_charles', 'ashkhan'];
-            patronIds.forEach(pId => {
-                const card = document.getElementById(`patron-card-${pId}`);
-                if (card) {
-                    if (pId === patronId) {
-                        card.style.background = 'rgba(212, 175, 55, 0.3)';
-                        card.style.borderColor = '#f4d03f';
-                    } else {
-                        card.style.background = 'rgba(42, 42, 42, 0.8)';
-                        card.style.borderColor = '#8b6914';
-                    }
-                }
-            });
+            console.log('Patron set to:', gameState.patronId);
+            console.log('gameState after setPatron:', JSON.stringify({patronId: gameState.patronId, patron: gameState.patron}));
             
+            // Force update the display to regenerate HTML with new selection
             updateDisplay();
-        }
+        };
         
         function answerBackgroundQuestion(questionId) {
             if (!gameState.backgroundQuestionsAnswered) {
@@ -15149,7 +15153,11 @@
             
             // Call onChoose callback if present (for kit granting, etc.)
             if (choice.onChoose && typeof choice.onChoose === 'function') {
-                choice.onChoose();
+                const onChooseResult = choice.onChoose();
+                // If onChoose returns false, validation failed - don't proceed
+                if (onChooseResult === false) {
+                    return;
+                }
             }
             
             // Apply effects with clamping (supports both object and function effects)
