@@ -1,0 +1,51 @@
+# Test files and scripts
+test*.js
+test*.html
+playtest.js
+static-analysis.js
+static-analysis-report.json
+
+# Demo and variant files
+man-at-arms-combat-demo.html
+man-at-arms-minigame-demo.html
+man-at-arms-equipment-system.js
+man-at-arms-equipment-ui.js
+man-at-arms-enemy-profiles.js
+man-at-arms.with-random.html
+NEW_COMBAT_ENCOUNTERS.js
+
+# Temporary and generated files
+temp_scenes.txt
+ALL_DIALOG_SCENES.txt
+*.zip
+
+# Prompt and analysis files (development notes)
+WRITING_STYLE_*.md
+WRITING_STYLE_*.txt
+GPT_*.md
+KIMI_*.md
+CLAUDE_*.md
+COMBAT_*.md
+CONTENT_INVENTORY.md
+CONTINUATION_PROMPT.md
+EQUIPMENT_*.md
+HISTORICAL_ANALYSIS.md
+IMPLEMENTATION_PLAN.md
+MAP_*.md
+PLAYTEST_*.md
+PLAYTESTING_GUIDE.md
+TEST_*.md
+TESTING_SUMMARY.md
+README_PLAYTEST.md
+
+# Artwork prompt files (keep actual images, ignore prompts)
+artwork/*.md
+artwork/*.txt
+
+# Package files
+package.json
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
