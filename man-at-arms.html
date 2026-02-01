@@ -11223,7 +11223,7 @@
                 {
                     text: "Pay him to avoid trouble",
                     effects: function(gs) {
-                        const wealth = gs.stats?.wealth || gs.wealth || 0;
+                        const wealth = (gs.stats && gs.stats.wealth) || gs.wealth || 0;
                         if (wealth >= 2) {
                             applyStatChange('wealth', -2, {silent: true});
                             applyStatChange('stress', -1, {silent: true});
@@ -11315,7 +11315,7 @@
                 {
                     text: "Pay a smith to repair it properly",
                     effects: function(gs) {
-                        const wealth = gs.stats?.wealth || gs.wealth || 0;
+                        const wealth = (gs.stats && gs.stats.wealth) || gs.wealth || 0;
                         if (wealth >= 3) {
                             applyStatChange('wealth', -3, {silent: true});
                             applyStatChange('stress', -1, {silent: true});
@@ -11522,7 +11522,7 @@
                 {
                     text: "Join the game",
                     effects: function(gs) {
-                        const wealth = gs.stats?.wealth || gs.wealth || 0;
+                        const wealth = (gs.stats && gs.stats.wealth) || gs.wealth || 0;
                         if (wealth >= 1) {
                             const roll = Math.random();
                             if (roll < 0.5) {
