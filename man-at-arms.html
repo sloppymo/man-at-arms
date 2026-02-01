@@ -10220,7 +10220,17 @@
                     }
                     
                     // Fallback to old format (single stage) - convert to multi-stage format on the fly
-                    const oldChoices = vignette.choices || [];
+                    let oldChoices = [];
+                    if (typeof vignette.choices === 'function') {
+                        try {
+                            oldChoices = vignette.choices(gameState) || [];
+                        } catch (error) {
+                            console.error('Error getting choices from vignette function:', error);
+                            oldChoices = [];
+                        }
+                    } else if (Array.isArray(vignette.choices)) {
+                        oldChoices = vignette.choices;
+                    }
                     const choices = oldChoices.map((c, i) => {
                         return {
                             text: c.text,
