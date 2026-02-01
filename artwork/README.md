@@ -10,6 +10,7 @@ Place your medieval manuscript artwork images here.
 4. **naval-battle-1.jpg** - Naval battle scene (for channel_crossing)
 5. **naval-battle-2.jpg** - Naval battle with coastal city (for saint_vaast_landing)
 6. **naval-battle-3.jpg** - Another naval battle scene (for landing_raid)
+7. **campfire.jpg** - Campfire scene with soldiers (for campfire_interlude) ✅
 
 ## Usage:
 
