@@ -4699,6 +4699,757 @@
                     }
                 ]
             },
+            // ============================================================================
+            // COMBAT ENCOUNTERS - Batch 1: Forest Ambush & Siege Defense
+            // ============================================================================
+            forest_ambush_1340: {
+                title: "Ambush in the Woods",
+                year: 1340,
+                age: 22,
+                location: "Northern France",
+                artworkCaption: "French archers emerge from the trees",
+                text: `<p>The forest goes still the wrong way. No birds. No chatter. Just boots on leaf-mold and the small clink of mail. Men keep walking anyway. Because marching is what you do until it isn't.</p>
+                       <p>An arrow hits the man beside you. He drops like his knees were cut out. Someone shouts. Then there's more arrows. French archers in the trees. Close. Higher than you. Hard to see until they move.</p>
+                       <p>Soot-Eyed Billy hisses, "Left side. Up. Don't bunch." He's already backing toward a trunk, eyes on the canopy.</p>
+                       <p>Fiddle Jack ducks low, gripping his bow like he wants to wring it. "I can't see them. I can hear them," he says, breath fast.</p>
+                       <p>Granny Six-Teeth is behind the line with the baggage, voice sharp as any captain's. "Heads down. If you stand there like a post, you'll get used like one."</p>
+                       <p>You're in the open. Leaves jump with impacts. Men shout names. Some stop shouting. You have a few heartbeats to pick a way through it.</p>`,
+                choices: [
+                    {
+                        text: "Charge the archers in the trees",
+                        effects: {},
+                        nextScene: "forest_ambush_1340_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Take cover and return fire",
+                        effects: {},
+                        nextScene: "forest_ambush_1340_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Lead a retreat to better ground",
+                        effects: {},
+                        nextScene: "forest_ambush_1340_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+            forest_ambush_1340_resolve: {
+                title: "After the Ambush",
+                year: 1340,
+                age: 22,
+                location: "Northern France",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The forest settles back down like it didn't do anything. Men breathe hard. Someone coughs and won't stop.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You move when others freeze. You get under wood and root and shadow. You put steel where it needs to go, or you put arrows back into the trees until the shooting falters.</p>
+                            <p>Billy points with two fingers. "There. One more." He's calm, like this is work he's done before. He probably has.</p>
+                            <p>Harry barrels in from the right with a man at his shoulder, smashing through brush. "Keep moving," he grunts. "Don't stop to look."</p>
+                            <p>The French break once it costs them. A few run deeper into the trees. A few don't get up. The column drags itself back together. Men check each other's straps, count heads, find the ones that are missing.</p>
+                            <p>Jack exhales like he's been holding it since the first arrow. "I hate woods," he says. "Never trust woods."</p>
+                            <p>You move on with the taste of leaves and fear in your mouth, and you keep Billy's warnings in your head the way you keep water when you're thirsty.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>You try to move and the forest punishes it. An arrow catches you—hard enough to make your arm go slack, or to make your leg forget what it's for. You stumble into cover more by luck than sense.</p>
+                            <p>Jack grabs your belt and hauls. "Down. Down," he says, not loud, just urgent. He's shaking with it. He tries not to show.</p>
+                            <p>Billy's voice comes through the noise. "Hold still. Let them waste shots."</p>
+                            <p>Harry takes a hit off a shield and keeps going, jaw locked. "If you can breathe, you can crawl," he says, like he's giving you permission.</p>
+                            <p>The ambush ends the ugly way most things end—by running out of will. The French peel off when your men stop panicking. The column survives. You survive. But you're leaking and sore and angry, and it's going to be a long march.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 8);
+                        applyStatChange('reputation', 1);
+                        applyStatChange('stress', 1);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 2);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 2);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            siege_defense_1345: {
+                title: "The Walls Hold",
+                year: 1345,
+                age: 26,
+                location: "Gascony",
+                artworkCaption: "French forces assault the castle walls",
+                text: `<p>The siege has gone on long enough that everyone's sick of the sound of stone. The French throw rocks. You throw rocks back. Men die in bits you don't want to look at too hard.</p>
+                       <p>Up on the ramparts the air smells of piss, smoke, and old sweat. The captain points where he wants bodies. "Gate. Wall. Anywhere they touch. Hold it."</p>
+                       <p>Hammer-Hand Harry pats his weapon like it's a tool. "Gate's a door," he says. "Doors break. Men break first."</p>
+                       <p>Soot-Eyed Billy peers out from behind a crenel. "They're stacking ladders on the left. Three at once," he says. "They're timing it."</p>
+                       <p>Fiddle Jack swallows and tightens his grip. "If they come over, it's close work," he says. "No room to be clever."</p>
+                       <p>Below, the first ladder slams into the stone. Wood scrapes. Men shout. The assault finally starts.</p>`,
+                choices: [
+                    {
+                        text: "Defend the main gate with all your strength",
+                        effects: {},
+                        nextScene: "siege_defense_1345_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Hold your position on the walls",
+                        effects: {},
+                        nextScene: "siege_defense_1345_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "endurance",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Coordinate the defense from a vantage point",
+                        effects: {},
+                        nextScene: "siege_defense_1345_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+            siege_defense_1345_resolve: {
+                title: "The Assault Ends",
+                year: 1345,
+                age: 26,
+                location: "Gascony",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The assault keeps coming in waves. Arms ache. Throats go raw. The wall shakes and holds.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You do the job in front of you. You keep hands off the wall where hands shouldn't be. You shove ladders. You put steel into faces that pop up over stone. You keep the gate line tight.</p>
+                            <p>Billy calls it clean: "Left ladder's empty. Next one's coming." He keeps feeding you the small facts that stop men from dying stupid.</p>
+                            <p>Harry plants himself where the press is worst. "Here," he grunts. "Not back there." He takes the hit that would've taken another man's teeth.</p>
+                            <p>Jack's breathing hard, but he stays. "Don't let them sit on the wall," he says, and it's the closest thing to advice he's got.</p>
+                            <p>The French finally pull away, dragging their wounded, leaving their dead where they fell. The wall is slick and chipped and still yours. Men slump wherever they can. Someone laughs once, short and ugly, because it's over for the moment.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>They find the weak spot. A ladder lands where no one wanted it. A knot of French gets a foothold. For a minute the wall feels like it's tilting under you.</p>
+                            <p>You fight close. Elbows, knife, shield edge. No space. No clean swings. Someone's breath in your face and you don't know whose it is.</p>
+                            <p>You take a hard cut or a crushing hit. Your arm goes numb. Your legs wobble. Jack sees it and grabs you by the strap. "Stay up," he says through his teeth. "Stay up."</p>
+                            <p>Harry shoulders into the crush and buys a few seconds. "Move," he barks. "Move now."</p>
+                            <p>The French are driven off eventually, but it's not neat. It's not heroic. It's bodies piled where the ladder was and men staring at their own hands like they don't recognize them. When it's done you're left hurting and patched and quieter than you were.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 12);
+                        applyStatChange('reputation', 2);
+                        applyStatChange('patronFavor', 1);
+                        applyStatChange('stress', 2);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Seriously Wounded', 'negative', 3);
+                        applyStatChange('endurance', -2);
+                        applyStatChange('stress', 3);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Tend to your wounds",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            // ============================================================================
+            // COMBAT ENCOUNTERS - Batch 2: Cavalry Skirmish & Night Raid
+            // ============================================================================
+            cavalry_skirmish_1342: {
+                title: "Horsemen on the Road",
+                year: 1342,
+                age: 23,
+                location: "Aquitaine",
+                artworkCaption: "French cavalry charges across the field",
+                text: `<p>You're marching in a long column when the sound changes. Not boots. Not carts. Hooves. Fast. Many of them. It comes up from behind a low rise like a storm you can't step aside from.</p>
+                       <p>French cavalry—helmets bright, lances down. The men near you start shouting at once. Some start running. That makes it worse.</p>
+                       <p>Billy looks over his shoulder and spits. "Too close. If you run, they'll ride you down."</p>
+                       <p>Jack's hands are already on a strap. "Where do you want me?" he asks. No poetry. Just trying to live.</p>
+                       <p>Harry steps into the road like it belongs to him. "Get your shields up," he says. "Or get out of my way."</p>
+                       <p>The ground starts to shake under the hooves. There's no time to argue with it.</p>`,
+                choices: [
+                    {
+                        text: "Form a shield wall with your comrades",
+                        effects: {},
+                        nextScene: "cavalry_skirmish_1342_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Scatter and take cover",
+                        effects: {},
+                        nextScene: "cavalry_skirmish_1342_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Stand your ground and hope for the best",
+                        effects: {},
+                        nextScene: "cavalry_skirmish_1342_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "luck",
+                        resolutionDifficulty: 8
+                    }
+                ]
+            },
+            cavalry_skirmish_1342_resolve: {
+                title: "After the Charge",
+                year: 1342,
+                age: 23,
+                location: "Aquitaine",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The dust hangs in the air. Men cough. Someone is crying and trying to hide it.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You pick something that works and commit to it. Shields lock or men spill into ditches at the right moment. The first lance glances off wood instead of flesh.</p>
+                            <p>Harry is a wall with hands. He shoves one man back into line. "Hold," he growls. "Hold or die." Simple as that.</p>
+                            <p>Billy points past the riders. "They're turning wide. Don't chase." He's right. The moment you chase, you die tired.</p>
+                            <p>The cavalry breaks off when it stops being easy. They wheel away, kicking up dust and curses. You're left with splintered shields, a few crushed bodies, and the sick relief of still standing.</p>
+                            <p>Jack wipes his mouth with his sleeve. "I'm going to hear that sound in my sleep," he says, and no one laughs because it's true.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>The charge hits like a dropped cart. Horses slam into men. The road becomes screaming and dust and weight. You go down under it, not even sure how.</p>
+                            <p>Something clips you—hoof, lance, shield rim. Pain blooms and then everything is just getting air back into your lungs.</p>
+                            <p>Jack drags you by the collar into a shallow ditch. "Don't stand," he snaps. "Just breathe."</p>
+                            <p>Harry hauls another man upright and shoves him forward. "Move," he says. "If you're alive, move."</p>
+                            <p>The cavalry rides through and out the far side, leaving you in the churned mess. You're alive. You're hurt. The column regroups with a smaller count than it had a minute ago.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 10);
+                        applyStatChange('reputation', 1);
+                        applyStatChange('stress', 1);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 2);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 2);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            night_raid_1347: {
+                title: "Darkness and Steel",
+                year: 1347,
+                age: 28,
+                location: "Normandy",
+                artworkCaption: "Shadows move in the darkness",
+                text: `<p>Night in camp is never quiet. Men cough. Horses shift. Someone argues in a whisper. The fire burns low because no one wants to be a beacon.</p>
+                       <p>You're on watch when you see movement where there shouldn't be any. Not a man going to piss. Not a dog. Shapes slipping between tents.</p>
+                       <p>Billy is already beside you, voice low. "Not ours," he says. "Too many. Knives."</p>
+                       <p>Jack's awake on the ground with his hand on his gear. "Tell me what to do," he whispers.</p>
+                       <p>Granny Six-Teeth sits up near the baggage like she never slept at all. "If you're going to shout, shout now," she says. "If you're going to stab, do that."</p>
+                       <p>Steel flashes once. A man grunts. Then everything starts at once.</p>`,
+                choices: [
+                    {
+                        text: "Sound the alarm and rally the camp",
+                        effects: {},
+                        nextScene: "night_raid_1347_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Engage them silently in the dark",
+                        effects: {},
+                        nextScene: "night_raid_1347_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Try to slip past and find help",
+                        effects: {},
+                        nextScene: "night_raid_1347_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "luck",
+                        resolutionDifficulty: 8
+                    }
+                ]
+            },
+            night_raid_1347_resolve: {
+                title: "Dawn Breaks",
+                year: 1347,
+                age: 28,
+                location: "Normandy",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The night drags on. Men don't sleep. The dark keeps its teeth out for now.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You do the right thing fast enough. You get men moving. You get blades out. You keep the raiders from turning the camp into a slaughter pen.</p>
+                            <p>Billy puts you where you need to be. "There," he says, pointing into the gap between tents. "That's their path."</p>
+                            <p>Harry comes in half-dressed, furious, and effective. He drops one man with a single ugly swing and then barks, "Back. Keep them out of the horses."</p>
+                            <p>Jack doesn't do anything fancy. He stays close, follows orders, keeps his hands from shaking by staying busy.</p>
+                            <p>The raiders run when they stop getting easy kills. Dawn comes slow and gray. The camp stinks of smoke and sweat and spilled blood, but it's still standing. You're still standing.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>It goes wrong fast. Someone shouts too late or in the wrong direction. The raiders get into the tents. Men wake up with knives already on them.</p>
+                            <p>You fight in the dark with half-seen shapes. You catch a blade you didn't see coming, or you take a hit while dragging someone out of their blanket.</p>
+                            <p>Jack's voice is close. "Hold on," he says, rough and scared. He ties something tight around you with shaking hands and swears at the knot.</p>
+                            <p>Billy keeps moving, pulling men awake, pushing them toward light. "Wake up. Wake up," he repeats like it'll bring the dead back.</p>
+                            <p>The raiders pull off before sunrise, carrying what they can. The camp survives, but it's thinner. Dawn shows what the dark took.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 12);
+                        applyStatChange('reputation', 2);
+                        applyStatChange('patronFavor', 1);
+                        applyStatChange('stress', 2);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 2);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 3);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Tend to the wounded",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            // ============================================================================
+            // COMBAT ENCOUNTERS - Batch 3: Town Fighting & Archery Duel
+            // ============================================================================
+            town_fighting_1348: {
+                title: "Streets of Calais",
+                year: 1348,
+                age: 29,
+                location: "Calais",
+                artworkCaption: "Combat in the narrow streets",
+                text: `<p>Calais is tight stone and narrow lanes. The air is bad—smoke, rot, old fish. Everything echoes. A shout becomes ten shouts. A footstep becomes a warning.</p>
+                       <p>Your unit pushes into a street and the street pushes back. A bolt from a window. A man drops. A door bursts open and there's a Frenchman in it, just as surprised as you are.</p>
+                       <p>Billy presses himself to a wall and listens. "Two on the roof," he says. "One in that doorway. Don't stand in the open."</p>
+                       <p>Jack's breathing through his mouth. "I hate towns," he says. "Too many corners."</p>
+                       <p>Harry shoulders past, impatient. "Corners are fine," he grunts. "Men hiding in them aren't."</p>
+                       <p>You have to clear the block. Not because it matters. Because you've been told to. Because you'll be killed if you don't.</p>`,
+                choices: [
+                    {
+                        text: "Charge forward and clear the street",
+                        effects: {},
+                        nextScene: "town_fighting_1348_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Move through the alleys and flank them",
+                        effects: {},
+                        nextScene: "town_fighting_1348_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Coordinate with your unit to clear buildings",
+                        effects: {},
+                        nextScene: "town_fighting_1348_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+            town_fighting_1348_resolve: {
+                title: "The Street is Clear",
+                year: 1348,
+                age: 29,
+                location: "Calais",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The street is still contested. Men press forward by inches and fear.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You clear it the hard way—door by door, corner by corner. You keep men together. You keep someone watching the roofs. You don't let panic split the line.</p>
+                            <p>Billy taps your shoulder and points, quick. "Now," he says. You move on the cue and it saves you from a shot meant for your chest.</p>
+                            <p>Harry takes a door with his shoulder and goes in like he's late to work. "Next," he says when he comes out, and his voice doesn't change.</p>
+                            <p>Jack covers a window, hands steady enough. "Clear," he calls, and it sounds like relief trying not to show.</p>
+                            <p>When it's done, the street is yours. The silence after is worse than the noise. Men look at walls like the walls might stab them.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>The town punishes mistakes. You take a corner too wide, or a door opens where you didn't expect it. A blade finds you, or a bolt takes you low.</p>
+                            <p>You go down in the filth of the street and you taste old smoke and grit. Someone hauls you back by your straps.</p>
+                            <p>Jack is there, face tight. "Stay awake," he says. "Just stay awake."</p>
+                            <p>Harry plants himself between you and the doorway and takes the next swing meant for you. "Move him," he barks. "Move."</p>
+                            <p>The block is cleared eventually, but you don't feel like a winner. You feel like a man who got lucky enough to keep breathing.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 12);
+                        applyStatChange('reputation', 2);
+                        applyStatChange('patronFavor', 1);
+                        applyStatChange('stress', 2);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 2);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 3);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue clearing the town",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            archery_duel_1339: {
+                title: "The Archers' Stand",
+                year: 1339,
+                age: 20,
+                location: "Northern France",
+                artworkCaption: "Arrows fly across the field",
+                text: `<p>The French hold a ridge and they won't stop shooting. All day it's been the same: a man steps out, a man drops. Your side curses the wind and keeps moving corpses off the line.</p>
+                       <p>You're ordered forward with the archers. Not to be brave. To be useful. You string an arrow. Your fingers are stiff. Your mouth is dry.</p>
+                       <p>Jack checks his string, then yours. "Your knot's loose," he says. "Fix it or it'll slap you bloody."</p>
+                       <p>Billy squints at the ridge. "They're aiming for movement," he says. "Don't dance around. Pick a spot and shoot."</p>
+                       <p>Granny Six-Teeth is behind you with the spare shafts, counting like it's bread. "Stop wasting arrows," she mutters. "We're not made of them."</p>
+                       <p>You draw. You aim. You try to make the ridge pay attention to someone else for a change.</p>`,
+                choices: [
+                    {
+                        text: "Focus on accuracy and pick your targets",
+                        effects: {},
+                        nextScene: "archery_duel_1339_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Coordinate volleys with your unit",
+                        effects: {},
+                        nextScene: "archery_duel_1339_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    },
+                    {
+                        text: "Rapid fire and hope for the best",
+                        effects: {},
+                        nextScene: "archery_duel_1339_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "luck",
+                        resolutionDifficulty: 8
+                    }
+                ]
+            },
+            archery_duel_1339_resolve: {
+                title: "The Archers Break",
+                year: 1339,
+                age: 20,
+                location: "Northern France",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>Arrows keep trading places in the air. Men keep falling. No one calls it fair.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You slow down enough to hit what you're aiming at, or you keep your volley tight enough that the ridge starts to flinch. A Frenchman drops. Then another. Heads duck. Their shooting loses its rhythm.</p>
+                            <p>Jack gives a short nod. "That one counted," he says, like he's marking a tally.</p>
+                            <p>Billy points. "They're backing off the crest."</p>
+                            <p>Granny hands you another shaft without looking at you. "Good. Keep doing that. Don't get proud."</p>
+                            <p>The French archers pull back, not running, just deciding they've had enough for the day. The ridge is quieter. Your side breathes again. It's not a victory song. It's just less dying.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>You shoot and it doesn't matter enough. The ridge keeps biting. An arrow finds you—arm, thigh, anywhere that makes you swear and lose your grip.</p>
+                            <p>Jack grabs your elbow. "Hold it still," he says, voice tight. "Don't yank it."</p>
+                            <p>Granny is already there with cloth. "Sit," she snaps. "You're no use falling over."</p>
+                            <p>Billy keeps shooting while you bleed. "Keep their heads down," he mutters, like he's talking to himself as much as anyone.</p>
+                            <p>The French eventually ease off, but you pay for the time it took. You're alive. You're hurt. You're going to feel it every time you draw a string.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 8);
+                        applyStatChange('reputation', 1);
+                        applyStatChange('stress', 1);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 1);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 2);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the advance",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            // ============================================================================
+            // COMBAT ENCOUNTERS - Batch 4: River Crossing & Last Stand
+            // ============================================================================
+            river_crossing_1344: {
+                title: "The River Runs Red",
+                year: 1344,
+                age: 25,
+                location: "Gascony",
+                artworkCaption: "Men struggle across the river under fire",
+                text: `<p>The river is wide, cold, and fast. The far bank is lined with French archers. You can see the draw of their bows even before you hear the strings.</p>
+                       <p>Men step in and the water grabs them. Packs drag. Boots slip in the mud. An arrow hits a man midstream and he goes under like he's been pulled.</p>
+                       <p>Billy watches the ripples like he can read them. "Don't go where it looks smooth," he says. "That's the deep."</p>
+                       <p>Jack keeps his bow high and his mouth shut, saving breath. "Just tell me when," he says.</p>
+                       <p>Harry spits and steps in like he hates the river personally. "If we're crossing, we're crossing," he growls. "No standing around getting shot."</p>
+                       <p>The order comes. Forward. Into the water. Into the arrows. There's no clean way to do it.</p>`,
+                choices: [
+                    {
+                        text: "Push through the current with all your strength",
+                        effects: {},
+                        nextScene: "river_crossing_1344_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Move slowly and carefully to avoid arrows",
+                        effects: {},
+                        nextScene: "river_crossing_1344_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "endurance",
+                        resolutionDifficulty: 8
+                    },
+                    {
+                        text: "Find a better crossing point upstream",
+                        effects: {},
+                        nextScene: "river_crossing_1344_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 7
+                    }
+                ]
+            },
+            river_crossing_1344_resolve: {
+                title: "On the Far Bank",
+                year: 1344,
+                age: 25,
+                location: "Gascony",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The river keeps taking what it can. Men keep trying anyway.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>You pick a line and stick to it. You keep your feet under you, keep your head down, keep your pack from dragging you sideways. You hit the far bank with your lungs on fire.</p>
+                            <p>Billy is already there, grabbing wrists, hauling men up. "Don't stop in the shallows," he snaps. "Get up the bank."</p>
+                            <p>Harry hits the mud like a bull and then climbs like he's offended by gravity. "Move," he growls at a man frozen on the slope. "Move now."</p>
+                            <p>Jack gets across with his bow still usable, which feels like a miracle. He coughs and says, "Never doing that again."</p>
+                            <p>You push into the French line and they give ground. Not because you're noble. Because you're wet and angry and right in front of them. The bank becomes yours. The river is behind you. You don't look back until it's done.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>You step wrong once and the river takes the rest. You slip. Your pack drags. Water fills your mouth. An arrow hits close enough to make you flinch and lose your footing again.</p>
+                            <p>Something catches you—arrow, rock, boot. Pain and cold together. You claw forward because there's no other choice.</p>
+                            <p>Jack grabs you when you reach the bank and yanks, nearly tearing you out of your own skin. "Up," he says. "Up."</p>
+                            <p>Billy's face is tight with it. "Keep going," he says. "Don't sit down. You'll never stand back up."</p>
+                            <p>You make the far side. You fight because you have to. You win the bank because the men behind you keep coming. Later, when the shaking starts, you realize how close it was.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 12);
+                        applyStatChange('reputation', 2);
+                        applyStatChange('patronFavor', 1);
+                        applyStatChange('stress', 2);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Wounded', 'negative', 2);
+                        applyStatChange('endurance', -1);
+                        applyStatChange('stress', 3);
+                        gameState.career.wounds++;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the advance",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
+            last_stand_1350: {
+                title: "No Retreat",
+                year: 1350,
+                age: 31,
+                location: "Northern France",
+                artworkCaption: "Outnumbered and surrounded",
+                text: `<p>The day goes wrong and then keeps going wrong. Your unit gets cut off. The captain goes down. The line breaks. You end up with a handful of men and no clean way out.</p>
+                       <p>The French are everywhere. Not in a grand way. In a practical way. You turn your head and there's more of them. You step back and there's more of them. The ground feels smaller.</p>
+                       <p>Billy looks around once, quick, like he's counting exits. "We're boxed," he says. "There's a thin spot by that hedge, maybe."</p>
+                       <p>Jack's face is gray. "If we run, they'll cut us down," he says. Not a complaint. Just the math.</p>
+                       <p>Harry wipes his hand on his coat and nods at you like you're the only thing left that counts as a plan. "Say it," he says. "We're doing something or we're dying standing still."</p>
+                       <p>Granny Six-Teeth is nowhere near the fighting, but you can hear her voice behind the scramble of men—sharp, scolding, alive. "Don't drop the bandage bundle, you idiot. Hold it tight." Even now she's keeping someone from bleeding out.</p>
+                       <p>This is the moment where you pick a shape for the end.</p>`,
+                choices: [
+                    {
+                        text: "Form a circle and fight to the last",
+                        effects: {},
+                        nextScene: "last_stand_1350_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "endurance",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Lead a desperate charge to break through",
+                        effects: {},
+                        nextScene: "last_stand_1350_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Try to find a weak point and escape",
+                        effects: {},
+                        nextScene: "last_stand_1350_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 8
+                    }
+                ]
+            },
+            last_stand_1350_resolve: {
+                title: "Survival",
+                year: 1350,
+                age: 31,
+                location: "Northern France",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The French close in. Men tighten grips. Breath gets loud inside helmets.</p>`;
+
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+
+                    if (result.success) {
+                        return `${rollDisplay}
+                            <p>It works because you make it work. You keep men together, or you hit the thin spot before it thickens, or you turn a hedge and a ditch into a wall for a few minutes that matter.</p>
+                            <p>Billy's voice is right in your ear. "Now. Now." He doesn't say why. He doesn't need to. You move on the cue and it's the gap you needed.</p>
+                            <p>Harry breaks the first man in the way and keeps going, breathing like a bellows. "Keep up," he grunts. "Don't fall behind me."</p>
+                            <p>Jack stays close and does exactly what he's told. When it's over he sits down hard, shaking. "That was… close," he says. Understatement of the year.</p>
+                            <p>You get out with fewer men than you started with. You don't feel lucky. You feel used up. But you're alive. And that is, for now, enough.</p>`;
+                    } else {
+                        return `${rollDisplay}
+                            <p>You try it and it doesn't come clean. The circle buckles, or the charge stalls, or the "weak spot" turns out to be wishful thinking. The French don't need poetry. They just need numbers.</p>
+                            <p>You take a heavy wound. Not a scratch. Something that makes your arm stop working right, or makes your leg drag. You keep moving because stopping is the same as dying.</p>
+                            <p>Harry grabs you and hauls. "Not here," he growls. "Not now." He's bleeding too. He doesn't mention it.</p>
+                            <p>Jack is swearing as he pulls another man by the strap. "Move. Move," he repeats, like words can carry weight.</p>
+                            <p>Billy gets you to cover the ugly way—crawling, dragging, stumbling. "Keep your eyes open," he says. "Just keep them open."</p>
+                            <p>You survive the moment. You don't win it. Later you'll find out how much it cost.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('experience', 15);
+                        applyStatChange('reputation', 3);
+                        applyStatChange('patronFavor', 2);
+                        applyStatChange('stress', 3);
+                        gameState.career.battles++;
+                    } else if (result) {
+                        addCondition('Seriously Wounded', 'negative', 4);
+                        applyStatChange('endurance', -2);
+                        applyStatChange('stress', 4);
+                        gameState.career.wounds++;
+                        if (Math.random() < 0.15) {
+                            gameState.career.deathRate += 0.1;
+                        }
+                    }
+                },
+                choices: [
+                    {
+                        text: "Tend to your wounds and regroup",
+                        effects: {},
+                        nextScene: "start"
+                    }
+                ]
+            },
             spring_campaign: {
                 title: "The Campaign of 1346",
                 year: 1346,
