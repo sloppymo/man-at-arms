@@ -740,7 +740,7 @@
     <div class="game-container">
         <div class="header">
             <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v1.4.0</div>
+            <div id="version-display">v1.5.0</div>
             <div class="status-bar">
                 <div class="status-item">
                     <span>📅</span>
@@ -10871,6 +10871,7 @@
                         // Show response from previous choice
                         return header + (cf.currentResponse || '');
                     }
+                }
                 },
                 choices: function() {
                     const cf = gameState.campfire || {};
@@ -11017,6 +11018,533 @@
                     return choices;
                 }
             }
+        }
+        }
+        },
+        
+        // ===== RANDOM ENCOUNTERS =====
+        
+        random_drunken_song: {
+            title: "A Drunken Song",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Someone's trying to remember the words to a drinking song. He gets halfway through the first verse, forgets the next line, starts over, forgets again. A few men join in, each with a different version of the lyrics.</p>
+                   <p>It's not good. It's not even close to good. But it's loud, and it's happening, and you're stuck listening to it.</p>`,
+            choices: [
+                {
+                    text: "Join in and try to remember the words",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Tell them to shut up",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Walk away and find somewhere quieter",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_lost_boot: {
+            title: "Missing Boot",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>You wake up and one of your boots is gone. Just gone. You look around. You ask around. No one's seen it. No one knows where it went.</p>
+                   <p>Boots don't just disappear. Someone took it. Or it got moved. Or something else happened that you don't want to think about.</p>`,
+            choices: [
+                {
+                    text: "Search the camp thoroughly",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Ask around if anyone's seen it",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Give up and make do with one boot",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_gambling_debt: {
+            title: "Gambling Debt",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>A man approaches you with a friendly smile and a dice cup. "Care for a game?" he asks. "Just a friendly wager. Nothing serious."</p>
+                   <p>You know how this goes. Friendly games turn serious. Serious games turn into debts. Debts turn into problems.</p>`,
+            choices: [
+                {
+                    text: "Play a few rounds",
+                    effects: function(gs) {
+                        const roll = Math.random();
+                        if (roll < 0.4) {
+                            applyStatChange('wealth', -2, {silent: true});
+                            applyStatChange('stress', 1, {silent: true});
+                        } else if (roll < 0.7) {
+                            // Break even
+                        } else {
+                            applyStatChange('wealth', 2, {silent: true});
+                            applyStatChange('morale', 1, {silent: true});
+                        }
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Decline politely",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Tell him you don't gamble",
+                    effects: function(gs) {
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_campfire_tale: {
+            title: "A Tall Tale",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Someone's telling a story. A ridiculous story. About a French knight who kissed a pig thinking it was a lady. About a dragon that was really just a big dog. About a princess who turned out to be a man in a dress.</p>
+                   <p>It's all lies. Everyone knows it's lies. But it's funny, and it's something to talk about, and for a moment the war feels far away.</p>`,
+            choices: [
+                {
+                    text: "Laugh along with the story",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Point out how ridiculous it is",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Add your own ridiculous detail",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_broken_sword: {
+            title: "Broken Blade",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Your sword has a problem. The tang is cracked. The pommel is loose. The edge is nicked after prying something open that shouldn't have been pried.</p>
+                   <p>It still works. Sort of. But it's not right. And in a fight, "not right" can get you killed.</p>`,
+            choices: [
+                {
+                    text: "Try to fix it yourself",
+                    effects: function(gs) {
+                        const roll = Math.random();
+                        if (roll < 0.5) {
+                            applyStatChange('stress', 1, {silent: true});
+                        } else {
+                            applyStatChange('stress', -1, {silent: true});
+                        }
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Find a smith to fix it",
+                    effects: function(gs) {
+                        applyStatChange('wealth', -5, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Use it as is and hope for the best",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_stolen_socks: {
+            title: "Stolen Socks",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Your socks are gone. All of them. Every pair. You had them this morning. Now they're just... gone.</p>
+                   <p>Someone took them. Probably someone who needed socks more than you do. Or someone who just wanted to be annoying.</p>`,
+            choices: [
+                {
+                    text: "Search for the thief",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Accept the loss and move on",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Ask around if anyone has spare socks",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_bad_stew: {
+            title: "Bad Stew",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>The stew tastes wrong. Not spoiled wrong. Just... wrong. Too much salt. Not enough salt. Something that shouldn't be in there. Something that definitely shouldn't be in there.</p>
+                   <p>You eat it anyway. Because you're hungry. Because there's nothing else. Because that's what you do.</p>`,
+            choices: [
+                {
+                    text: "Eat it anyway",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Try to find something else to eat",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Complain to the cook",
+                    effects: function(gs) {
+                        applyStatChange('stress', 2, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_weather_complaint: {
+            title: "The Weather",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>It's too hot. Or too cold. Or too wet. Or too dry. Someone's complaining about the weather. Everyone's complaining about the weather.</p>
+                   <p>You can't change it. You can't fix it. You just have to live with it. Like everything else.</p>`,
+            choices: [
+                {
+                    text: "Join in the complaining",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Ignore it and focus on something else",
+                    effects: function(gs) {
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Point out that complaining won't help",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_insult_battle: {
+            title: "Insults Fly",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Two men are trading insults. Not serious insults. Not the kind that lead to knives. Just the kind that pass the time. The kind that make everyone else laugh.</p>
+                   <p>It's crude. It's stupid. It's exactly what you'd expect from men who've been stuck together for too long.</p>`,
+            choices: [
+                {
+                    text: "Watch and enjoy the show",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Join in with your own insult",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Tell them to stop before it gets serious",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_dice_game: {
+            title: "A Game of Dice",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>A group of men are playing dice. Simple game. Simple stakes. Winner takes a small share from everyone else.</p>
+                   <p>It's not much. But it's something. And right now, something is better than nothing.</p>`,
+            choices: [
+                {
+                    text: "Join the game",
+                    effects: function(gs) {
+                        const roll = Math.random();
+                        if (roll < 0.4) {
+                            applyStatChange('wealth', -3, {silent: true});
+                            applyStatChange('stress', 1, {silent: true});
+                        } else if (roll < 0.7) {
+                            // Break even
+                        } else {
+                            applyStatChange('wealth', 3, {silent: true});
+                            applyStatChange('morale', 1, {silent: true});
+                        }
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Watch but don't play",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Walk away",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_cooking_disaster: {
+            title: "Cooking Disaster",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>Someone tried to cook something. It didn't work. The pot's on fire. The food's burned. Smoke is everywhere. Men are coughing. Men are laughing. Men are trying to help.</p>
+                   <p>It's chaos. But it's the kind of chaos that brings people together. The kind that makes you forget, for a moment, where you are and why you're here.</p>`,
+            choices: [
+                {
+                    text: "Help put out the fire",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Stand back and watch",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Laugh along with everyone else",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_sleepwalking: {
+            title: "Sleepwalking",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>You wake up somewhere you shouldn't be. Not in your tent. Not in your bedroll. Somewhere else entirely. You don't remember how you got there. You don't remember why you're there.</p>
+                   <p>You've been sleepwalking. It happens. Stress does that. War does that. You just have to get back to where you're supposed to be and hope it doesn't happen again.</p>`,
+            choices: [
+                {
+                    text: "Quietly return to your tent",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Ask someone if they saw you sleepwalking",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Try to forget about it",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        },
+        
+        random_animal_encounter: {
+            title: "Camp Visitor",
+            year: function() { return gameState.year; },
+            age: function() { return gameState.age; },
+            location: "Camp",
+            text: `<p>A stray dog has wandered into camp. It's thin. It's dirty. It's looking for food. Men are throwing it scraps. Some are trying to pet it. Others are trying to shoo it away.</p>
+                   <p>It's not a threat. It's not a problem. It's just a dog. Just an animal. Just something that doesn't belong here but is here anyway.</p>`,
+            choices: [
+                {
+                    text: "Feed the dog some of your rations",
+                    effects: function(gs) {
+                        applyStatChange('morale', 1, {silent: true});
+                        applyStatChange('stress', -1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Ignore it and go about your business",
+                    effects: function(gs) {
+                        // No effect
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                },
+                {
+                    text: "Try to shoo it away",
+                    effects: function(gs) {
+                        applyStatChange('stress', 1, {silent: true});
+                    },
+                    nextScene: function() {
+                        return (gameState.randomEncounter && gameState.randomEncounter.returnScene) || "start";
+                    }
+                }
+            ]
+        }
         };
         
         // Initialize game
