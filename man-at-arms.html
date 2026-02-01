@@ -4510,13 +4510,13 @@
                 text: function() {
                     const pay = Math.floor(5 + gameState.stats.reputation / 5);
                     return `<p>The war has quieted for the winter. You're billeted in a small village. Your pay arrives: ${pay} silver coins.</p>
-                           <p>The local blacksmith's daughter, Marie, has been bringing you food. She's pretty, and you've noticed she's been making eyes at you. Your comrades joke about settling down.</p>`;
+                           <p>The local blacksmith's daughter, Marie, has been bringing you food. She's pretty, and you've noticed she's been making eyes at you. Your comrades joke about settling down. They laugh. You don't understand why. Not yet.</p>`;
                 },
                 choices: [
                     {
                         text: "Court Marie seriously",
                         effects: { charisma: 1 },
-                        nextScene: "marriage_question"
+                        nextScene: "marriage_joke"
                     },
                     {
                         text: "Keep it casual",
@@ -4671,35 +4671,30 @@
                     }
                 ]
             },
-            marriage_question: {
-                title: "A Proposal",
+            marriage_joke: {
+                title: "The Joke",
                 year: 1340,
                 age: 21,
-                text: `<p>Marie's father approves of the match. He offers you his daughter's hand in marriage.</p>
-                       <p>Marriage would give you a home, but what if the war calls again? You'd have someone to fight for, but also someone to lose.</p>`,
+                location: "Northern France",
+                text: `<p>You approach Marie. Speak to her. Tell her how you feel. What you want. What you hope for. She listens. Smiles. Nods. But there's something in her eyes. Something you don't see. Not yet.</p>
+                       <p>Her father watches. The blacksmith. Big man. Hard hands. He laughs. Not at you. With you. Or so you think. He approves. Offers his daughter's hand. You're happy. Proud. Foolish.</p>
+                       <p>Then you hear it. The laughter. Your comrades. Behind you. Around you. Everywhere. They're laughing. At you. At the joke. At everything you believed. Everything you hoped for.</p>
+                       <p>Marie laughs too. Not the kind laugh you thought. The cruel one. The mocking one. The one that cuts deeper than any blade. She was never interested. Never serious. It was all a game. A joke. A way to pass the winter. To amuse themselves. At your expense.</p>
+                       <p>You're a fool. A mark. A story they'll tell for years. The soldier who thought a blacksmith's daughter would marry him. Who thought he was special. Who thought he mattered. You don't. Not to them. Not to her. Not to anyone.</p>`,
                 choices: [
                     {
-                        text: "Marry Marie",
-                        effects: { charisma: 2, wealth: 5, reputation: 1 },
-                        nextScene: "married_life"
+                        text: "Walk away in silence",
+                        effects: { stress: 3, morale: -2 },
+                        nextScene: "between_years_1341"
                     },
                     {
-                        text: "Not yet - wait until after the next campaign",
-                        effects: {},
+                        text: "Confront them",
+                        effects: { stress: 2, reputation: -1 },
                         nextScene: "between_years_1341"
-                    }
-                ]
-            },
-            married_life: {
-                title: "A New Life",
-                year: 1340,
-                age: 21,
-                text: `<p>You've married Marie. You have a home now, a place to return to. But the war continues...</p>
-                       <p>Your wife is with child. You have more to lose, but also more to fight for.</p>`,
-                choices: [
+                    },
                     {
-                        text: "Continue your service",
-                        effects: {},
+                        text: "Laugh with them, pretend it doesn't hurt",
+                        effects: { stress: 4, morale: -1 },
                         nextScene: "between_years_1341"
                     }
                 ]
