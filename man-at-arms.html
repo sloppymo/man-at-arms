@@ -1284,6 +1284,9 @@
             }
         }
         
+        /** Ensure flags object exists and return it */
+        const ensureFlags = (gs) => (gs.flags ??= {});
+        
         /** Check if campfire should be inserted */
         function shouldInsertCampfire(nextSceneKey) {
             // Never interrupt:
@@ -8212,6 +8215,275 @@
                 ]
             },
 
+            random_the_wandering_chicken: {
+                title: "The Wandering Chicken",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>A chicken wanders into camp. Not a camp chicken. A proper chicken. It walks like it owns the place. Feet click on packed mud.</p>
+                        <p>Wat watches it. <em>"That bird's got more sense than half the men here."</em></p>
+                        <p>The Cook looks up from his pot. <em>"It is looking for grain. Or a place to die. Hard to tell with chickens."</em></p>
+                        <p>The chicken pecks at Wat's boot. Wat doesn't move. The chicken pecks again. More insistent.</p>
+                        <p><em>"It wants something,"</em> The Cook says. <em>"Chickens always want something."</em></p>
+                        <p>Wat spits. The chicken doesn't flinch. <em>"Stupid bird. Or brave. Same thing, I suppose."</em></p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Try to shoo it away",
+                        effects: function(gs) {
+                            applyStatChange("stress", 1, {silent:true});
+                            ensureFlags(gs).campChickenSeen = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ask The Cook if we should eat it",
+                        effects: function(gs) {
+                            changeRel("cook", 1);
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).campChickenSeen = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Watch and see what happens",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                            ensureFlags(gs).campChickenSeen = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tell Wat the chicken is judging him",
+                        effects: function(gs) {
+                            changeRel("wat", 1);
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).campChickenSeen = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_wat_vs_the_boot: {
+                title: "Wat Versus the Boot",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat's boot won't come off. He's been wrestling with it for half an hour. His face is red. His knuckles are white. The leather stinks of old sweat.</p>
+                        <p><em>"Stuck,"</em> he grunts. <em>"Like it's grown to my foot."</em></p>
+                        <p>The Cook watches from across the fire. <em>"Have you tried pulling it?"</em></p>
+                        <p>Wat stops. Looks at The Cook. Looks at the boot. Looks back at The Cook.</p>
+                        <p><em>"Yes,"</em> Wat says. <em>"I tried pulling it. That's what you do with boots."</em></p>
+                        <p><em>"Sometimes boots need persuasion,"</em> The Cook says. <em>"Like onions. They resist until they don't."</em></p>
+                        <p>Wat tries again. A lace snaps. The boot doesn't move. He swears. The boot doesn't care.</p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Offer to help pull",
+                        effects: function(gs) {
+                            changeRel("wat", 1);
+                            applyStatChange("wits", 1, {silent:true});
+                            if (gs.stats?.stress >= 3) {
+                                applyStatChange("stress", 1, {silent:true});
+                            }
+                            ensureFlags(gs).watBootWar = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Suggest cutting it off",
+                        effects: function(gs) {
+                            changeRel("wat", -1);
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).watBootWar = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ask The Cook for his boot philosophy",
+                        effects: function(gs) {
+                            changeRel("cook", 1);
+                            changeRel("wat", -1);
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).watBootWar = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Say nothing. This is between Wat and the boot.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                            ensureFlags(gs).watBootWar = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_dice_sermon: {
+                title: "Dice Sermon",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Lloyd the Welshman sits with Sixpence Tom, rolling dice. Not for coin. For meaning.</p>
+                        <p><em>"Every throw is fate,"</em> Lloyd says. <em>"Every number a message from God."</em></p>
+                        <p>Tom rolls. Three and two. The dice clatter on a flat stone. <em>"What's that mean, then?"</em></p>
+                        <p><em>"It means you rolled a five,"</em> Lloyd says. <em>"The message is: you rolled a five."</em></p>
+                        <p>Wat watches from his spot. <em>"That's not philosophy. That's stating the obvious."</em></p>
+                        <p><em>"All philosophy is stating the obvious,"</em> Lloyd says. <em>"The trick is saying it pretty."</em></p>
+                        <p>Tom rolls again. Snake eyes. <em>"What about this?"</em></p>
+                        <p><em>"That means you're unlucky,"</em> Lloyd says. <em>"Or lucky. Depends on what you're trying to do."</em></p>
+                        <p>Wat spits. <em>"That's not helpful."</em></p>
+                        <p><em>"Most philosophy isn't,"</em> Lloyd says. <em>"That's why it's philosophy."</em></p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Ask Lloyd what your future holds",
+                        effects: function(gs) {
+                            applyStatChange("morale", 1, {silent:true});
+                            applyStatChange("stress", 1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tell Wat he's missing the point",
+                        effects: function(gs) {
+                            changeRel("wat", -1);
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Join the game. Roll for meaning.",
+                        effects: function(gs) {
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Walk away. Some conversations aren't worth having.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_the_singing_contest: {
+                title: "The Singing Contest",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Porridge Tom challenges Fiddle Jack to a singing contest. <em>"I'll sing better than you can play,"</em> Tom says.</p>
+                        <p>Jack doesn't look up from his fiddle. <em>"That's not a high bar."</em></p>
+                        <p>Tom starts. It's bad. Very bad. Men cover their ears. Horses shift nervously. A horse whinnies in protest.</p>
+                        <p>Jack plays. It's worse. The fiddle screeches. The strings protest. The wood groans.</p>
+                        <p>Wat stands up. <em>"Stop. Both of you. You're scaring the animals."</em></p>
+                        <p><em>"Who won?"</em> Tom asks.</p>
+                        <p><em>"The animals,"</em> Wat says. <em>"They won by not having to listen anymore."</em></p>
+                        <p>The Cook looks up from his pot. <em>"I think Tom won. His was louder."</em></p>
+                        <p><em>"Loud isn't good,"</em> Jack says.</p>
+                        <p><em>"In war, loud is everything,"</em> The Cook says. <em>"Ask the French."</em></p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Declare Tom the winner",
+                        effects: function(gs) {
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Declare Jack the winner",
+                        effects: function(gs) {
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Agree with Wat. Nobody won.",
+                        effects: function(gs) {
+                            changeRel("wat", 1);
+                            applyStatChange("stress", -1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Start your own song. Make it worse.",
+                        effects: function(gs) {
+                            applyStatChange("morale", 2, {silent:true});
+                            applyStatChange("reputation", -1, {silent:true});
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
+            random_the_missing_spoon: {
+                title: "The Missing Spoon",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>The Cook is missing a spoon. Not just any spoon. <em>"The good one,"</em> he says. <em>"The one that doesn't bend."</em></p>
+                        <p>He's been looking for it all morning. Asking everyone. Getting angrier. The pot simmers. Unwatched.</p>
+                        <p>Wat sits nearby, eating with his hands. <em>"Use your fingers. Spoons are for nobles."</em></p>
+                        <p><em>"Spoons are for cooking,"</em> The Cook says. <em>"Fingers are for burning."</em></p>
+                        <p>Hoary Bill walks past. <em>"I saw Rat-Catcher Ned with a spoon. Might be yours."</em></p>
+                        <p>The Cook finds Ned. The spoon is his. The handle is stamped with a mark. Ned's been using it to dig. Grit of dirt still on it. <em>"It's good for digging,"</em> Ned says. <em>"Strong."</em></p>
+                        <p>The Cook takes it back. Washes it three times. Watches it like it might run away again.</p>
+                        <p><em>"Spoons have jobs,"</em> The Cook says. <em>"Digging is not a spoon's job."</em></p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Help The Cook look for the spoon",
+                        effects: function(gs) {
+                            changeRel("cook", 1);
+                            applyStatChange("stress", 1, {silent:true});
+                            ensureFlags(gs).cookGoodSpoon = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Tell The Cook to use a stick instead",
+                        effects: function(gs) {
+                            changeRel("cook", -1);
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).cookGoodSpoon = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Ask Ned why he needed a spoon for digging",
+                        effects: function(gs) {
+                            applyStatChange("wits", 1, {silent:true});
+                            applyStatChange("morale", 1, {silent:true});
+                            ensureFlags(gs).cookGoodSpoon = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    },
+                    {
+                        text: "Stay out of it. Spoon drama isn't your problem.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                            ensureFlags(gs).cookGoodSpoon = true;
+                        },
+                        nextScene: function() { return returnFromRandomEncounter(); }
+                    }
+                ]
+            },
+
             random_campfire_tale: {
                 title: "A Tall Tale",
                 text: `<p>Rat-Catcher Ned is telling a story again. He swears he once saw a French knight fall off his horse and get beaten to death by a flock of geese.</p>
@@ -11401,6 +11673,166 @@
                     { text: "Ask Wat, quietly, what he misses. If anything.", effects: { stress: 1, wits: 1 }, nextScene: "start" }
                 ]
             },
+
+            campfire_cook_06_the_complaint: {
+                focus: "cook",
+                title: "Campfire — The Complaint",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Someone complained about the stew. Not to The Cook. To you. Like you're in charge of complaints.</p>
+                        <p>The Cook hears anyway. He always hears. The fire pops. Steam rises from the pot.</p>
+                        <p><em>"What did they say?"</em> he asks. Calm. Too calm.</p>
+                        <p>You tell him. The stew was thin. The meat was tough. The bread was hard.</p>
+                        <p>The Cook nods. <em>"All true. What else did they say?"</em></p>
+                        <p>Wat laughs from his corner. <em>"They said you cook like a Frenchman."</em></p>
+                        <p>The Cook stops stirring. Looks at Wat. Looks at the pot. Looks at you.</p>
+                        <p><em>"Frenchmen can cook,"</em> he says. <em>"The complaint is invalid."</em></p>
+                        <p>He goes back to stirring. The moment passes. But you remember it.</p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Defend The Cook. The stew was fine.",
+                        effects: function(gs) {
+                            changeRel("cook", 2);
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Agree with the complaint. It was thin.",
+                        effects: function(gs) {
+                            changeRel("cook", -2);
+                            applyStatChange("stress", 1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Say nothing. Let The Cook handle it.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Ask Wat why he's stirring trouble",
+                        effects: function(gs) {
+                            changeRel("wat", -1);
+                            changeRel("cook", 1);
+                        },
+                        nextScene: "start"
+                    }
+                ]
+            },
+
+            campfire_wat_06_three_knives: {
+                focus: "wat",
+                title: "Campfire — Three Knives",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat has three knives. He's showing them to you. Not bragging. Explaining.</p>
+                        <p><em>"This one's for eating,"</em> he says, holding up a small blade. <em>"This one's for fighting."</em> A longer one. <em>"This one's for when the other two aren't enough."</em></p>
+                        <p>The third knife is very large. Very sharp. The edge catches firelight. You don't ask what it's for.</p>
+                        <p>The Cook looks over. <em>"That is a lot of knives for one man."</em></p>
+                        <p><em>"A man can never have too many knives,"</em> Wat says. <em>"That's a fact."</em></p>
+                        <p><em>"A man can have too many opinions about knives,"</em> The Cook says.</p>
+                        <p>Wat grins. It's not a nice grin. <em>"You want to test that theory, Cook?"</em></p>
+                        <p>The Cook goes back to his pot. <em>"I have enough knives. In the pot. For cutting vegetables."</em></p>
+                        <p>Wat sheathes his knives. One. Two. Three. <em>"Vegetables don't fight back."</em></p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Ask to see the knives up close",
+                        effects: function(gs) {
+                            changeRel("wat", 1);
+                            applyStatChange("wits", 1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Tell Wat he has a problem",
+                        effects: function(gs) {
+                            changeRel("wat", -1);
+                            applyStatChange("morale", 1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Ask The Cook if he has a knife philosophy",
+                        effects: function(gs) {
+                            changeRel("cook", 1);
+                            changeRel("wat", -1);
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Say nothing. Knives are personal.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                        },
+                        nextScene: "start"
+                    }
+                ]
+            },
+
+            campfire_both_01_the_bet: {
+                focus: "both",
+                title: "Campfire — The Bet",
+                minYear: 1337,
+                maxYear: null,
+                text: function(gs) {
+                    return `
+                        <p>Wat bets The Cook that it will rain before dawn. The Cook bets it won't.</p>
+                        <p><em>"What are we betting?"</em> Wat asks.</p>
+                        <p><em>"Your next meal,"</em> The Cook says. <em>"If you win, I make it better. If I win, you eat what I give you and say nothing."</em></p>
+                        <p>Wat grins. <em>"Deal. But I want extra meat if I win."</em></p>
+                        <p><em>"If you win, you get what you get,"</em> The Cook says. <em>"That is how bets work."</em></p>
+                        <p>They shake on it. Wat looks at the sky. The Cook looks at his pot. The fire pops between them.</p>
+                        <p><em>"It's going to rain,"</em> Wat says. <em>"I can smell it."</em></p>
+                        <p><em>"You can smell your own socks,"</em> The Cook says. <em>"That does not mean rain."</em></p>
+                        <p>You watch. The sky doesn't care about their bet. Neither does the war.</p>
+                    `;
+                },
+                choices: [
+                    {
+                        text: "Bet on Wat. Rain's coming.",
+                        effects: function(gs) {
+                            changeRel("wat", 1);
+                            changeRel("cook", -1);
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Bet on The Cook. The sky looks clear.",
+                        effects: function(gs) {
+                            changeRel("cook", 1);
+                            changeRel("wat", -1);
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Stay out of it. Bets are trouble.",
+                        effects: function(gs) {
+                            applyStatChange("stress", -1, {silent:true});
+                        },
+                        nextScene: "start"
+                    },
+                    {
+                        text: "Make your own bet with both of them",
+                        effects: function(gs) {
+                            applyStatChange("morale", 1, {silent:true});
+                            applyStatChange("stress", 1, {silent:true});
+                        },
+                        nextScene: "start"
+                    }
+                ]
+            },
+
             campfire_interlude: {
                 title: "Campfire",
                 year: function() { return gameState.year; },
