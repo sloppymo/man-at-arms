@@ -1886,7 +1886,8 @@
                 gearCallouts: buildGearCallouts(choiceId, mods, result, costResult.flags),
                 insideReach: costResult.flags.insideReach || false, // From cost calculation metadata
                 timing: { bonus: timing.bonus, label: timing.label }, // Store timing data for deterministic rendering
-                returnScene: gameState.randomEncounter.returnScene || (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start') // Fallback
+                // Use same fallback logic as getPostSkirmishNextScene() to ensure consistency
+                returnScene: gameState.randomEncounter?.returnScene || (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null) // Fallback: null is safer than 'start'; getPostSkirmishNextScene() will handle it
             };
             
             // Transition to resolve scene
@@ -1902,7 +1903,12 @@
             
             // Never route back into the skirmish loop from the resolve exit.
             // This can happen if an interlude previously set returnScene to the resolve scene.
-            if (!rs || rs === 'skirmish_roadside_resolve' || rs === 'skirmish_roadside' || rs === 'start' || rs === 'character_creation' || rs === 'quick_start_review') {
+            const invalidReturnScenes = [
+                'skirmish_roadside_resolve', 'skirmish_roadside', 
+                'skirmish_roadside_mud', 'skirmish_roadside_lane',
+                'start', 'character_creation', 'quick_start_review'
+            ];
+            if (!rs || invalidReturnScenes.includes(rs)) {
                 return fallback;
             }
             
@@ -13436,6 +13442,187 @@
             if (tempoBtn) tempoBtn.style.display = show ? 'inline-block' : 'none';
         }
         
+        // ===== QA TESTING HELPERS =====
+        // These functions can be called from the browser console for testing
+        
+        // Validate returnScene is safe (Test A2)
+        window.qaValidateReturnScene = function() {
+            // Check if we have a skirmish state to validate
+            if (!gameState.lastSkirmish) {
+                console.log('=== ReturnScene Validation ===');
+                console.log('ℹ️ SKIPPED: No skirmish state found (lastSkirmish is null)');
+                console.log('   This is normal if you haven\'t completed a skirmish yet.');
+                console.log('   Run this test after completing a skirmish to validate returnScene.');
+                return null; // Return null to indicate "skipped" vs false "failed"
+            }
+            
+            const rs = gameState.lastSkirmish.returnScene;
+            const invalid = ['start', 'character_creation', 'quick_start_review', 
+                            'skirmish_roadside', 'skirmish_roadside_resolve', 
+                            'skirmish_roadside_mud', 'skirmish_roadside_lane'];
+            const isValid = rs && 
+                            !invalid.includes(rs) && 
+                            typeof scenes[rs] !== 'undefined';
+            
+            console.log('=== ReturnScene Validation ===');
+            console.log('ReturnScene:', rs);
+            console.log('Is Valid:', isValid);
+            if (!isValid) {
+                console.error('❌ INVALID: returnScene is either missing, in invalid list, or scene does not exist');
+                if (rs && invalid.includes(rs)) {
+                    console.error('   Reason: Scene is in invalid list (intro/skirmish scene)');
+                } else if (rs && typeof scenes[rs] === 'undefined') {
+                    console.error('   Reason: Scene does not exist in scenes object');
+                } else {
+                    console.error('   Reason: returnScene is missing or null');
+                }
+            } else {
+                console.log('✅ VALID: returnScene points to a valid non-intro scene');
+            }
+            return isValid;
+        };
+        
+        // Validate routing from resolve screen (Test A1)
+        window.qaValidateResolveRouting = function() {
+            if (gameState.currentScene !== 'skirmish_roadside_resolve') {
+                console.log('=== Resolve Routing Validation ===');
+                console.log('ℹ️ SKIPPED: Not on resolve screen. Current scene:', gameState.currentScene);
+                console.log('   This test requires being on skirmish_roadside_resolve.');
+                console.log('   Complete a skirmish first, then run this test on the resolve screen.');
+                return null; // Return null to indicate "skipped"
+            }
+            
+            // Check what the next scene would be
+            const nextScene = getPostSkirmishNextScene();
+            const invalidNext = ['skirmish_roadside_resolve', 'skirmish_roadside', 
+                                'skirmish_roadside_mud', 'skirmish_roadside_lane'];
+            const isValid = nextScene && 
+                            !invalidNext.includes(nextScene) &&
+                            typeof scenes[nextScene] !== 'undefined';
+            
+            console.log('=== Resolve Routing Validation ===');
+            console.log('Current Scene:', gameState.currentScene);
+            console.log('Next Scene (from getPostSkirmishNextScene):', nextScene);
+            console.log('Is Valid:', isValid);
+            
+            if (!isValid) {
+                console.error('❌ INVALID: Next scene would bounce back to resolve or is invalid');
+            } else {
+                console.log('✅ VALID: Next scene is safe (travel/campfire/encounter)');
+            }
+            
+            // Also check returnScene (may return null if skipped)
+            const rsValid = window.qaValidateReturnScene();
+            if (rsValid === null) {
+                // returnScene check was skipped, but routing check still valid
+                return isValid;
+            }
+            return isValid && rsValid;
+        };
+        
+        // Check for double-insertion risk (Test A4)
+        window.qaCheckDoubleInsertionGuard = function() {
+            console.log('=== Double-Insertion Guard Check ===');
+            console.log('Current Scene:', gameState.currentScene);
+            
+            if (gameState.currentScene === 'skirmish_roadside_resolve') {
+                console.log('✅ Guard should be active: global insertion pipeline should be SKIPPED');
+                console.log('   (Check console logs for "[QA] SKIPPED global insertion pipeline" message)');
+            } else {
+                console.log('ℹ️ Not on resolve screen, guard not applicable');
+                console.log('   Global insertion pipeline should run normally');
+            }
+            
+            // Check if there are any stale returnScene references
+            if (gameState.randomEncounter) {
+                const staleScenes = ['skirmish_roadside_resolve', 'skirmish_roadside'];
+                if (staleScenes.includes(gameState.randomEncounter.returnScene)) {
+                    console.warn('⚠️ WARNING: randomEncounter.returnScene points to stale skirmish scene:', 
+                                gameState.randomEncounter.returnScene);
+                } else {
+                    console.log('✅ randomEncounter.returnScene is clean');
+                }
+            }
+            
+            if (gameState.campfire) {
+                const staleScenes = ['skirmish_roadside_resolve', 'skirmish_roadside'];
+                if (staleScenes.includes(gameState.campfire.returnScene)) {
+                    console.warn('⚠️ WARNING: campfire.returnScene points to stale skirmish scene:', 
+                                gameState.campfire.returnScene);
+                } else {
+                    console.log('✅ campfire.returnScene is clean');
+                }
+            }
+        };
+        
+        // Run all routing validations (quick check)
+        window.qaRunRoutingTests = function() {
+            console.log('=== QA Routing Tests ===\n');
+            console.log('Note: Some tests require being in a post-skirmish state.');
+            console.log('If you see "SKIPPED" messages, that\'s normal from a cold start.\n');
+            
+            const returnSceneResult = window.qaValidateReturnScene();
+            console.log('');
+            
+            const routingResult = window.qaValidateResolveRouting();
+            console.log('');
+            
+            window.qaCheckDoubleInsertionGuard();
+            console.log('');
+            
+            // Summary
+            console.log('=== Test Summary ===');
+            const testsRun = [];
+            const testsPassed = [];
+            
+            if (returnSceneResult !== null) {
+                testsRun.push('ReturnScene Validation');
+                if (returnSceneResult) testsPassed.push('ReturnScene Validation');
+            } else {
+                console.log('⏭️  ReturnScene Validation: SKIPPED (no skirmish state)');
+            }
+            
+            if (routingResult !== null) {
+                testsRun.push('Resolve Routing Validation');
+                if (routingResult) testsPassed.push('Resolve Routing Validation');
+            } else {
+                console.log('⏭️  Resolve Routing Validation: SKIPPED (not on resolve screen)');
+            }
+            
+            if (testsRun.length > 0) {
+                console.log(`\n✅ Tests Run: ${testsRun.length}`);
+                console.log(`✅ Tests Passed: ${testsPassed.length}/${testsRun.length}`);
+                if (testsPassed.length === testsRun.length) {
+                    console.log('🎉 All applicable tests passed!');
+                } else {
+                    console.log('⚠️  Some tests failed. Check output above for details.');
+                }
+            } else {
+                console.log('ℹ️  No tests ran (requires post-skirmish state).');
+                console.log('   Complete a skirmish first, then run this suite on the resolve screen.');
+            }
+            
+            console.log('\n=== Tests Complete ===');
+        };
+        
+        // Enable debug mode for QA testing (shows diagnostic logs)
+        window.qaEnableDebug = function() {
+            gameState.debug = gameState.debug || {};
+            gameState.debug.enabled = true;
+            updateDebugUI();
+            console.log('✅ Debug mode enabled. QA diagnostic logs will now appear.');
+            console.log('   Look for [QA] prefixed messages in console.');
+        };
+        
+        // Disable debug mode
+        window.qaDisableDebug = function() {
+            if (gameState.debug) {
+                gameState.debug.enabled = false;
+            }
+            updateDebugUI();
+            console.log('✅ Debug mode disabled.');
+        };
+        
         // Initialize game
         function initGame() {
             // Hide loading message immediately (redundant check, but safe)
@@ -16918,6 +17105,11 @@
             // pipeline again here or you'll double-insert and can bounce back into skirmish.
             let finalNextScene = nextSceneName;
             if (gameState.currentScene !== 'skirmish_roadside_resolve') {
+                // QA: Log when global insertion pipeline runs
+                if (gameState.debug && gameState.debug.enabled) {
+                    console.log('[QA] Running global insertion pipeline from:', gameState.currentScene, '→', nextSceneName);
+                }
+                
                 // Check if we should insert a skirmish (before campfire, shares cooldown with random encounters)
                 const afterSkirmish = maybeInsertSkirmish(nextSceneName);
                 
@@ -16927,6 +17119,11 @@
                 // Random encounter insertion (with cooldown to avoid back-to-back interruptions)
                 tickRandomEncounterCooldown(gameState.currentScene);
                 finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, afterCampfire);
+            } else {
+                // QA: Log when global insertion pipeline is skipped
+                if (gameState.debug && gameState.debug.enabled) {
+                    console.log('[QA] SKIPPED global insertion pipeline (exiting skirmish_roadside_resolve)');
+                }
             }
             
             gameState.currentScene = finalNextScene;
