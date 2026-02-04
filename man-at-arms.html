@@ -930,6 +930,8 @@
                     <button class="control-button" onclick="showStats()">📊 Full Stats</button>
                     <button class="control-button" onclick="openEquipmentScreen()">🛡️ Equipment</button>
                     <button class="control-button" onclick="toggleEffectsPreview()">👁️ <span id="effects-toggle">Show</span> Effects</button>
+                    <button class="control-button" onclick="forceSkirmishUI()" id="debug-skirmish-btn" style="display: none;">⚔️ Force Skirmish</button>
+                    <button class="control-button" onclick="startTempoStrikeDemo()" id="debug-tempo-btn" style="display: none;">🎯 Timing Demo</button>
                 </div>
             </div>
 
@@ -1503,6 +1505,10 @@
             gameState.campfire.returnScene = nextSceneKey;
             gameState.campfire.lastInsertedAtIndex = (gameState.scenesVisited ? gameState.scenesVisited.length : 0);
             
+            // Decide mode: 30% full vignette, 70% micro campfire
+            gameState.campfire.lastMode = gameState.campfire.mode;
+            gameState.campfire.mode = (Math.random() < 0.30) ? 'full' : 'micro';
+            
             return "campfire_interlude";
         }
         
@@ -1539,6 +1545,368 @@
                 difficulty: adjustedDifficulty,
                 baseDifficulty: difficulty
             };
+        }
+        
+        // ===== SKIRMISH SYSTEM =====
+        
+        // Compute explicit gear bonuses for skirmish choices
+        function computeSkirmishModifiers(choiceId) {
+            const mods = {
+                reachBonus: 0,
+                armorDefenseBonus: 0,
+                moraleDeltaBonus: 0,
+                variantModifier: 0 // Applied to all choices
+            };
+            
+            // Apply variant-specific modifiers
+            const variantContext = gameState.lastSkirmishContext || {};
+            if (variantContext.variantId === 'mud') {
+                // Mud & Ruts: -1 to all bonuses (worse footing)
+                mods.variantModifier = -1;
+            } else if (variantContext.variantId === 'lane') {
+                // Narrow Lane: reduce spear reach bonus by 1 (cramped space)
+                // This is handled below in reach bonus calculation
+            }
+            
+            // Reach bonus: Check if weapon is spear
+            const weapon = gameState.equipment?.weapon?.item;
+            if (weapon && weapon.id === 'spear') {
+                mods.reachBonus = 2;
+                // Narrow lane reduces spear effectiveness
+                if (variantContext.variantId === 'lane') {
+                    mods.reachBonus -= 1; // Reduce by 1 in cramped space
+                }
+            }
+            
+            // Armor defense bonus: Check if torso has mail
+            const torso = gameState.equipment?.torso?.item;
+            if (torso && torso.id && (torso.id.includes('mail') || torso.id === 'mail_shirt')) {
+                mods.armorDefenseBonus = 2;
+            }
+            
+            // Morale delta bonus: Based on morale thresholds
+            const morale = gameState.stats.morale || 5;
+            if (morale >= 7) {
+                mods.moraleDeltaBonus = 1;
+            } else if (morale <= 3) {
+                mods.moraleDeltaBonus = -1;
+            }
+            
+            return mods;
+        }
+        
+        // Calculate deltas based on margin bands, return metadata flags
+        function computeSkirmishCosts(result, choiceId, mods) {
+            const margin = result.margin;
+            const deltas = {exertion: 0, wear: 0, morale: 0, wealth: 0};
+            const flags = {};
+            
+            // Success always costs something (tuned to prevent excessive stacking)
+            if (margin >= 0) {
+                if (margin <= 1) {
+                    // Close success - worse cost
+                    deltas.wear += 1; // Reduced from 2
+                    deltas.morale -= 1;
+                } else if (margin <= 4) {
+                    // Normal success
+                    deltas.wear += 1;
+                } else {
+                    // Clean win (margin 5+)
+                    deltas.wear += 1; // Still small cost
+                }
+            } else if (margin >= -2) {
+                // Partial failure
+                deltas.wear += 1; // Reduced from 2
+                deltas.morale -= 1;
+            } else {
+                // Full failure (margin <= -3)
+                deltas.wear += 2; // Reduced from 3
+                deltas.morale -= 2;
+            }
+            
+            // Mail always adds wear (heat/strain floor) - only if wearing mail
+            if (mods.armorDefenseBonus > 0) {
+                deltas.wear += 1;
+            }
+            
+            // Spear "inside reach" downside (Press only, on failure/partial)
+            if (choiceId === 'press' && mods.reachBonus > 0 && margin < 0 && margin >= -2) {
+                deltas.wear += 1;
+                flags.insideReach = true; // Return as metadata, don't mutate global state
+            }
+            
+            // Cap total wear increase per fight to prevent excessive stacking
+            deltas.wear = Math.min(deltas.wear, 3); // Cap at 3 per skirmish
+            
+            return { deltas, flags };
+        }
+        
+        // Apply computed deltas to gameState
+        function applySkirmishDeltas(deltas) {
+            // Apply morale change
+            if (deltas.morale !== 0) {
+                applyStatChange('morale', deltas.morale);
+            }
+            
+            // Apply exertion (already handled in runSkirmish for Press choice)
+            // But handle any additional exertion from costs if needed
+            if (deltas.exertion !== 0) {
+                gameState.exertion = Math.max(0, Math.min(10, (gameState.exertion || 0) + deltas.exertion));
+            }
+            
+            // Apply wear
+            if (deltas.wear !== 0) {
+                gameState.wear = Math.max(0, Math.min(10, (gameState.wear || 0) + deltas.wear));
+            }
+            
+            // Apply wealth (if any)
+            if (deltas.wealth !== 0) {
+                applyStatChange('wealth', deltas.wealth);
+            }
+        }
+        
+        // Generate display formula string reflecting actual computed mods
+        function buildFormulaText(choiceId, mods, exertion, effectiveStat) {
+            let parts = ['1d10'];
+            let bonusTotal = effectiveStat;
+            
+            if (choiceId === 'press') {
+                parts.push(`+ Strength (${effectiveStat})`);
+                if (mods.reachBonus > 0) {
+                    parts.push(`+ Reach (+${mods.reachBonus})`);
+                    bonusTotal += mods.reachBonus;
+                } else if (mods.reachBonus < 0) {
+                    // Handle reduced reach (e.g., in narrow lane)
+                    parts.push(`+ Reach (${mods.reachBonus})`);
+                    bonusTotal += mods.reachBonus;
+                }
+            } else if (choiceId === 'hold') {
+                parts.push(`+ Wits (${effectiveStat})`);
+                if (mods.armorDefenseBonus > 0) {
+                    parts.push(`+ Armor (+${mods.armorDefenseBonus})`);
+                    bonusTotal += mods.armorDefenseBonus;
+                }
+            } else if (choiceId === 'drive') {
+                parts.push(`+ Charisma (${effectiveStat})`);
+                if (mods.moraleDeltaBonus !== 0) {
+                    parts.push(`+ Morale (${mods.moraleDeltaBonus > 0 ? '+' : ''}${mods.moraleDeltaBonus})`);
+                    bonusTotal += mods.moraleDeltaBonus;
+                }
+            }
+            
+            if (exertion > 0) {
+                parts.push(`- Exertion (${exertion})`);
+                bonusTotal -= exertion;
+            }
+            
+            // Add variant modifier if applicable (e.g., mud penalty)
+            if (mods.variantModifier !== 0) {
+                const variantContext = gameState.lastSkirmishContext || {};
+                if (variantContext.variantId === 'mud') {
+                    parts.push(`- Mud (-1)`);
+                    bonusTotal += mods.variantModifier; // Already negative
+                }
+            }
+            
+            return parts.join(' ') + ` = 1d10 + ${bonusTotal}`;
+        }
+        
+        // Generate array of cost strings for UI
+        function buildCostList(deltas, choiceId, mods, result, flags) {
+            const costs = [];
+            
+            if (deltas.exertion > 0) {
+                costs.push(`Exertion +${deltas.exertion}`);
+            }
+            
+            if (deltas.wear > 0) {
+                const wearReasons = [];
+                const margin = result.margin;
+                
+                if (margin >= 0 && margin <= 1) {
+                    wearReasons.push('close success');
+                } else if (margin >= 0 && margin <= 4) {
+                    wearReasons.push('normal success');
+                } else if (margin >= 0) {
+                    wearReasons.push('clean win');
+                } else if (margin >= -2) {
+                    wearReasons.push('partial failure');
+                } else {
+                    wearReasons.push('full failure');
+                }
+                
+                if (mods.armorDefenseBonus > 0) {
+                    wearReasons.push('mail heat');
+                }
+                
+                if (flags.insideReach) {
+                    wearReasons.push('inside reach');
+                }
+                
+                const reasonText = wearReasons.length > 0 ? ` (${wearReasons.join(', ')})` : '';
+                costs.push(`Wear +${deltas.wear}${reasonText}`);
+            }
+            
+            if (deltas.morale < 0) {
+                costs.push(`Morale ${deltas.morale}`);
+            }
+            
+            if (deltas.wealth !== 0) {
+                costs.push(`Wealth ${deltas.wealth > 0 ? '+' : ''}${deltas.wealth}`);
+            }
+            
+            return costs;
+        }
+        
+        // Generate gear-specific prose (only when relevant)
+        function buildGearCallouts(choiceId, mods, result, flags) {
+            const callouts = [];
+            
+            // Spear inside reach callout
+            if (flags.insideReach) {
+                callouts.push('They got inside your reach; the spear was a staff for a moment.');
+            }
+            
+            // Mail heat callout (only on certain outcomes)
+            if (mods.armorDefenseBonus > 0 && result.margin < 0) {
+                callouts.push('Mail turned the edge; the bruise blooms anyway.');
+            }
+            
+            return callouts;
+        }
+        
+        // Execute skirmish resolution, apply costs, store result
+        // Now async to support Tempo Strike timing minigame
+        async function runSkirmish(choiceId) {
+            // Get variant context (set by scene choice)
+            const variantContext = gameState.lastSkirmishContext || {};
+            
+            // Run Tempo Strike timing minigame (only for Press choice, or all choices - comment your preference)
+            // For now, applying to all choices for consistency
+            const timing = await startTempoStrike({
+                title: 'Tempo Strike',
+                subtitle: 'Tap to stop the marker in the orange zone for a timing bonus.'
+            });
+            
+            // Apply deterministic timing cost: +1 exertion for +2 bonus
+            let timingExertionCost = 0;
+            if (timing.bonus === 2) {
+                timingExertionCost = 1;
+            }
+            
+            const mods = computeSkirmishModifiers(choiceId);
+            const exertion = gameState.exertion || 0;
+            
+            let statKey, dc, bonus;
+            if (choiceId === 'press') {
+                statKey = 'strength';
+                dc = 8;
+                bonus = mods.reachBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
+            } else if (choiceId === 'hold') {
+                statKey = 'wits';
+                dc = 7;
+                bonus = mods.armorDefenseBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
+            } else if (choiceId === 'drive') {
+                statKey = 'charisma';
+                dc = 6;
+                bonus = mods.moraleDeltaBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
+            }
+            
+            const result = resolveAction(statKey, dc, bonus);
+            
+            // Apply exertion (always +1 for Press, +0 for others)
+            // Plus timing cost if applicable
+            if (choiceId === 'press') {
+                gameState.exertion = Math.min(10, (gameState.exertion || 0) + 1 + timingExertionCost);
+            } else if (timingExertionCost > 0) {
+                // Apply timing cost for non-Press choices too
+                gameState.exertion = Math.min(10, (gameState.exertion || 0) + timingExertionCost);
+            }
+            
+            // Compute costs based on margin (returns deltas + metadata flags)
+            const costResult = computeSkirmishCosts(result, choiceId, mods);
+            // Mud variant: add +1 wear on partial (worse footing cost)
+            if (variantContext.variantId === 'mud' && result.margin >= -2 && result.margin < 0) {
+                // Partial failure in mud: extra wear
+                costResult.deltas.wear = Math.min(3, (costResult.deltas.wear || 0) + 1);
+            }
+            
+            // Apply deltas
+            applySkirmishDeltas(costResult.deltas);
+            
+            // RESOLVED: result.roll IS the total (d10 + effectiveStat + bonus)
+            // rollDice() adds modifiers, so result.roll already includes everything
+            const total = result.roll; // This is the total check value
+            
+            // Extract d10 for display if needed: d10 = result.roll - effectiveStat - bonus
+            // But we can also compute it from the formula breakdown
+            const d10 = result.roll - (result.effectiveStat + bonus); // For display purposes
+            const modifierSum = result.effectiveStat + bonus; // For display breakdown
+            
+            // Compute chance using exact Crécy pattern
+            // For display: neededRoll = adjustedDifficulty - (effectiveStat + bonus)
+            // This is the number needed on the d10 to succeed
+            const neededRoll = result.difficulty - (result.effectiveStat + bonus);
+            const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+            
+            // Build formula text with actual computed mods (not generic)
+            // Include timing bonus in formula text if non-zero
+            let formulaText = buildFormulaText(choiceId, mods, exertion, result.effectiveStat);
+            if (timing.bonus > 0) {
+                // Append timing bonus to formula
+                formulaText += ` + Tempo (+${timing.bonus})`;
+            }
+            
+            // Determine variant key for storage
+            let variantKey = 'roadside_clash';
+            if (variantContext.variantId === 'mud') {
+                variantKey = 'mud_ruts';
+            } else if (variantContext.variantId === 'lane') {
+                variantKey = 'narrow_lane';
+            }
+            
+            gameState.lastSkirmish = {
+                key: variantKey,
+                variantId: variantContext.variantId || 'roadside',
+                choiceId: choiceId,
+                statKey: statKey,
+                dc: result.difficulty, // Use adjusted difficulty for display
+                baseDc: dc, // Store base DC for reference
+                formulaText: formulaText,
+                chancePct: Math.round(successChance),
+                d10: d10, // Store d10 separately for clarity
+                modifierSum: modifierSum, // Store modifier sum
+                total: total, // Correct total: result.roll
+                margin: result.margin,
+                success: result.margin >= 0,  // Use margin, not result.success
+                partial: (result.margin === -1 || result.margin === -2),
+                mods: mods,
+                deltas: costResult.deltas,
+                costs: buildCostList(costResult.deltas, choiceId, mods, result, costResult.flags),
+                gearCallouts: buildGearCallouts(choiceId, mods, result, costResult.flags),
+                insideReach: costResult.flags.insideReach || false, // From cost calculation metadata
+                timing: { bonus: timing.bonus, label: timing.label }, // Store timing data for deterministic rendering
+                returnScene: gameState.randomEncounter.returnScene || (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start') // Fallback
+            };
+            
+            // Transition to resolve scene
+            return 'skirmish_roadside_resolve';
+        }
+        
+        // Helper: Get the next scene after leaving skirmish resolve
+        function getPostSkirmishNextScene() {
+            const fallback = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            const rs = (gameState.lastSkirmish && typeof gameState.lastSkirmish.returnScene === "string")
+                ? gameState.lastSkirmish.returnScene
+                : "";
+            
+            // Never route back into the skirmish loop from the resolve exit.
+            // This can happen if an interlude previously set returnScene to the resolve scene.
+            if (!rs || rs === 'skirmish_roadside_resolve' || rs === 'skirmish_roadside' || rs === 'start' || rs === 'character_creation' || rs === 'quick_start_review') {
+                return fallback;
+            }
+            
+            return rs;
         }
         
         // Add condition (wound, fatigue, etc.)
@@ -1758,6 +2126,32 @@
         ];
         
         // Check for arbitrary death events
+        // Helper: Determine if arbitrary death should be checked when entering a scene
+        function shouldCheckArbitraryDeathOnEnter(sceneKey) {
+            if (!sceneKey || typeof sceneKey !== 'string') return false;
+
+            // Never death-check on these "UI wrapper" / encounter scenes
+            const block = new Set([
+                'character_creation',
+                'quick_start_review',
+                'campfire_interlude',
+                'skirmish_roadside',
+                'skirmish_roadside_resolve'
+            ]);
+            if (block.has(sceneKey)) return false;
+
+            // Never check on death/retirement/avoidance scenes
+            if (sceneKey.startsWith('death_') ||
+                sceneKey.startsWith('forced_retirement_') ||
+                sceneKey.startsWith('avoid_')) {
+                return false;
+            }
+
+            // Only death-check on travel-ish scenes
+            const prefixes = ['march_', 'marsh_', 'winter_', 'between_', 'siege_'];
+            return prefixes.some(p => sceneKey.startsWith(p));
+        }
+
         function checkArbitraryDeath() {
             // Never check during character creation, campfires, or death scenes
             if (gameState.currentScene === 'character_creation' || 
@@ -8990,6 +9384,212 @@
                 ]
             },
 
+            skirmish_roadside: {
+                title: "Roadside Clash",
+                text: `<p>Bandits. Or deserters. Or men who've lost their way. They block the road. Weapons drawn. Demanding coin or blood.</p>
+                       <p>Your column halts. Men reach for weapons. The moment hangs. Decision time.</p>`,
+                choices: [
+                    {
+                        text: "Press Them (Aggressive) - 1d10 + Strength + Reach - Exertion vs DC 8",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'roadside' };
+                            return await runSkirmish('press');
+                        }
+                    },
+                    {
+                        text: "Hold Formation (Controlled) - 1d10 + Wits + Armor - Exertion vs DC 7",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'roadside' };
+                            return await runSkirmish('hold');
+                        }
+                    },
+                    {
+                        text: "Drive Them Off (Threaten) - 1d10 + Charisma + Morale - Exertion vs DC 6",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'roadside' };
+                            return await runSkirmish('drive');
+                        }
+                    }
+                ]
+            },
+
+            skirmish_roadside_mud: {
+                title: "Mud & Ruts",
+                text: `<p>The road is a quagmire. Mud clings to boots. Ruts trap wheels. The enemy blocks the way, but footing is treacherous.</p>
+                       <p>Every step is uncertain. Every move costs more. The clash comes anyway.</p>`,
+                choices: [
+                    {
+                        text: "Press Them (Aggressive) - 1d10 + Strength + Reach - Exertion - 1 (mud) vs DC 8",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'mud' };
+                            return await runSkirmish('press');
+                        }
+                    },
+                    {
+                        text: "Hold Formation (Controlled) - 1d10 + Wits + Armor - Exertion - 1 (mud) vs DC 7",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'mud' };
+                            return await runSkirmish('hold');
+                        }
+                    },
+                    {
+                        text: "Drive Them Off (Threaten) - 1d10 + Charisma + Morale - Exertion - 1 (mud) vs DC 6",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'mud' };
+                            return await runSkirmish('drive');
+                        }
+                    }
+                ]
+            },
+
+            skirmish_roadside_lane: {
+                title: "Narrow Lane",
+                text: `<p>Hedgerows press close. The lane is narrow. No room for grand gestures. Spears are awkward here—too long, too unwieldy.</p>
+                       <p>This is close work. Inside reach. The enemy knows it.</p>`,
+                choices: [
+                    {
+                        text: "Press Them (Aggressive) - 1d10 + Strength + Reach - Exertion vs DC 8",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'lane' };
+                            return await runSkirmish('press');
+                        }
+                    },
+                    {
+                        text: "Hold Formation (Controlled) - 1d10 + Wits + Armor - Exertion vs DC 7",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'lane' };
+                            return await runSkirmish('hold');
+                        }
+                    },
+                    {
+                        text: "Drive Them Off (Threaten) - 1d10 + Charisma + Morale - Exertion vs DC 6",
+                        effects: {},
+                        nextScene: async function() {
+                            gameState.lastSkirmishContext = { variantId: 'lane' };
+                            return await runSkirmish('drive');
+                        }
+                    }
+                ]
+            },
+
+            skirmish_roadside_resolve: {
+                title: "After the Clash",
+                text: function() {
+                    const skirmish = gameState.lastSkirmish;
+                    if (!skirmish) return `<p>The clash ends. Dust settles.</p>`;
+                    
+                    // Build dice display (reuse Crécy pattern exactly)
+                    // Format: "1d10 + X = TOTAL (vs DC)"
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> ${skirmish.formulaText} = ${skirmish.total} (vs ${skirmish.dc})
+                        <br><em>Chance to succeed: ${skirmish.chancePct}%</em>
+                        <br><strong>${skirmish.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                        <br>Margin: ${skirmish.margin >= 0 ? '+' : ''}${skirmish.margin}
+                    </div>`;
+                    
+                    // Build cost display
+                    const costDisplay = skirmish.costs.length > 0 
+                        ? `<div class="costs"><strong>Costs:</strong><ul>${skirmish.costs.map(c => `<li>${c}</li>`).join('')}</ul></div>`
+                        : '';
+                    
+                    // Build gear callouts
+                    const gearDisplay = skirmish.gearCallouts.length > 0
+                        ? `<div class="gear-callouts">${skirmish.gearCallouts.map(c => `<p><em>${c}</em></p>`).join('')}</div>`
+                        : '';
+                    
+                    // Outcome prose (varies by margin/choice)
+                    let outcomeText = '';
+                    if (skirmish.success) {
+                        if (skirmish.margin <= 1) {
+                            outcomeText = `<p>You drive them back, but it's close. Too close. Your gear takes the strain. Your lungs burn.</p>`;
+                        } else if (skirmish.margin <= 4) {
+                            outcomeText = `<p>You hold. They break. The road clears. But nothing comes free. Your kit shows the wear.</p>`;
+                        } else {
+                            outcomeText = `<p>Clean work. They scatter. The column moves on. Still, the march takes its toll.</p>`;
+                        }
+                    } else {
+                        outcomeText = `<p>They push hard. You give ground. Your gear strains. Your morale dips. The cost shows.</p>`;
+                    }
+                    
+                    return `${rollDisplay}${costDisplay}${gearDisplay}${outcomeText}`;
+                },
+                onEnter: function() {
+                    // Check exertion threshold
+                    if (gameState.exertion >= 3 && !hasCondition('Fatigued')) {
+                        addCondition('Fatigued', 'negative', 2);
+                    }
+                    
+                    // Check wear threshold
+                    if (gameState.wear >= 3 && !hasCondition('Bruised')) {
+                        addCondition('Bruised', 'negative', 2);
+                    }
+                    
+                    // Alternative: use flag instead of condition
+                    if (gameState.wear >= 3) {
+                        gameState.flags.KitStrained = true;
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
+                        nextScene: function() {
+                            // Compute the travel scene we should return to
+                            let nextScene = getPostSkirmishNextScene();
+                            
+                            // Store the travel scene for return routing (before any interludes)
+                            const travelReturnScene = nextScene;
+                            
+                            // Run campfire insertion (may return campfire_interlude or nextScene)
+                            // maybeInsertCampfire already sets gameState.campfire.returnScene = nextSceneKey
+                            nextScene = maybeInsertCampfire(nextScene);
+                            
+                            // Ensure campfire returns to travel scene (not resolve scene)
+                            if (nextScene === "campfire_interlude" && gameState.campfire) {
+                                gameState.campfire.returnScene = travelReturnScene;
+                            }
+                            
+                            // Tick random encounter cooldown (from current scene: skirmish_roadside_resolve)
+                            tickRandomEncounterCooldown(gameState.currentScene);
+                            
+                            // Run random encounter insertion (may return encounter scene or nextScene)
+                            // maybeInsertRandomEncounter already sets gameState.randomEncounter.returnScene = nextSceneKey
+                            // This correctly chains: if campfire was inserted, random encounter returns to campfire
+                            // which then returns to travel. If no campfire, random encounter returns to travel.
+                            nextScene = maybeInsertRandomEncounter(gameState.currentScene, nextScene);
+                            
+                            // Clean up stale randomEncounter.returnScene (even if inactive)
+                            // Prevents stale returnScene from pointing back to resolve scene
+                            if (gameState.randomEncounter) {
+                                const staleResolveScenes = ['skirmish_roadside_resolve', 'skirmish_roadside'];
+                                if (staleResolveScenes.includes(gameState.randomEncounter.returnScene)) {
+                                    // If encounter is active, maybeInsertRandomEncounter already set returnScene correctly
+                                    // But if it somehow still points to resolve, fix it
+                                    // If inactive, clean up stale reference
+                                    gameState.randomEncounter.returnScene = travelReturnScene;
+                                }
+                            }
+                            
+                            // Clear skirmish data only if we're actually leaving the resolve scene.
+                            // If nextScene somehow points back here, keep lastSkirmish so the UI doesn't blank out.
+                            if (nextScene !== 'skirmish_roadside_resolve') {
+                                gameState.lastSkirmish = null;
+                            }
+                            
+                            return nextScene;
+                        }
+                    }
+                ]
+            },
+
             restart: {
                 title: "New Beginning",
                 year: null,
@@ -9050,7 +9650,7 @@
                         requiresResolution: true,
                         resolutionStat: "agility",
                         resolutionDifficulty: 6,
-                        nextScene: "road_block_encounter"
+                        nextScene: "skirmish_roadside"
                     },
                     {
                         text: "Wait with the main column",
@@ -12016,6 +12616,19 @@
                     const cf = gameState.campfire || {};
                     const step = cf.currentStep || 0;
                     
+                    // Micro campfire mode: short maintenance description
+                    if (cf.mode === 'micro') {
+                        const descriptions = [
+                            "The fire burns low. A moment to tend to yourself and your kit.",
+                            "A brief pause. The column rests. You catch your breath.",
+                            "Evening settles. Men huddle by the flames. Time for maintenance.",
+                            "The march halts. You find a spot by the fire. Rest and repair."
+                        ];
+                        const desc = descriptions[Math.floor(Math.random() * descriptions.length)];
+                        return `<p>${desc}</p><h3 style="margin-top:0; color: #f4d03f;">Maintenance</h3>`;
+                    }
+                    
+                    // Full vignette mode: existing behavior
                     // Initialize vignette on step 0
                     if (step === 0) {
                         const seenIds = new Set(cf.seenIds || []);
@@ -12104,6 +12717,75 @@
                 choices: function() {
                     const cf = gameState.campfire || {};
                     const step = cf.currentStep || 0;
+                    
+                    // Micro campfire mode: maintenance choices
+                    if (cf.mode === 'micro') {
+                        return [
+                            {
+                                text: "Sleep — Rest and recover",
+                                effects: function(gs) {
+                                    const state = gs || gameState;
+                                    // Exertion -1, stress -1
+                                    state.exertion = Math.max(0, Math.min(10, (state.exertion || 0) - 1));
+                                    applyStatChange('stress', -1, {silent: true});
+                                },
+                                nextScene: function() {
+                                    const next = cf.returnScene || "start";
+                                    cf.returnScene = null;
+                                    cf.mode = null;
+                                    cf.currentStep = 0;
+                                    return next;
+                                }
+                            },
+                            {
+                                text: "Tend Kit — Repair and maintain gear",
+                                effects: function(gs) {
+                                    const state = gs || gameState;
+                                    // Wear -1
+                                    state.wear = Math.max(0, Math.min(10, (state.wear || 0) - 1));
+                                },
+                                nextScene: function() {
+                                    const next = cf.returnScene || "start";
+                                    cf.returnScene = null;
+                                    cf.mode = null;
+                                    cf.currentStep = 0;
+                                    return next;
+                                }
+                            },
+                            {
+                                text: "Share Words — Talk with companions",
+                                effects: function(gs) {
+                                    const state = gs || gameState;
+                                    // Morale +1
+                                    applyStatChange('morale', 1, {silent: true});
+                                },
+                                nextScene: function() {
+                                    const next = cf.returnScene || "start";
+                                    cf.returnScene = null;
+                                    cf.mode = null;
+                                    cf.currentStep = 0;
+                                    return next;
+                                }
+                            },
+                            {
+                                text: "Keep Watch — Stay alert",
+                                effects: function(gs) {
+                                    const state = gs || gameState;
+                                    // Initiative +1 (no meter recovery)
+                                    applyStatChange('initiative', 1, {silent: true});
+                                },
+                                nextScene: function() {
+                                    const next = cf.returnScene || "start";
+                                    cf.returnScene = null;
+                                    cf.mode = null;
+                                    cf.currentStep = 0;
+                                    return next;
+                                }
+                            }
+                        ];
+                    }
+                    
+                    // Full vignette mode: existing behavior
                     const vignetteId = cf.currentVignetteId;
                     const vignette = CAMPFIRE_VIGNETTES.find(v => v.id === vignetteId);
                     
@@ -12351,6 +13033,409 @@
             return encounterId;
         }
         
+        // Skirmish insertion (shares cooldown bucket with random encounters)
+        function maybeInsertSkirmish(nextSceneKey) {
+            // Respect shared cooldown (skirmishes and random encounters share the same bucket)
+            if (gameState.randomEncounter && gameState.randomEncounter.cooldown > 0) {
+                return nextSceneKey;
+            }
+            
+            // Check debug flag for forced skirmish
+            if (gameState.debug && gameState.debug.forceSkirmish) {
+                gameState.debug.forceSkirmish = false; // Reset after use
+                // Set return scene and cooldown
+                if (!gameState.randomEncounter) {
+                    gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+                }
+                gameState.randomEncounter.returnScene = nextSceneKey;
+                // Default to roadside for debug
+                gameState.randomEncounter.lastKey = 'skirmish_roadside';
+                gameState.randomEncounter.cooldown = 5;
+                return 'skirmish_roadside';
+            }
+            
+            // Avoid critical scenes (reuse isCriticalSceneKey logic)
+            if (isCriticalSceneKey(nextSceneKey)) {
+                return nextSceneKey;
+            }
+            
+            // Avoid character creation, campfires
+            if (nextSceneKey.startsWith('character_creation') || 
+                nextSceneKey.startsWith('campfire')) {
+                return nextSceneKey;
+            }
+            
+            // Probability keyed to region/chapter/wealth/exertion
+            // Base chance: 8% (lower than random encounters to avoid spam)
+            let chance = 0.08;
+            
+            // Adjust by exertion (higher exertion = more likely, but cap at 15%)
+            if (gameState.exertion >= 3) {
+                chance += 0.03;
+            }
+            if (gameState.exertion >= 6) {
+                chance += 0.02;
+            }
+            chance = Math.min(0.15, chance);
+            
+            // Adjust by wealth (poorer = more desperate = more likely)
+            if (gameState.stats.wealth < 50) {
+                chance += 0.02;
+            }
+            
+            if (Math.random() >= chance) {
+                return nextSceneKey;
+            }
+            
+            // Set return scene and cooldown (shares randomEncounter object)
+            if (!gameState.randomEncounter) {
+                gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+            }
+            
+            gameState.randomEncounter.returnScene = nextSceneKey;
+            
+            // Randomly pick skirmish variant: 60% roadside, 20% mud, 20% lane
+            const roll = Math.random();
+            let variantKey;
+            if (roll < 0.6) {
+                variantKey = 'skirmish_roadside';
+            } else if (roll < 0.8) {
+                variantKey = 'skirmish_roadside_mud';
+            } else {
+                variantKey = 'skirmish_roadside_lane';
+            }
+            
+            gameState.randomEncounter.lastKey = variantKey;
+            gameState.randomEncounter.cooldown = 5; // 5 scenes cooldown (shared with random encounters)
+            
+            return variantKey;
+        }
+        
+        // Debug functions for skirmish testing
+        window.forceSkirmish = function() {
+            gameState.debug = gameState.debug || {};
+            gameState.debug.forceSkirmish = true;
+            // Force transition
+            const currentScene = gameState.currentScene;
+            const nextScene = maybeInsertSkirmish('test_scene');
+            if (nextScene === 'skirmish_roadside') {
+                // Use the scene transition system
+                gameState.currentScene = 'skirmish_roadside';
+                updateDisplay();
+            }
+        };
+        
+        function forceSkirmishUI() {
+            gameState.debug = gameState.debug || {};
+            gameState.debug.forceSkirmish = true;
+            // Force immediate transition
+            const currentScene = gameState.currentScene;
+            if (!gameState.randomEncounter) {
+                gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+            }
+            gameState.randomEncounter.returnScene = currentScene;
+            gameState.randomEncounter.cooldown = 0; // Reset cooldown for testing
+            gameState.currentScene = 'skirmish_roadside';
+            updateDisplay();
+        }
+
+        // ===== Timing Minigame Demo (Tempo Strike) =====
+        // Single-tap timing bar → deterministic bonus. No extra RNG.
+        const tempoStrikeDemoState = {
+            running: false,
+            raf: null,
+            startMs: 0,
+            speed: 0.9, // cycles per second
+            lastPos: 0
+        };
+
+        function closeMinigameOverlay() {
+            const overlay = document.getElementById('minigame-overlay');
+            if (overlay) overlay.style.display = 'none';
+            tempoStrikeDemoState.running = false;
+            if (tempoStrikeDemoState.raf) cancelAnimationFrame(tempoStrikeDemoState.raf);
+            tempoStrikeDemoState.raf = null;
+            window.removeEventListener('keydown', tempoStrikeDemoKeyHandler);
+        }
+
+        function tempoStrikeDemoKeyHandler(e) {
+            if (e.key === 'Escape') {
+                closeMinigameOverlay();
+                return;
+            }
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                tempoStrikeStop();
+            }
+        }
+
+        function startTempoStrikeDemo() {
+            const overlay = document.getElementById('minigame-overlay');
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            const progress = document.getElementById('combat-progress');
+            const log = document.getElementById('combat-log');
+
+            if (!overlay || !display || !title || !instructions) {
+                console.warn('TempoStrike demo: minigame overlay elements missing');
+                return;
+            }
+
+            // Hide unused combat UI bits for this demo
+            if (progress) progress.style.display = 'none';
+            if (log) log.style.display = 'none';
+            const healthBars = overlay.querySelector('.health-bars');
+            if (healthBars) healthBars.style.display = 'none';
+
+            overlay.style.display = 'flex';
+            title.textContent = 'Tempo Strike — Timing Demo';
+            if (subtitle) subtitle.textContent = 'Tap to stop the marker in the orange zone.';
+
+            display.innerHTML = `
+              <div style="max-width:520px;margin:0 auto;">
+                <div id="tempo-bar" style="position:relative;height:22px;border:2px solid #a8732a;background:#231a12;border-radius:6px;overflow:hidden;">
+                  <div id="tempo-sweet" style="position:absolute;left:42.5%;width:15%;top:0;bottom:0;background:rgba(214,116,32,0.35);"></div>
+                  <div id="tempo-sweet2" style="position:absolute;left:47.5%;width:5%;top:0;bottom:0;background:rgba(214,116,32,0.55);"></div>
+                  <div id="tempo-marker" style="position:absolute;top:-3px;width:10px;height:28px;background:#f4d03f;border-radius:4px;box-shadow:0 0 8px rgba(244,208,63,0.55);"></div>
+                </div>
+                <div id="tempo-result" style="margin-top:14px;font-size:14px;line-height:1.4;"></div>
+                <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                  <button class="control-button" id="tempo-stop-btn">Stop</button>
+                  <button class="control-button" id="tempo-again-btn">Again</button>
+                  <button class="control-button" id="tempo-close-btn">Close</button>
+                </div>
+              </div>
+            `;
+
+            instructions.innerHTML = `<div style="text-align:center;opacity:0.9;">Tap the bar (or press Space/Enter) to stop. Esc closes.</div>`;
+
+            // Wire buttons
+            const stopBtn = document.getElementById('tempo-stop-btn');
+            const againBtn = document.getElementById('tempo-again-btn');
+            const closeBtn = document.getElementById('tempo-close-btn');
+            if (stopBtn) stopBtn.onclick = tempoStrikeStop;
+            if (againBtn) againBtn.onclick = tempoStrikeStart;
+            if (closeBtn) closeBtn.onclick = closeMinigameOverlay;
+
+            // Tap anywhere on the bar to stop
+            const bar = document.getElementById('tempo-bar');
+            if (bar) {
+                bar.onclick = tempoStrikeStop;
+                bar.ontouchstart = (ev) => { ev.preventDefault(); tempoStrikeStop(); };
+            }
+
+            window.addEventListener('keydown', tempoStrikeDemoKeyHandler);
+            tempoStrikeStart();
+        }
+
+        function tempoStrikeStart() {
+            const marker = document.getElementById('tempo-marker');
+            const result = document.getElementById('tempo-result');
+            if (!marker) return;
+
+            tempoStrikeDemoState.running = true;
+            tempoStrikeDemoState.startMs = performance.now();
+            if (result) result.innerHTML = `<strong>Running…</strong> Try to hit the center for <strong>+2</strong>.`;
+
+            const tick = (now) => {
+                if (!tempoStrikeDemoState.running) return;
+                const t = (now - tempoStrikeDemoState.startMs) / 1000;
+                // Triangle wave 0→1→0
+                const phase = (t * tempoStrikeDemoState.speed) % 1;
+                const tri = phase < 0.5 ? (phase * 2) : (2 - phase * 2);
+                tempoStrikeDemoState.lastPos = tri;
+
+                const bar = document.getElementById('tempo-bar');
+                const w = bar ? bar.clientWidth : 300;
+                const x = Math.floor(tri * (w - 10));
+                marker.style.left = x + 'px';
+
+                tempoStrikeDemoState.raf = requestAnimationFrame(tick);
+            };
+
+            if (tempoStrikeDemoState.raf) cancelAnimationFrame(tempoStrikeDemoState.raf);
+            tempoStrikeDemoState.raf = requestAnimationFrame(tick);
+        }
+
+        function tempoStrikeStop() {
+            if (!tempoStrikeDemoState.running) return;
+            tempoStrikeDemoState.running = false;
+            if (tempoStrikeDemoState.raf) cancelAnimationFrame(tempoStrikeDemoState.raf);
+            tempoStrikeDemoState.raf = null;
+
+            const pos = tempoStrikeDemoState.lastPos; // 0..1
+            const dist = Math.abs(pos - 0.5);
+            let bonus = 0;
+            let label = 'MISS';
+            if (dist <= 0.025) { bonus = 2; label = 'PERFECT'; }
+            else if (dist <= 0.075) { bonus = 1; label = 'GOOD'; }
+
+            const result = document.getElementById('tempo-result');
+            if (result) {
+                result.innerHTML = `
+                  <div><strong>${label}</strong> — timing bonus: <strong>${bonus >= 0 ? '+' : ''}${bonus}</strong></div>
+                  <div style="opacity:0.85;">(This is deterministic from your tap, not RNG. Intended to feed into skirmish bonus.)</div>
+                `;
+            }
+        }
+        
+        // ===== Promise-based Tempo Strike for skirmish integration =====
+        // Returns Promise<{bonus: number, label: string}>
+        function startTempoStrike({title = 'Tempo Strike', subtitle = 'Tap to stop the marker in the orange zone.'} = {}) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('minigame-overlay');
+                const titleEl = document.getElementById('minigame-title');
+                const subtitleEl = document.getElementById('minigame-subtitle');
+                const display = document.getElementById('minigame-display');
+                const instructions = document.getElementById('minigame-instructions');
+                const progress = document.getElementById('combat-progress');
+                const log = document.getElementById('combat-log');
+
+                if (!overlay || !display || !titleEl || !instructions) {
+                    console.warn('TempoStrike: minigame overlay elements missing');
+                    resolve({bonus: 0, label: 'SKIP'});
+                    return;
+                }
+
+                // Hide unused combat UI bits
+                if (progress) progress.style.display = 'none';
+                if (log) log.style.display = 'none';
+                const healthBars = overlay.querySelector('.health-bars');
+                if (healthBars) healthBars.style.display = 'none';
+
+                overlay.style.display = 'flex';
+                titleEl.textContent = title;
+                if (subtitleEl) subtitleEl.textContent = subtitle;
+
+                // State for this instance
+                let resolved = false;
+                const state = {
+                    running: false,
+                    raf: null,
+                    startMs: 0,
+                    speed: 0.9,
+                    lastPos: 0
+                };
+
+                // Resolve helper
+                function resolveWithResult(bonus, label) {
+                    if (resolved) return;
+                    resolved = true;
+                    state.running = false;
+                    if (state.raf) cancelAnimationFrame(state.raf);
+                    state.raf = null;
+                    window.removeEventListener('keydown', keyHandler);
+                    overlay.style.display = 'none';
+                    resolve({bonus, label});
+                }
+
+                // Key handler
+                function keyHandler(e) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        resolveWithResult(0, 'SKIP');
+                    } else if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        stopTempo();
+                    }
+                }
+
+                // Stop function
+                function stopTempo() {
+                    if (!state.running || resolved) return;
+                    state.running = false;
+                    if (state.raf) cancelAnimationFrame(state.raf);
+                    state.raf = null;
+
+                    const pos = state.lastPos; // 0..1
+                    const dist = Math.abs(pos - 0.5);
+                    let bonus = 0;
+                    let label = 'MISS';
+                    if (dist <= 0.025) { bonus = 2; label = 'PERFECT'; }
+                    else if (dist <= 0.075) { bonus = 1; label = 'GOOD'; }
+
+                    resolveWithResult(bonus, label);
+                }
+
+                // Start animation
+                function startTempo() {
+                    const marker = document.getElementById('tempo-marker');
+                    const result = document.getElementById('tempo-result');
+                    if (!marker) {
+                        resolveWithResult(0, 'SKIP');
+                        return;
+                    }
+
+                    state.running = true;
+                    state.startMs = performance.now();
+                    if (result) result.innerHTML = `<strong>Running…</strong> Try to hit the center for <strong>+2</strong>.`;
+
+                    const tick = (now) => {
+                        if (!state.running || resolved) return;
+                        const t = (now - state.startMs) / 1000;
+                        const phase = (t * state.speed) % 1;
+                        const tri = phase < 0.5 ? (phase * 2) : (2 - phase * 2);
+                        state.lastPos = tri;
+
+                        const bar = document.getElementById('tempo-bar');
+                        const w = bar ? bar.clientWidth : 300;
+                        const x = Math.floor(tri * (w - 10));
+                        marker.style.left = x + 'px';
+
+                        state.raf = requestAnimationFrame(tick);
+                    };
+
+                    if (state.raf) cancelAnimationFrame(state.raf);
+                    state.raf = requestAnimationFrame(tick);
+                }
+
+                // Setup UI
+                display.innerHTML = `
+                  <div style="max-width:520px;margin:0 auto;">
+                    <div id="tempo-bar" style="position:relative;height:22px;border:2px solid #a8732a;background:#231a12;border-radius:6px;overflow:hidden;">
+                      <div id="tempo-sweet" style="position:absolute;left:42.5%;width:15%;top:0;bottom:0;background:rgba(214,116,32,0.35);"></div>
+                      <div id="tempo-sweet2" style="position:absolute;left:47.5%;width:5%;top:0;bottom:0;background:rgba(214,116,32,0.55);"></div>
+                      <div id="tempo-marker" style="position:absolute;top:-3px;width:10px;height:28px;background:#f4d03f;border-radius:4px;box-shadow:0 0 8px rgba(244,208,63,0.55);"></div>
+                    </div>
+                    <div id="tempo-result" style="margin-top:14px;font-size:14px;line-height:1.4;"></div>
+                    <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                      <button class="control-button" id="tempo-stop-btn">Stop</button>
+                      <button class="control-button" id="tempo-skip-btn">Skip</button>
+                    </div>
+                  </div>
+                `;
+
+                instructions.innerHTML = `<div style="text-align:center;opacity:0.9;">Tap the bar (or press Space/Enter) to stop. Esc or Skip to skip.</div>`;
+
+                // Wire buttons
+                const stopBtn = document.getElementById('tempo-stop-btn');
+                const skipBtn = document.getElementById('tempo-skip-btn');
+                if (stopBtn) stopBtn.onclick = stopTempo;
+                if (skipBtn) skipBtn.onclick = () => resolveWithResult(0, 'SKIP');
+
+                // Tap anywhere on the bar to stop
+                const bar = document.getElementById('tempo-bar');
+                if (bar) {
+                    bar.onclick = stopTempo;
+                    bar.ontouchstart = (ev) => { ev.preventDefault(); stopTempo(); };
+                }
+
+                window.addEventListener('keydown', keyHandler);
+                startTempo();
+            });
+        }
+        
+        // Show debug button if debug mode is enabled
+        function updateDebugUI() {
+            const show = !!(gameState.debug && gameState.debug.enabled);
+            const skirmishBtn = document.getElementById('debug-skirmish-btn');
+            const tempoBtn = document.getElementById('debug-tempo-btn');
+            if (skirmishBtn) skirmishBtn.style.display = show ? 'inline-block' : 'none';
+            if (tempoBtn) tempoBtn.style.display = show ? 'inline-block' : 'none';
+        }
+        
         // Initialize game
         function initGame() {
             // Hide loading message immediately (redundant check, but safe)
@@ -12386,6 +13471,9 @@
             
             // Initialize equipment manager if not already done (consolidated to single function)
             initializeEquipmentSystem();
+            
+            // Update debug UI visibility
+            updateDebugUI();
             
             console.log("Calling updateDisplay");
             try {
@@ -14420,54 +15508,57 @@
         }
         
         /** Recalculate stats from priorities */
-        function recalculateFromPriorities() {
-            // Safety check: ensure gameState and stats exist
-            if (!gameState) {
-                console.error("recalculateFromPriorities: gameState is not defined");
+        function recalculateFromPriorities(targetState = null) {
+            // Use provided state or default to global gameState
+            const state = targetState || gameState;
+            
+            // Safety check: ensure state and stats exist
+            if (!state) {
+                console.error("recalculateFromPriorities: state is not defined");
                 return;
             }
-            if (!gameState.stats) {
-                console.error("recalculateFromPriorities: gameState.stats is not defined");
+            if (!state.stats) {
+                console.error("recalculateFromPriorities: state.stats is not defined");
                 return;
             }
             
-            if (!gameState.priorities) {
-                gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+            if (!state.priorities) {
+                state.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
             }
             
             // Start with base stats (all 5)
-            gameState.stats.strength = 5;
-            gameState.stats.agility = 5;
-            gameState.stats.endurance = 5;
-            gameState.stats.charisma = 5;
-            gameState.stats.wits = 5;
-            gameState.stats.luck = 5;
-            gameState.stats.wealth = 10; // Base wealth
-            gameState.stats.reputation = 0; // Base reputation
+            state.stats.strength = 5;
+            state.stats.agility = 5;
+            state.stats.endurance = 5;
+            state.stats.charisma = 5;
+            state.stats.wits = 5;
+            state.stats.luck = 5;
+            state.stats.wealth = 10; // Base wealth
+            state.stats.reputation = 0; // Base reputation
             
             // Apply priority bonuses
-            Object.keys(gameState.priorities).forEach(function(category) {
-                const letter = gameState.priorities[category];
+            Object.keys(state.priorities).forEach(function(category) {
+                const letter = state.priorities[category];
                 if (letter) {
                     const bonuses = getPriorityBonuses(category, letter);
                     Object.keys(bonuses).forEach(function(stat) {
                         if (stat === 'kitTier') {
-                            gameState.kitTier = bonuses[stat];
-                        } else if (gameState.stats.hasOwnProperty(stat)) {
-                            gameState.stats[stat] += bonuses[stat];
+                            state.kitTier = bonuses[stat];
+                        } else if (state.stats.hasOwnProperty(stat)) {
+                            state.stats[stat] += bonuses[stat];
                         }
                     });
                 }
             });
             
             // Clamp all stats
-            Object.keys(gameState.stats).forEach(function(stat) {
-                gameState.stats[stat] = clampStat(stat, gameState.stats[stat]);
+            Object.keys(state.stats).forEach(function(stat) {
+                state.stats[stat] = clampStat(stat, state.stats[stat]);
             });
             
             // Ensure kitTier is set
-            if (!gameState.kitTier) {
-                gameState.kitTier = "Standard";
+            if (!state.kitTier) {
+                state.kitTier = "Standard";
             }
         }
         
@@ -15774,7 +16865,21 @@
                 nextSceneName = badOutcomeScene;
             } else if (typeof choice.nextScene === 'function') {
                 try {
-                    nextSceneName = choice.nextScene();
+                    const result = choice.nextScene();
+                    // Handle async nextScene functions
+                    if (result && typeof result.then === 'function') {
+                        result.then((sceneName) => {
+                            if (sceneName && typeof sceneName === 'string') {
+                                gameState.currentScene = sceneName;
+                                updateDisplay();
+                            }
+                        }).catch((error) => {
+                            console.error("Error executing async nextScene function:", error);
+                            showNotification('Error', 'Failed to determine next scene. Please refresh the page.');
+                        });
+                        return; // Exit early, async will update display
+                    }
+                    nextSceneName = result;
                     console.log("nextScene function returned:", nextSceneName);
                     console.log("gameState.background:", gameState.background);
                 } catch (error) {
@@ -15807,38 +16912,50 @@
                 return;
             }
             
-            // Check if we should insert a campfire interlude
-            const afterCampfire = maybeInsertCampfire(nextSceneName);
+            // Scene insertion pipeline (skirmish → campfire → random encounter)
+            // NOTE: skirmish_roadside_resolve has its own carefully controlled exit flow
+            // (Option 1: resolve → maybe interludes → travel). Do NOT run the global insertion
+            // pipeline again here or you'll double-insert and can bounce back into skirmish.
+            let finalNextScene = nextSceneName;
+            if (gameState.currentScene !== 'skirmish_roadside_resolve') {
+                // Check if we should insert a skirmish (before campfire, shares cooldown with random encounters)
+                const afterSkirmish = maybeInsertSkirmish(nextSceneName);
+                
+                // Check if we should insert a campfire interlude
+                const afterCampfire = maybeInsertCampfire(afterSkirmish);
 
-            // Random encounter insertion (with cooldown to avoid back-to-back interruptions)
-            tickRandomEncounterCooldown(gameState.currentScene);
-            const finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, afterCampfire);
+                // Random encounter insertion (with cooldown to avoid back-to-back interruptions)
+                tickRandomEncounterCooldown(gameState.currentScene);
+                finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, afterCampfire);
+            }
             
             gameState.currentScene = finalNextScene;
             
-            // Check for arbitrary death events (after scene transition, before display)
-            const deathEvent = checkArbitraryDeath();
-            if (deathEvent) {
-                // Check if player can spend to avoid death (if avoidScene and avoidCost are defined)
-                if (deathEvent.avoidScene && deathEvent.avoidCost !== undefined) {
-                    const wealth = gameState.stats.wealth || 0;
-                    if (wealth >= deathEvent.avoidCost) {
-                        // Player can afford to avoid death - go to avoidance scene
-                        gameState.currentScene = deathEvent.avoidScene;
+            // Check for arbitrary death events ONLY on entering travel scenes
+            if (shouldCheckArbitraryDeathOnEnter(finalNextScene)) {
+                const deathEvent = checkArbitraryDeath();
+                if (deathEvent) {
+                    // Check if player can spend to avoid death (if avoidScene and avoidCost are defined)
+                    if (deathEvent.avoidScene && deathEvent.avoidCost !== undefined) {
+                        const wealth = gameState.stats.wealth || 0;
+                        if (wealth >= deathEvent.avoidCost) {
+                            // Player can afford to avoid death - go to avoidance scene
+                            gameState.currentScene = deathEvent.avoidScene;
+                        } else {
+                            // Player cannot afford - go to death scene
+                            gameState.currentScene = deathEvent.nextScene;
+                        }
                     } else {
-                        // Player cannot afford - go to death scene
+                        // No avoidance option - go straight to death
                         gameState.currentScene = deathEvent.nextScene;
                     }
-                } else {
-                    // No avoidance option - go straight to death
-                    gameState.currentScene = deathEvent.nextScene;
+                    // Remove fade-in class and re-add for animation
+                    document.getElementById('story').classList.remove('fade-in');
+                    setTimeout(() => {
+                        updateDisplay();
+                    }, 100);
+                    return;
                 }
-                // Remove fade-in class and re-add for animation
-                document.getElementById('story').classList.remove('fade-in');
-                setTimeout(() => {
-                    updateDisplay();
-                }, 100);
-                return;
             }
             
             // Check for stress cap psychological disorders
@@ -15954,17 +17071,23 @@
                 rank: "Common Soldier",
                 relationships: { wat: 0, cook: 0 },
                 campfire: {
-                    cooldownScenes: 2,
-                    chance: 0.35,
+                    cooldownScenes: 5,
+                    chance: 0.18,
                     lastInsertedAtIndex: 0,
                     seenIds: [],
                     returnScene: null,
                     currentVignetteId: null,
                     currentStep: 0,
                     stepHistory: [],
-                    currentResponse: null
+                    currentResponse: null,
+                    mode: null, // 'micro' | 'full' | null
+                    microSeenIds: [],
+                    lastMode: null
                 },
                 randomEncounter: { active: false, returnScene: null, cooldown: 0 },
+                exertion: 0,  // 0-10, physical debt from aggressive actions
+                wear: 0,      // 0-10, kit strain from gear/opposition
+                lastSkirmish: null,  // Structured object for deterministic rendering
                 career: {
                     battles: 0,
                     wounds: 0,
@@ -15986,7 +17109,11 @@
                     fortune: null
                 },
                 kitTier: "Standard",
-                startingKitGranted: false
+                startingKitGranted: false,
+                debug: {
+                    forceSkirmish: false,
+                    enabled: false
+                }
             };
         }
         
@@ -16075,21 +17202,44 @@
             
             // Campfire hydration
             base.campfire = base.campfire && typeof base.campfire === "object" ? base.campfire : {};
-            base.campfire.cooldownScenes = Number(base.campfire.cooldownScenes) || 2;
-            base.campfire.chance = Number(base.campfire.chance) || 0.35;
+            base.campfire.cooldownScenes = Number(base.campfire.cooldownScenes) || 5; // Updated default
+            base.campfire.chance = Number(base.campfire.chance) || 0.18; // Updated default
             base.campfire.lastInsertedAtIndex = Number(base.campfire.lastInsertedAtIndex) || 0;
             base.campfire.seenIds = Array.isArray(base.campfire.seenIds) ? base.campfire.seenIds : [];
             base.campfire.returnScene = (typeof base.campfire.returnScene === "string") ? base.campfire.returnScene : null;
             base.campfire.currentVignetteId = (typeof base.campfire.currentVignetteId === "string") ? base.campfire.currentVignetteId : null;
+            base.campfire.mode = (typeof base.campfire.mode === "string" && (base.campfire.mode === 'micro' || base.campfire.mode === 'full')) ? base.campfire.mode : null;
+            base.campfire.microSeenIds = Array.isArray(base.campfire.microSeenIds) ? base.campfire.microSeenIds : [];
+            base.campfire.lastMode = (typeof base.campfire.lastMode === "string" && (base.campfire.lastMode === 'micro' || base.campfire.lastMode === 'full')) ? base.campfire.lastMode : null;
+            
+            // Skirmish system hydration (exertion, wear, lastSkirmish)
+            // Ensure exertion and wear exist (backward compatibility)
+            base.exertion = asNumber(base.exertion, 0);
+            base.wear = asNumber(base.wear, 0);
+            // Clamp to 0-10
+            base.exertion = Math.max(0, Math.min(10, base.exertion));
+            base.wear = Math.max(0, Math.min(10, base.wear));
+            // Initialize lastSkirmish if missing
+            base.lastSkirmish = base.lastSkirmish || null;
             
             // Recalculate stats from priorities if priorities are set (for loaded saves)
             if (base.priorities && Object.values(base.priorities).some(function(p) { return p !== null && p !== ''; })) {
-                // Temporarily set gameState to base for recalculation
-                const tempGameState = gameState;
-                gameState = base;
-                recalculateFromPriorities();
-                // Restore gameState
-                gameState = tempGameState;
+                // Preserve accumulated wealth and reputation before recalculation
+                // (recalculateFromPriorities resets these to base values, which is correct for character creation
+                //  but we want to preserve accumulated values during load)
+                const preservedWealth = base.stats && base.stats.wealth !== undefined ? base.stats.wealth : null;
+                const preservedReputation = base.stats && base.stats.reputation !== undefined ? base.stats.reputation : null;
+                
+                // Recalculate directly on base without reassigning gameState
+                recalculateFromPriorities(base);
+                
+                // Restore preserved wealth and reputation if they were present
+                if (preservedWealth !== null && base.stats) {
+                    base.stats.wealth = preservedWealth;
+                }
+                if (preservedReputation !== null && base.stats) {
+                    base.stats.reputation = preservedReputation;
+                }
                 // Stats are now updated in base
             }
             
