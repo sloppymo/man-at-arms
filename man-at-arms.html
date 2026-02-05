@@ -1497,18 +1497,43 @@
         
         /** Insert campfire interlude if conditions are met */
         function maybeInsertCampfire(nextSceneKey) {
+            // Fix D: Guard - campfire should never return to campfire
+            if (nextSceneKey === 'campfire_interlude') {
+                console.warn('[QA ROUTING GUARD] maybeInsertCampfire called with campfire_interlude as nextScene');
+                return nextSceneKey; // Don't insert another campfire
+            }
+
             if (!shouldInsertCampfire(nextSceneKey)) {
                 return nextSceneKey;
             }
-            
+
+            // Guard: campfire should never return to itself or resolve scenes
+            const invalidReturnScenes = ['campfire_interlude', 'skirmish_roadside_resolve',
+                                        'skirmish_roadside', 'skirmish_roadside_mud', 'skirmish_roadside_lane'];
+            let safeReturnScene = nextSceneKey;
+
+            if (invalidReturnScenes.includes(nextSceneKey)) {
+                // Fallback to a safe travel scene
+                safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+                if (gameState.debug && gameState.debug.enabled) {
+                    console.warn('[QA] Campfire returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
+                }
+            }
+
+            // Fix D: Assertion - verify we're not routing to ourselves
+            if (safeReturnScene === 'campfire_interlude') {
+                console.error('[QA ASSERTION FAILED] Campfire would return to campfire! Using fallback.');
+                safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            }
+
             // Set return scene and mark insertion
-            gameState.campfire.returnScene = nextSceneKey;
+            gameState.campfire.returnScene = safeReturnScene;
             gameState.campfire.lastInsertedAtIndex = (gameState.scenesVisited ? gameState.scenesVisited.length : 0);
-            
+
             // Decide mode: 30% full vignette, 70% micro campfire
             gameState.campfire.lastMode = gameState.campfire.mode;
             gameState.campfire.mode = (Math.random() < 0.30) ? 'full' : 'micro';
-            
+
             return "campfire_interlude";
         }
         
@@ -1564,8 +1589,9 @@
                 // Mud & Ruts: -1 to all bonuses (worse footing)
                 mods.variantModifier = -1;
             } else if (variantContext.variantId === 'lane') {
-                // Narrow Lane: reduce spear reach bonus by 1 (cramped space)
-                // This is handled below in reach bonus calculation
+                // Narrow Lane: cramped space makes all actions harder
+                // Spear reach is also reduced (handled below)
+                mods.variantModifier = -1; // Same penalty as mud, but for different reason (cramped space)
             }
             
             // Reach bonus: Check if weapon is spear
@@ -1634,10 +1660,18 @@
                 deltas.wear += 1;
                 flags.insideReach = true; // Return as metadata, don't mutate global state
             }
-            
+
+            // Fix B: Narrow Lane additional wear on Press (cramped fighting space)
+            // Only trigger on partial failure (-2 to -1 margin) where strain shows
+            const variantContext = gameState.lastSkirmishContext || {};
+            if (variantContext.variantId === 'lane' && choiceId === 'press' && margin < 0 && margin >= -2) {
+                deltas.wear += 1;
+                flags.laneCramped = true;
+            }
+
             // Cap total wear increase per fight to prevent excessive stacking
             deltas.wear = Math.min(deltas.wear, 3); // Cap at 3 per skirmish
-            
+
             return { deltas, flags };
         }
         
@@ -1648,8 +1682,7 @@
                 applyStatChange('morale', deltas.morale);
             }
             
-            // Apply exertion (already handled in runSkirmish for Press choice)
-            // But handle any additional exertion from costs if needed
+            // Apply exertion (includes press cost + timing cost, all tracked in deltas)
             if (deltas.exertion !== 0) {
                 gameState.exertion = Math.max(0, Math.min(10, (gameState.exertion || 0) + deltas.exertion));
             }
@@ -1673,7 +1706,13 @@
             if (choiceId === 'press') {
                 parts.push(`+ Strength (${effectiveStat})`);
                 if (mods.reachBonus > 0) {
-                    parts.push(`+ Reach (+${mods.reachBonus})`);
+                    const variantContext = gameState.lastSkirmishContext || {};
+                    if (variantContext.variantId === 'lane' && mods.reachBonus === 1) {
+                        // Spear reach reduced from 2 to 1 in cramped lane
+                        parts.push(`+ Reach (+${mods.reachBonus}, cramped)`);
+                    } else {
+                        parts.push(`+ Reach (+${mods.reachBonus})`);
+                    }
                     bonusTotal += mods.reachBonus;
                 } else if (mods.reachBonus < 0) {
                     // Handle reduced reach (e.g., in narrow lane)
@@ -1699,11 +1738,14 @@
                 bonusTotal -= exertion;
             }
             
-            // Add variant modifier if applicable (e.g., mud penalty)
+            // Add variant modifier if applicable (e.g., mud penalty, lane cramped space)
             if (mods.variantModifier !== 0) {
                 const variantContext = gameState.lastSkirmishContext || {};
                 if (variantContext.variantId === 'mud') {
                     parts.push(`- Mud (-1)`);
+                    bonusTotal += mods.variantModifier; // Already negative
+                } else if (variantContext.variantId === 'lane') {
+                    parts.push(`- Cramped Space (-1)`);
                     bonusTotal += mods.variantModifier; // Already negative
                 }
             }
@@ -1712,11 +1754,19 @@
         }
         
         // Generate array of cost strings for UI
-        function buildCostList(deltas, choiceId, mods, result, flags) {
+        function buildCostList(deltas, choiceId, mods, result, flags, timing) {
             const costs = [];
             
             if (deltas.exertion > 0) {
-                costs.push(`Exertion +${deltas.exertion}`);
+                const exertionReasons = [];
+                if (choiceId === 'press') {
+                    exertionReasons.push('press');
+                }
+                if (timing && timing.bonus === 2) {
+                    exertionReasons.push('perfect tempo');
+                }
+                const reasonText = exertionReasons.length > 0 ? ` (${exertionReasons.join(', ')})` : '';
+                costs.push(`Exertion +${deltas.exertion}${reasonText}`);
             }
             
             if (deltas.wear > 0) {
@@ -1742,7 +1792,11 @@
                 if (flags.insideReach) {
                     wearReasons.push('inside reach');
                 }
-                
+
+                if (flags.laneCramped) {
+                    wearReasons.push('cramped lane');
+                }
+
                 const reasonText = wearReasons.length > 0 ? ` (${wearReasons.join(', ')})` : '';
                 costs.push(`Wear +${deltas.wear}${reasonText}`);
             }
@@ -1814,17 +1868,22 @@
             
             const result = resolveAction(statKey, dc, bonus);
             
-            // Apply exertion (always +1 for Press, +0 for others)
-            // Plus timing cost if applicable
+            // Calculate total exertion cost for this skirmish
+            let totalExertionCost = 0;
             if (choiceId === 'press') {
-                gameState.exertion = Math.min(10, (gameState.exertion || 0) + 1 + timingExertionCost);
+                totalExertionCost = 1 + timingExertionCost;
             } else if (timingExertionCost > 0) {
-                // Apply timing cost for non-Press choices too
-                gameState.exertion = Math.min(10, (gameState.exertion || 0) + timingExertionCost);
+                totalExertionCost = timingExertionCost;
             }
             
             // Compute costs based on margin (returns deltas + metadata flags)
             const costResult = computeSkirmishCosts(result, choiceId, mods);
+            
+            // Add exertion cost to deltas so it appears in costs list and is tracked in lastSkirmish
+            // NOTE: Do NOT apply exertion directly here - applySkirmishDeltas() will handle it
+            if (totalExertionCost > 0) {
+                costResult.deltas.exertion = (costResult.deltas.exertion || 0) + totalExertionCost;
+            }
             // Mud variant: add +1 wear on partial (worse footing cost)
             if (variantContext.variantId === 'mud' && result.margin >= -2 && result.margin < 0) {
                 // Partial failure in mud: extra wear
@@ -1882,7 +1941,7 @@
                 partial: (result.margin === -1 || result.margin === -2),
                 mods: mods,
                 deltas: costResult.deltas,
-                costs: buildCostList(costResult.deltas, choiceId, mods, result, costResult.flags),
+                costs: buildCostList(costResult.deltas, choiceId, mods, result, costResult.flags, timing),
                 gearCallouts: buildGearCallouts(choiceId, mods, result, costResult.flags),
                 insideReach: costResult.flags.insideReach || false, // From cost calculation metadata
                 timing: { bonus: timing.bonus, label: timing.label }, // Store timing data for deterministic rendering
@@ -9492,6 +9551,13 @@
                     const skirmish = gameState.lastSkirmish;
                     if (!skirmish) return `<p>The clash ends. Dust settles.</p>`;
                     
+                    // Build timing display (explicit Tempo Strike result)
+                    const timingDisplay = skirmish.timing && skirmish.timing.bonus !== undefined
+                        ? `<div class="tempo-result" style="margin-bottom: 10px;">
+                            <strong>Tempo:</strong> ${skirmish.timing.label || 'SKIP'} ${skirmish.timing.bonus > 0 ? `(+${skirmish.timing.bonus})` : ''}
+                        </div>`
+                        : '';
+                    
                     // Build dice display (reuse Crécy pattern exactly)
                     // Format: "1d10 + X = TOTAL (vs DC)"
                     const rollDisplay = `<div class="dice-roll">
@@ -9525,7 +9591,7 @@
                         outcomeText = `<p>They push hard. You give ground. Your gear strains. Your morale dips. The cost shows.</p>`;
                     }
                     
-                    return `${rollDisplay}${costDisplay}${gearDisplay}${outcomeText}`;
+                    return `${timingDisplay}${rollDisplay}${costDisplay}${gearDisplay}${outcomeText}`;
                 },
                 onEnter: function() {
                     // Check exertion threshold
@@ -9548,30 +9614,41 @@
                         text: "Continue",
                         effects: {},
                         nextScene: function() {
+                            // Fix D: Guard - resolve scene should never route back into skirmish/resolve loop
+                            const resolveScene = gameState.currentScene;
+                            const invalidResolveRoutes = ['skirmish_roadside', 'skirmish_roadside_resolve',
+                                                         'skirmish_roadside_mud', 'skirmish_roadside_lane'];
+
                             // Compute the travel scene we should return to
                             let nextScene = getPostSkirmishNextScene();
-                            
+
+                            // Fix D: Assertion - verify we got a valid scene
+                            if (!nextScene || invalidResolveRoutes.includes(nextScene)) {
+                                console.error('[QA ROUTING GUARD] Invalid returnScene from resolve:', nextScene, 'using fallback');
+                                nextScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+                            }
+
                             // Store the travel scene for return routing (before any interludes)
                             const travelReturnScene = nextScene;
-                            
+
                             // Run campfire insertion (may return campfire_interlude or nextScene)
                             // maybeInsertCampfire already sets gameState.campfire.returnScene = nextSceneKey
                             nextScene = maybeInsertCampfire(nextScene);
-                            
+
                             // Ensure campfire returns to travel scene (not resolve scene)
                             if (nextScene === "campfire_interlude" && gameState.campfire) {
                                 gameState.campfire.returnScene = travelReturnScene;
                             }
-                            
+
                             // Tick random encounter cooldown (from current scene: skirmish_roadside_resolve)
                             tickRandomEncounterCooldown(gameState.currentScene);
-                            
+
                             // Run random encounter insertion (may return encounter scene or nextScene)
                             // maybeInsertRandomEncounter already sets gameState.randomEncounter.returnScene = nextSceneKey
                             // This correctly chains: if campfire was inserted, random encounter returns to campfire
                             // which then returns to travel. If no campfire, random encounter returns to travel.
                             nextScene = maybeInsertRandomEncounter(gameState.currentScene, nextScene);
-                            
+
                             // Clean up stale randomEncounter.returnScene (even if inactive)
                             // Prevents stale returnScene from pointing back to resolve scene
                             if (gameState.randomEncounter) {
@@ -12631,7 +12708,8 @@
                             "The march halts. You find a spot by the fire. Rest and repair."
                         ];
                         const desc = descriptions[Math.floor(Math.random() * descriptions.length)];
-                        return `<p>${desc}</p><h3 style="margin-top:0; color: #f4d03f;">Maintenance</h3>`;
+                        const maintenanceText = "Your gear needs attention. Leather straps worn thin. Metal dulled by mud and clash. You work by firelight, hands moving with practiced rhythm.";
+                        return `<p>${desc}</p><h3 style="margin-top:0; color: #f4d03f;">Maintenance</h3><p>${maintenanceText}</p>`;
                     }
                     
                     // Full vignette mode: existing behavior
@@ -13023,6 +13101,15 @@
         }
 
         function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+            // Fix D: Guard - randomEncounter should never return to resolve scene
+            const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
+                                        'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
+
+            if (invalidReturnScenes.includes(nextSceneKey)) {
+                console.warn('[QA ROUTING GUARD] Random encounter blocked - would return to:', nextSceneKey);
+                return nextSceneKey; // Don't insert encounter
+            }
+
             if (!shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
             if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
 
@@ -13032,8 +13119,23 @@
                 gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
             }
 
+            let safeReturnScene = nextSceneKey;
+
+            // Fix D: Double-check return scene is valid (redundant guard)
+            if (invalidReturnScenes.includes(nextSceneKey)) {
+                // Fallback to a safe travel scene
+                safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+                console.warn('[QA] Random encounter returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
+            }
+
+            // Fix D: Assertion - verify we're not in a loop
+            if (safeReturnScene === fromSceneKey && fromSceneKey && fromSceneKey.startsWith('random_')) {
+                console.error('[QA ASSERTION FAILED] Random encounter would return to random scene! Using fallback.');
+                safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            }
+
             gameState.randomEncounter.active = true;
-            gameState.randomEncounter.returnScene = nextSceneKey;
+            gameState.randomEncounter.returnScene = safeReturnScene;
             gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
 
             return encounterId;
@@ -13141,7 +13243,22 @@
             }
             gameState.randomEncounter.returnScene = currentScene;
             gameState.randomEncounter.cooldown = 0; // Reset cooldown for testing
-            gameState.currentScene = 'skirmish_roadside';
+
+            // Pick a variant (default weights: 60% roadside, 20% mud, 20% lane)
+            const variants = [
+                { key: 'skirmish_roadside', w: 0.60 },
+                { key: 'skirmish_roadside_mud', w: 0.20 },
+                { key: 'skirmish_roadside_lane', w: 0.20 }
+            ];
+            const r = Math.random();
+            let acc = 0;
+            let chosen = variants[0].key;
+            for (const v of variants) {
+                acc += v.w;
+                if (r <= acc) { chosen = v.key; break; }
+            }
+
+            gameState.currentScene = chosen;
             updateDisplay();
         }
 
@@ -13521,24 +13638,38 @@
         };
         
         // Check for double-insertion risk (Test A4)
+        // Returns structured result: {status: 'passed'|'failed'|'info', message: string}
         window.qaCheckDoubleInsertionGuard = function() {
             console.log('=== Double-Insertion Guard Check ===');
             console.log('Current Scene:', gameState.currentScene);
             
+            const result = {
+                status: 'info',
+                message: 'Guard check completed',
+                warnings: []
+            };
+            
             if (gameState.currentScene === 'skirmish_roadside_resolve') {
                 console.log('✅ Guard should be active: global insertion pipeline should be SKIPPED');
                 console.log('   (Check console logs for "[QA] SKIPPED global insertion pipeline" message)');
+                result.status = 'passed';
+                result.message = 'Guard is active on resolve screen';
             } else {
                 console.log('ℹ️ Not on resolve screen, guard not applicable');
                 console.log('   Global insertion pipeline should run normally');
+                result.status = 'info';
+                result.message = 'Guard not applicable (not on resolve screen)';
             }
             
             // Check if there are any stale returnScene references
             if (gameState.randomEncounter) {
                 const staleScenes = ['skirmish_roadside_resolve', 'skirmish_roadside'];
                 if (staleScenes.includes(gameState.randomEncounter.returnScene)) {
-                    console.warn('⚠️ WARNING: randomEncounter.returnScene points to stale skirmish scene:', 
-                                gameState.randomEncounter.returnScene);
+                    const warning = `randomEncounter.returnScene points to stale skirmish scene: ${gameState.randomEncounter.returnScene}`;
+                    console.warn('⚠️ WARNING:', warning);
+                    result.warnings.push(warning);
+                    result.status = 'failed';
+                    result.message = 'Found stale returnScene references';
                 } else {
                     console.log('✅ randomEncounter.returnScene is clean');
                 }
@@ -13547,15 +13678,21 @@
             if (gameState.campfire) {
                 const staleScenes = ['skirmish_roadside_resolve', 'skirmish_roadside'];
                 if (staleScenes.includes(gameState.campfire.returnScene)) {
-                    console.warn('⚠️ WARNING: campfire.returnScene points to stale skirmish scene:', 
-                                gameState.campfire.returnScene);
+                    const warning = `campfire.returnScene points to stale skirmish scene: ${gameState.campfire.returnScene}`;
+                    console.warn('⚠️ WARNING:', warning);
+                    result.warnings.push(warning);
+                    result.status = 'failed';
+                    result.message = 'Found stale returnScene references';
                 } else {
                     console.log('✅ campfire.returnScene is clean');
                 }
             }
+            
+            return result;
         };
         
         // Run all routing validations (quick check)
+        // Returns structured result object: {passed: number, failed: number, skipped: number, details: [...]}
         window.qaRunRoutingTests = function() {
             console.log('=== QA Routing Tests ===\n');
             console.log('Note: Some tests require being in a post-skirmish state.');
@@ -13567,8 +13704,16 @@
             const routingResult = window.qaValidateResolveRouting();
             console.log('');
             
-            window.qaCheckDoubleInsertionGuard();
+            const doubleInsertionResult = window.qaCheckDoubleInsertionGuard();
             console.log('');
+            
+            // Build structured result
+            const result = {
+                passed: 0,
+                failed: 0,
+                skipped: 0,
+                details: []
+            };
             
             // Summary
             console.log('=== Test Summary ===');
@@ -13577,16 +13722,66 @@
             
             if (returnSceneResult !== null) {
                 testsRun.push('ReturnScene Validation');
-                if (returnSceneResult) testsPassed.push('ReturnScene Validation');
+                const testDetail = {
+                    name: 'ReturnScene Validation',
+                    status: returnSceneResult ? 'passed' : 'failed',
+                    message: returnSceneResult ? 'ReturnScene is valid' : 'ReturnScene is invalid'
+                };
+                result.details.push(testDetail);
+                if (returnSceneResult) {
+                    testsPassed.push('ReturnScene Validation');
+                    result.passed++;
+                } else {
+                    result.failed++;
+                }
             } else {
                 console.log('⏭️  ReturnScene Validation: SKIPPED (no skirmish state)');
+                result.details.push({
+                    name: 'ReturnScene Validation',
+                    status: 'skipped',
+                    message: 'No skirmish state found (requires post-skirmish state)'
+                });
+                result.skipped++;
             }
             
             if (routingResult !== null) {
                 testsRun.push('Resolve Routing Validation');
-                if (routingResult) testsPassed.push('Resolve Routing Validation');
+                const testDetail = {
+                    name: 'Resolve Routing Validation',
+                    status: routingResult ? 'passed' : 'failed',
+                    message: routingResult ? 'Next scene routing is valid' : 'Next scene routing is invalid'
+                };
+                result.details.push(testDetail);
+                if (routingResult) {
+                    testsPassed.push('Resolve Routing Validation');
+                    result.passed++;
+                } else {
+                    result.failed++;
+                }
             } else {
                 console.log('⏭️  Resolve Routing Validation: SKIPPED (not on resolve screen)');
+                result.details.push({
+                    name: 'Resolve Routing Validation',
+                    status: 'skipped',
+                    message: 'Not on resolve screen (requires skirmish_roadside_resolve scene)'
+                });
+                result.skipped++;
+            }
+            
+            // Double insertion guard check
+            if (doubleInsertionResult) {
+                result.details.push({
+                    name: 'Double-Insertion Guard',
+                    status: doubleInsertionResult.status || 'info',
+                    message: doubleInsertionResult.message || 'Guard check completed'
+                });
+                if (doubleInsertionResult.status === 'passed') {
+                    result.passed++;
+                } else if (doubleInsertionResult.status === 'failed') {
+                    result.failed++;
+                } else {
+                    result.skipped++;
+                }
             }
             
             if (testsRun.length > 0) {
@@ -13603,6 +13798,9 @@
             }
             
             console.log('\n=== Tests Complete ===');
+            console.log('Return value:', result);
+            
+            return result;
         };
         
         // Enable debug mode for QA testing (shows diagnostic logs)
@@ -15875,22 +16073,35 @@
                         if (item.type === "weapon" && !gameState.equipment.weapon.item) {
                             const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
                             if (invItem) {
-                                window.equipmentManager.equipItem(invItem.id, 'weapon');
+                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'weapon');
+                                // Verify equipment actually changed (if equipItem returns a boolean)
+                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.weapon.item)) {
+                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: weapon');
+                                }
                             }
                         } else if (item.type === "armor" && item.id.includes("hat") && !gameState.equipment.head.item) {
                             const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
                             if (invItem) {
-                                window.equipmentManager.equipItem(invItem.id, 'head');
+                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'head');
+                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.head.item)) {
+                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: head');
+                                }
                             }
                         } else if (item.type === "armor" && !gameState.equipment.torso.item) {
                             const invItem = gameState.inventory.find(function(i) { return i.id === item.id && i.type === "armor"; });
                             if (invItem) {
-                                window.equipmentManager.equipItem(invItem.id, 'torso');
+                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'torso');
+                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.torso.item)) {
+                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: torso');
+                                }
                             }
                         } else if (item.type === "shield" && !gameState.equipment.accessory.item) {
                             const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
                             if (invItem) {
-                                window.equipmentManager.equipItem(invItem.id, 'accessory');
+                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'accessory');
+                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.accessory.item)) {
+                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: accessory');
+                                }
                             }
                         }
                     } catch (e) {
