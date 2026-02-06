@@ -1730,8 +1730,12 @@ class EquipmentManager {
     
     // Get all available items for current year/region/social class
     getAvailableItems(year, region, socialClass) {
+        // Normalize social class if provided as rank
+        const normalizedSocialClass = (typeof window.normalizeSocialClass === 'function' && socialClass)
+            ? window.normalizeSocialClass(socialClass)
+            : socialClass;
         return Object.values(EQUIPMENT_DATABASE).filter(item => 
-            item.isAvailable(year, region, socialClass)
+            item.isAvailable(year, region, normalizedSocialClass)
         );
     }
     
@@ -1740,28 +1744,41 @@ class EquipmentManager {
         const item = EQUIPMENT_DATABASE[itemId];
         if (!item) return false;
         
+        // Normalize slot name to canonical form
+        const normalizedSlot = (typeof window.normalizeSlot === 'function') 
+            ? window.normalizeSlot(slot) 
+            : slot;
+        
         // Determine layer if not provided
         if (!layer) {
-            layer = item.layer || (slot === 'weapon' ? 'primary' : LAYER_TYPES.PLATE);
+            layer = item.layer || (normalizedSlot === 'weapon' ? 'primary' : LAYER_TYPES.PLATE);
         }
         
-        // Check availability - use region, not location
-        const region = this.gameState.region || this.normalizeRegion(this.gameState.location) || 'England';
+        // Check availability - always derive region from current location for accuracy
+        const region = (typeof window.normalizeRegion === 'function') 
+            ? window.normalizeRegion(this.gameState.location) || 'England'
+            : (this.gameState.region || 'England');
+        
+        // Normalize rank to social class for equipment availability
+        const socialClass = (typeof window.normalizeSocialClass === 'function')
+            ? window.normalizeSocialClass(this.gameState.rank) || 'retainer'
+            : (this.gameState.rank || 'retainer');
+        
         if (!item.isAvailable(
             this.gameState.year || 1346,
             region,
-            this.gameState.rank || 'retainer'
+            socialClass
         )) {
             return false;
         }
         
-        // Initialize slot if needed
-        if (!this.gameState.equipment[slot]) {
-            this.gameState.equipment[slot] = {};
+        // Initialize slot if needed (use normalized slot name)
+        if (!this.gameState.equipment[normalizedSlot]) {
+            this.gameState.equipment[normalizedSlot] = {};
         }
         
         // Store only primitives (id, condition, fit) - NOT the full item object
-        this.gameState.equipment[slot][layer] = {
+        this.gameState.equipment[normalizedSlot][layer] = {
             id: itemId,
             condition: 100, // Default condition
             fit: 'off-the-rack' // Default fit
@@ -1772,11 +1789,16 @@ class EquipmentManager {
     
     // Unequip an item from a specific slot and layer
     unequipItem(slot, layer) {
-        if (!this.gameState.equipment[slot]) {
+        // Normalize slot name to canonical form
+        const normalizedSlot = (typeof window.normalizeSlot === 'function') 
+            ? window.normalizeSlot(slot) 
+            : slot;
+        
+        if (!this.gameState.equipment[normalizedSlot]) {
             return { success: false, error: 'Slot does not exist' };
         }
         
-        const equipped = this.gameState.equipment[slot][layer];
+        const equipped = this.gameState.equipment[normalizedSlot][layer];
         if (!equipped || !equipped.id) {
             return { success: false, error: 'No item equipped in this slot/layer' };
         }
@@ -1790,7 +1812,7 @@ class EquipmentManager {
         };
         
         // Remove from equipment
-        delete this.gameState.equipment[slot][layer];
+        delete this.gameState.equipment[normalizedSlot][layer];
         
         return { success: true, item: itemData };
     }

@@ -98,6 +98,10 @@ function updateStory() {
     }
     if (scene.location !== undefined && scene.location !== null) {
         window.gameState.location = typeof scene.location === 'function' ? scene.location() : scene.location;
+        // Sync region when location changes
+        if (typeof window.normalizeRegion === 'function') {
+            window.gameState.region = window.normalizeRegion(window.gameState.location);
+        }
     }
     
     // Update conditions

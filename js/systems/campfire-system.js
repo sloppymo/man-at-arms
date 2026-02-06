@@ -10,11 +10,11 @@
     
     /** Change relationship with Wat or Cook */
     function changeRel(who, delta) {
-        if (!gameState.relationships) {
-            gameState.relationships = { wat: 0, cook: 0, oana: 0 };
+        if (!window.gameState.relationships) {
+            window.gameState.relationships = { wat: 0, cook: 0, oana: 0 };
         }
-        const oldValue = gameState.relationships[who] || 0;
-        gameState.relationships[who] = clampRel(oldValue + delta);
+        const oldValue = window.gameState.relationships[who] || 0;
+        window.gameState.relationships[who] = clampRel(oldValue + delta);
         
         // Immediate feedback - show relationship change
         if (delta !== 0) {
@@ -24,7 +24,7 @@
                 oana: "Oana"
             };
             const npcName = npcNames[who] || who;
-            const newValue = gameState.relationships[who];
+            const newValue = window.gameState.relationships[who];
             
             let feedback = "";
             if (delta > 0) {
@@ -101,11 +101,12 @@
         // - already-a-campfire scene
         // - explicit "noCampfire" flagged scenes/choices
         // - critical scenes like death/ending
+        // - early game scenes (training, between_years, winter_quarters)
         
         // Check if current scene is a campfire scene
-        const currentSceneStr = String(gameState.currentScene || '');
-        const isCurrentCampfire = gameState.currentScene === 'character_creation' || 
-            gameState.currentScene === 'campfire_interlude' ||
+        const currentSceneStr = String(window.gameState.currentScene || '');
+        const isCurrentCampfire = window.gameState.currentScene === 'character_creation' || 
+            window.gameState.currentScene === 'campfire_interlude' ||
             currentSceneStr.startsWith('campfire_wat_') ||
             currentSceneStr.startsWith('campfire_cook_') ||
             currentSceneStr.startsWith('campfire_both_');
@@ -122,23 +123,38 @@
             return false;
         }
         
+        // Never interrupt early game scenes
+        if (nextSceneKey.startsWith('training_') ||
+            nextSceneKey.startsWith('between_years_') ||
+            nextSceneKey.startsWith('winter_quarters_') ||
+            nextSceneKey.startsWith('equipment_upgrade_') ||
+            nextSceneKey === 'marriage_joke' ||
+            nextSceneKey === 'quick_start_review') {
+            return false;
+        }
+        
         // Check if scene has noCampfire flag
-        if (typeof scenes !== 'undefined' && scenes[nextSceneKey] && scenes[nextSceneKey].noCampfire) {
+        if (typeof window.scenes !== 'undefined' && window.scenes[nextSceneKey] && window.scenes[nextSceneKey].noCampfire) {
             return false;
         }
         
         // M5: Skip insertion if exiting high-intensity scene (emotional cooldown)
-        const currentIntensity = getSceneIntensity(gameState.currentScene);
+        const currentIntensity = getSceneIntensity(window.gameState.currentScene);
         if (currentIntensity >= 2) {
             return false;
         }
         
-        const idx = gameState.scenesVisited ? gameState.scenesVisited.length : 0;
-        const cf = gameState.campfire || {};
+        // Don't insert during early game (first 10 scenes)
+        const idx = window.gameState.scenesVisited ? window.gameState.scenesVisited.length : 0;
+        if (idx < 10) {
+            return false;
+        }
+        
+        const cf = window.gameState.campfire || {};
         const since = idx - (cf.lastInsertedAtIndex || 0);
         
-        // Must pass cooldown
-        if (since < (cf.cooldownScenes || 2)) {
+        // Must pass cooldown (increased to 3 for better pacing)
+        if (since < (cf.cooldownScenes || 3)) {
             return false;
         }
         
@@ -176,8 +192,8 @@
 
         if (invalidReturnScenes.includes(nextSceneKey) || isCampfireReturnScene) {
             // Fallback to a safe travel scene
-            safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-            if (gameState.debug && gameState.debug.enabled) {
+            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            if (window.gameState.debug && window.gameState.debug.enabled) {
                 console.warn('[QA] Campfire returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
             }
         }
@@ -191,19 +207,22 @@
         
         if (isStillCampfire) {
             console.error('[QA ASSERTION FAILED] Campfire would return to campfire! Using fallback.');
-            safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
         }
 
         // Set return scene and mark insertion
-        gameState.campfire.returnScene = safeReturnScene;
-        gameState.campfire.lastInsertedAtIndex = (gameState.scenesVisited ? gameState.scenesVisited.length : 0);
+        if (!window.gameState.campfire) {
+            window.gameState.campfire = {};
+        }
+        window.gameState.campfire.returnScene = safeReturnScene;
+        window.gameState.campfire.lastInsertedAtIndex = (window.gameState.scenesVisited ? window.gameState.scenesVisited.length : 0);
 
         // Decide mode: 30% full vignette, 70% micro campfire
-        gameState.campfire.lastMode = gameState.campfire.mode;
-        gameState.campfire.mode = (Math.random() < 0.30) ? 'full' : 'micro';
+        window.gameState.campfire.lastMode = window.gameState.campfire.mode;
+        window.gameState.campfire.mode = (Math.random() < 0.30) ? 'full' : 'micro';
 
         // If micro mode, use micro campfire
-        if (gameState.campfire.mode === 'micro') {
+        if (window.gameState.campfire.mode === 'micro') {
             return "campfire_interlude";
         }
 
@@ -217,12 +236,12 @@
         ];
 
         // Track seen campfire scenes to avoid immediate repetition
-        if (!gameState.campfire.seenScenes) {
-            gameState.campfire.seenScenes = [];
+        if (!window.gameState.campfire.seenScenes) {
+            window.gameState.campfire.seenScenes = [];
         }
 
         // Filter out recently seen scenes (last 2)
-        const recentSeen = gameState.campfire.seenScenes.slice(-2);
+        const recentSeen = window.gameState.campfire.seenScenes.slice(-2);
         const available = availableCampfireScenes.filter(scene => !recentSeen.includes(scene));
 
         // Select from available scenes, or fall back to all if all were recently seen
@@ -230,9 +249,9 @@
         const selectedScene = scenePool[Math.floor(Math.random() * scenePool.length)];
 
         // Track this selection
-        gameState.campfire.seenScenes.push(selectedScene);
-        if (gameState.campfire.seenScenes.length > 5) {
-            gameState.campfire.seenScenes = gameState.campfire.seenScenes.slice(-5);
+        window.gameState.campfire.seenScenes.push(selectedScene);
+        if (window.gameState.campfire.seenScenes.length > 5) {
+            window.gameState.campfire.seenScenes = window.gameState.campfire.seenScenes.slice(-5);
         }
 
         return selectedScene;

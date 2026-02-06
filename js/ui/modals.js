@@ -235,7 +235,24 @@
         }
     }
 
+    // Toggle effects preview display
+    function toggleEffectsPreview() {
+        if (typeof window.showEffectsPreview === 'undefined') {
+            window.showEffectsPreview = false;
+        }
+        window.showEffectsPreview = !window.showEffectsPreview;
+        const toggleText = document.getElementById('effects-toggle');
+        if (toggleText) {
+            toggleText.textContent = window.showEffectsPreview ? 'Hide' : 'Show';
+        }
+        // Trigger UI update if needed
+        if (typeof window.updateDisplay === 'function') {
+            window.updateDisplay();
+        }
+    }
+
     // Expose globally
     window.showNotification = showNotification;
     window.showStats = showStats;
+    window.toggleEffectsPreview = toggleEffectsPreview;
 })();

@@ -3986,7 +3986,7 @@
                         if (typeof v.prereq === 'function') {
                             if (!v.prereq(gameState)) return false;
                         } else if (typeof v.prereq === 'string') {
-                            if (!hasFlag(v.prereq)) return false;
+                            if (!window.hasFlag(v.prereq)) return false;
                         }
                     }
                     // P7: Check condition function (e.g., Oana location guard)

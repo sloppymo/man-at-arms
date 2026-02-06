@@ -11,8 +11,8 @@
         year: 1337,
         age: function() { return gameState.age; },
         location: "England",
-        artwork: "artwork/character-creation.jpg", // Medieval town square scene
-        artworkCaption: "Forge your path in the Hundred Years' War",
+        artwork: "artwork/opening-tapestry.jpg", // Medieval tapestry: "HIC MILITES VASTANT TERRAM" - soldiers laying waste to the land
+        artworkCaption: "Here the soldiers lay waste to the land",
         text: function() {
             // Ensure gameState.stats exists (safety check)
             if (!gameState.stats) {

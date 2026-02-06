@@ -170,6 +170,7 @@
                 nextScene: "training_conditioning"
             }
         ]
+    },
     training_weapons: {
         title: "Weapon Training",
         year: 1337,
@@ -210,6 +211,7 @@
                 resolutionDifficulty: 10
             }
         ]
+    },
     training_formation: {
         title: "Formation and Discipline",
         year: 1337,
@@ -250,6 +252,7 @@
                 resolutionDifficulty: 10
             }
         ]
+    },
     training_conditioning: {
         title: "Physical Conditioning",
         year: 1337,
@@ -290,6 +293,7 @@
                 resolutionDifficulty: 10
             }
         ]
+    },
     training_comrades: {
         title: "Brothers in Arms",
         year: 1337,
@@ -330,6 +334,7 @@
                 resolutionDifficulty: 9
             }
         ]
+    },
     training_final_assessment: {
         title: "Final Assessment",
         year: 1338,
@@ -361,6 +366,7 @@
                 nextScene: "first_battle_cautious"
             }
         ]
+    },
     training_weapons_resolve: {
         title: "Weapon Training",
         year: 1337,
@@ -408,6 +414,7 @@
                 nextScene: "training_comrades"
             }
         ]
+    },
     training_formation_resolve: {
         title: "Formation and Discipline",
         year: 1337,
@@ -463,6 +470,7 @@
                 nextScene: "training_comrades"
             }
         ]
+    },
     training_conditioning_resolve: {
         title: "Physical Conditioning",
         year: 1337,
@@ -521,6 +529,7 @@
                 nextScene: "training_comrades"
             }
         ]
+    },
     training_comrades_resolve: {
         title: "Brothers in Arms",
         year: 1337,
@@ -582,6 +591,7 @@
                 nextScene: "training_final_assessment"
             }
         ]
+    },
     training_manor_retainer: {
         title: "Service and Duty",
         year: 1338,
@@ -604,6 +614,7 @@
                 nextScene: "first_battle_brave"
             }
         ]
+    },
     training_craftsman_apprentice: {
         title: "A Craftsman's War",
         year: 1338,
@@ -626,6 +637,7 @@
                 nextScene: "first_battle_brave"
             }
         ]
+    },
     training_squire: {
         title: "A Knight's Service",
         year: 1338,
@@ -648,6 +660,7 @@
                 nextScene: "first_battle_brave"
             }
         ]
+    },
     training_minor_noble: {
         title: "Noble Expectations",
         year: 1338,
@@ -670,6 +683,7 @@
                 nextScene: "first_battle_brave"
             }
         ]
+    },
     training_peasant: {
         title: "Training Begins",
         year: 1338,
@@ -690,6 +704,7 @@
                 nextScene: "first_battle_cautious"
             }
         ]
+    },
     training_merchant: {
         title: "A Different Path",
         year: 1338,
@@ -709,6 +724,7 @@
                 nextScene: "first_battle_cautious"
             }
         ]
+    },
     training_noble: {
         title: "Noble Expectations",
         year: 1338,

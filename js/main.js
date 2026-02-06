@@ -334,7 +334,7 @@ function resetGame() {
     }
     return target;
 }
-function window.isCriticalSceneKey(sceneKey) {
+function isCriticalSceneKey(sceneKey) {
     if (!sceneKey || typeof sceneKey !== 'string') return true;
 
     const criticalPrefixes = [
@@ -361,7 +361,7 @@ function window.isCriticalSceneKey(sceneKey) {
     return false;
 }
 
-function window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
     // Never chain random encounters or interrupt a random return.
     if ((fromSceneKey || '').startsWith('random_')) return false;
     if ((nextSceneKey || '').startsWith('random_')) return false;
@@ -375,7 +375,7 @@ function window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
     return true;
 }
 
-function window.tickRandomEncounterCooldown(fromSceneKey) {
+function tickRandomEncounterCooldown(fromSceneKey) {
     if (!window.gameState.randomEncounter) return;
     if ((fromSceneKey || '').startsWith('random_')) return;
     if (window.gameState.randomEncounter.cooldown > 0) {
@@ -383,7 +383,7 @@ function window.tickRandomEncounterCooldown(fromSceneKey) {
     }
 }
 
-function window.maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
     // Fix D: Guard - randomEncounter should never return to resolve scene
     const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
                                 'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
@@ -424,6 +424,84 @@ function window.maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
     return encounterId;
 }
 
+function maybeInsertSkirmish(nextSceneKey) {
+    // Respect shared cooldown (skirmishes and random encounters share the same bucket)
+    if (window.gameState.randomEncounter && window.gameState.randomEncounter.cooldown > 0) {
+        return nextSceneKey;
+    }
+    
+    // Check debug flag for forced skirmish
+    if (window.gameState.debug && window.gameState.debug.forceSkirmish) {
+        window.gameState.debug.forceSkirmish = false; // Reset after use
+        // Set return scene and cooldown
+        if (!window.gameState.randomEncounter) {
+            window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+        }
+        window.gameState.randomEncounter.returnScene = nextSceneKey;
+        // Default to roadside for debug
+        window.gameState.randomEncounter.lastKey = 'skirmish_roadside';
+        window.gameState.randomEncounter.cooldown = 5;
+        return 'skirmish_roadside';
+    }
+    
+    // Avoid critical scenes (reuse isCriticalSceneKey logic)
+    if (isCriticalSceneKey(nextSceneKey)) {
+        return nextSceneKey;
+    }
+    
+    // Avoid character creation, campfires
+    if (nextSceneKey.startsWith('character_creation') || 
+        nextSceneKey.startsWith('campfire')) {
+        return nextSceneKey;
+    }
+    
+    // Probability keyed to region/chapter/wealth/exertion
+    // Base chance: 8% (lower than random encounters to avoid spam)
+    let chance = 0.08;
+    
+    // Adjust by exertion (higher exertion = more likely, but cap at 15%)
+    const exertion = window.gameState.exertion || 0;
+    if (exertion >= 3) {
+        chance += 0.03;
+    }
+    if (exertion >= 6) {
+        chance += 0.02;
+    }
+    chance = Math.min(0.15, chance);
+    
+    // Adjust by wealth (poorer = more desperate = more likely)
+    if (window.gameState.stats.wealth < 50) {
+        chance += 0.02;
+    }
+    
+    if (Math.random() >= chance) {
+        return nextSceneKey;
+    }
+    
+    // Set return scene and cooldown (shares randomEncounter object)
+    if (!window.gameState.randomEncounter) {
+        window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+    }
+    
+    window.gameState.randomEncounter.returnScene = nextSceneKey;
+    
+    // Randomly pick skirmish variant: 60% roadside, 20% mud, 20% lane
+    const roll = Math.random();
+    let variantKey;
+    if (roll < 0.6) {
+        variantKey = 'skirmish_roadside';
+    } else if (roll < 0.8) {
+        variantKey = 'skirmish_roadside_mud';
+    } else {
+        variantKey = 'skirmish_roadside_lane';
+    }
+    
+    window.gameState.randomEncounter.lastKey = variantKey;
+    window.gameState.randomEncounter.cooldown = 5; // 5 scenes cooldown (shared with random encounters)
+    
+    return variantKey;
+}
+
     // ============================================
     // Character Creation System
     // ============================================
@@ -445,7 +523,7 @@ function getPriorityBonuses(category, letter) {
 }
 
 /** Set priority for a category */
-function window.setPriority(category, letter) {
+function setPriority(category, letter) {
     if (!window.gameState.priorities) {
         window.gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
     }
@@ -465,7 +543,7 @@ function window.setPriority(category, letter) {
 }
 
 /** Recalculate all character creation derived stats from scratch (anti-stacking fix) */
-function window.recalculateCharacterCreationDerivedStats() {
+function recalculateCharacterCreationDerivedStats() {
     // Step 1: Start with base stats and apply priorities
     window.recalculateFromPriorities();
     
@@ -570,7 +648,7 @@ function resolveStartingKitTier() {
 }
 
 /** Recalculate stats from priorities */
-function window.recalculateFromPriorities(targetState = null) {
+function recalculateFromPriorities(targetState = null) {
     // Use provided state or default to global gameState
     const state = targetState || gameState;
     
@@ -625,7 +703,7 @@ function window.recalculateFromPriorities(targetState = null) {
 }
 
 /** Validate priorities are complete and unique */
-function window.validatePrioritiesCompleteAndUnique() {
+function validatePrioritiesCompleteAndUnique() {
     if (!window.gameState.priorities) {
         return { ok: false, message: "Please assign all priorities (A-E)." };
     }
@@ -657,14 +735,14 @@ function window.validatePrioritiesCompleteAndUnique() {
     return { ok: true, message: "All priorities assigned correctly." };
 }
 /** Apply priority preset */
-function window.applyPriorityPreset(presetId) {
+function applyPriorityPreset(presetId) {
     if (!window.gameState.priorities) {
         window.gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
     }
     
     const presets = {
         brawny: { might: 'A', finesse: 'C', wits: 'D', presence: 'E', fortune: 'B' },
-        cunning: { might: 'D', finesse: 'A', wits: 'A', presence: 'C', fortune: 'B' },
+        cunning: { might: 'D', finesse: 'A', wits: 'B', presence: 'C', fortune: 'E' },
         court: { might: 'C', finesse: 'D', wits: 'B', presence: 'A', fortune: 'E' },
         lucky: { might: 'C', finesse: 'C', wits: 'C', presence: 'C', fortune: 'A' }
     };
@@ -677,7 +755,7 @@ function window.applyPriorityPreset(presetId) {
 }
 
 /** Grant starting kit based on origin and fortune tier */
-function window.grantStartingKit(origin, kitTier) {
+function grantStartingKit(origin, kitTier) {
     if (window.gameState.startingKitGranted) {
         return; // Already granted
     }
@@ -789,14 +867,19 @@ function window.grantStartingKit(origin, kitTier) {
                         }
                     }
                 } else if (item.type === "shield") {
-                    // Check if accessory/offhand already equipped using adapter
+                    // Use canonical 'offhand' slot for shields
+                    const normalizedSlot = (typeof window.normalizeSlot === 'function') 
+                        ? window.normalizeSlot('offhand') 
+                        : 'offhand';
+                    // Check if offhand already equipped (check both canonical and legacy slots for compatibility)
                     const currentOffhand = window.getEquippedItem('offhand', 'item') || window.getEquippedItem('accessory', 'item');
                     if (!currentOffhand || !currentOffhand.id) {
                         const invItem = window.gameState.inventory.find(function(i) { return i.id === item.id; });
                         if (invItem) {
-                            const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'accessory');
-                            if (equipSuccess === false || (equipSuccess !== true && !window.gameState.equipment.accessory.item)) {
-                                console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: accessory');
+                            // Use canonical slot name
+                            const equipSuccess = window.equipmentManager.equipItem(invItem.id, normalizedSlot);
+                            if (equipSuccess === false || (equipSuccess !== true && !window.gameState.equipment[normalizedSlot]?.item)) {
+                                console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot:', normalizedSlot);
                             }
                         }
                     }
@@ -809,7 +892,7 @@ function window.grantStartingKit(origin, kitTier) {
     
     window.gameState.startingKitGranted = true;
 }
-function window.selectBackground(bg) {
+function selectBackground(bg) {
     window.gameState.background = bg;
     // Update button styles
     ['peasant', 'merchant', 'noble'].forEach(b => {
@@ -828,7 +911,7 @@ function window.selectBackground(bg) {
 }
 
 // Character Creation Step Navigation
-function window.nextCharacterCreationStep() {
+function nextCharacterCreationStep() {
     const currentStep = window.gameState.characterCreationStep || 1;
     const maxStep = 6;
     if (currentStep < maxStep) {
@@ -888,7 +971,7 @@ window.completeCharacterCreation = function() {
     window.gameState.currentScene = "start";
     window.updateDisplay();
 };
-function window.prevCharacterCreationStep() {
+function prevCharacterCreationStep() {
     const currentStep = window.gameState.characterCreationStep || 1;
     if (currentStep > 1) {
         window.gameState.characterCreationStep = currentStep - 1;
@@ -896,7 +979,7 @@ function window.prevCharacterCreationStep() {
     }
 }
 
-function window.goToCharacterCreationStep(step) {
+function goToCharacterCreationStep(step) {
     if (step >= 1 && step <= 6) {
         window.gameState.characterCreationStep = step;
         window.updateDisplay();
@@ -904,7 +987,7 @@ function window.goToCharacterCreationStep(step) {
 }
 
 // Render step navigation buttons
-function window.renderStepNavigation(currentStep, maxStep) {
+function renderStepNavigation(currentStep, maxStep) {
     const canGoBack = currentStep > 1;
     const isLastStep = currentStep === maxStep;
     
@@ -935,8 +1018,329 @@ function window.renderStepNavigation(currentStep, maxStep) {
     return navHtml;
 }
 
+// Character Creation Step Render Functions
+function renderCharacterCreationStep1(nameDisplay, currentCulture) {
+    const nameSuggestions = {
+        "Yorkshire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Kent": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "London": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Cornwall": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Lancashire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Essex": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Norfolk": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Somerset": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"]
+    };
+    
+    const regionFlavor = {
+        "Yorkshire": "You hail from the rugged moors and dales of Yorkshire. The longbow is your birthright, and you know the weight of honest labor. Your northern accent marks you among southerners, but your loyalty to the Crown is unquestioned. You are a Yorkshireman, and you will fight for King Edward and the realm.",
+        "Kent": "You come from the fertile fields and bustling ports of Kent. The Channel is your neighbor, and you've seen French ships on the horizon. Your accent carries the weight of the south, and your loyalty to the Crown runs deep. You are a Kentishman, and you will fight for King Edward and the realm.",
+        "London": "You are a son of London—the great city where merchants and nobles mix. You know the value of coin and the weight of reputation. Your speech marks you as a man of the capital, and your loyalty to the Crown is absolute. You are a Londoner, and you will fight for King Edward and the realm.",
+        "Cornwall": "You hail from the wild coasts and tin mines of Cornwall. The sea is in your blood, and you know the ways of both land and water. Your Cornish heritage sets you apart, but your loyalty to the Crown is steadfast. You are a Cornishman, and you will fight for King Edward and the realm.",
+        "Lancashire": "You come from the rolling hills and wool towns of Lancashire. The trade routes run through your land, and you know the value of hard work. Your northern roots shape you, and your loyalty to the Crown is unwavering. You are a Lancastrian, and you will fight for King Edward and the realm.",
+        "Essex": "You hail from the rich farmlands and ports of Essex. The Thames flows near, and you've seen the wealth of London. Your eastern accent marks you, and your loyalty to the Crown is true. You are an Essex man, and you will fight for King Edward and the realm.",
+        "Norfolk": "You come from the fens and ports of Norfolk. The sea and the land are both your home, and you know the ways of both. Your eastern roots shape you, and your loyalty to the Crown is resolute. You are a Norfolk man, and you will fight for King Edward and the realm.",
+        "Somerset": "You hail from the green hills and cider country of Somerset. The West Country is your home, and you know the value of honest toil. Your western accent marks you, and your loyalty to the Crown is firm. You are a Somerset man, and you will fight for King Edward and the realm."
+    };
+    
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<div style="margin-bottom: 20px; padding: 15px; background: rgba(139, 105, 20, 0.3); border: 2px solid #8b6914; border-radius: 5px; text-align: center;">' +
+            '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">Want to jump right in?</div>' +
+            '<button onclick="window.generateQuickStartCharacter()" style="padding: 12px 24px; background: #8b6914; border: 2px solid #d4af37; color: #f4d03f; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s;" onmouseover="this.style.background=\'#d4af37\'; this.style.color=\'#1a0f08\';" onmouseout="this.style.background=\'#8b6914\'; this.style.color=\'#f4d03f\';">⚡ Quick Start</button>' +
+            '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">We will randomly generate a character for you</div>' +
+        '</div>' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 1 — Identity</h3>' +
+        '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
+            '<label style="display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold;">Your Name:</label>' +
+            '<input type="text" id="character-name-input" placeholder="Enter your name" ' +
+                   'value="' + (nameDisplay || "William Thatcher") + '" ' +
+                   'list="name-suggestions" ' +
+                   'style="width: 100%; padding: 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 5px; font-size: 16px; font-family: \'Crimson Text\', serif; margin-bottom: 15px;" ' +
+                   'onfocus="if(this.value === \'William Thatcher\') { this.value = \'\'; }" ' +
+                   'onblur="if(this.value.trim() === \'\') { this.value = \'William Thatcher\'; }" ' +
+                   'onchange="window.gameState.characterName = this.value.trim() || \'William Thatcher\'; window.updateDisplay();">' +
+            '<datalist id="name-suggestions">' +
+                (currentCulture && nameSuggestions[currentCulture] ? nameSuggestions[currentCulture].map(function(n) { return '<option value="' + n + '">'; }).join('') : '') +
+            '</datalist>' +
+        '</div>' +
+        '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
+            '<label style="display: block; color: #d4af37; margin-bottom: 10px; font-weight: bold;">Your Region:</label>' +
+            '<div style="position: relative; margin-bottom: 15px; display: inline-block; width: 100%; max-width: 800px;">' +
+                '<img id="uk-map-image" src="artwork/map.jpg" alt="Map of England" style="width: 100%; max-width: 800px; height: auto; border: 2px solid #d4af37; border-radius: 5px; display: block; margin: 0 auto; background: rgba(26, 15, 8, 0.8);" />' +
+                '<button id="region-marker-Lancashire" onclick="window.selectCulture(\'Lancashire\')" onmouseover="window.showRegionTooltip(event, \'Lancashire\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(44.8% + 45px); top: 25.2%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Lancashire' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Lancashire' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Lancashire"></button>' +
+                '<button id="region-marker-Yorkshire" onclick="window.selectCulture(\'Yorkshire\')" onmouseover="window.showRegionTooltip(event, \'Yorkshire\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(57.2% + 45px); top: 47.5%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Yorkshire' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Yorkshire' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Yorkshire"></button>' +
+                '<button id="region-marker-Norfolk" onclick="window.selectCulture(\'Norfolk\')" onmouseover="window.showRegionTooltip(event, \'Norfolk\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(69.2% + 45px); top: 69.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Norfolk' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Norfolk' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Norfolk"></button>' +
+                '<button id="region-marker-Essex" onclick="window.selectCulture(\'Essex\')" onmouseover="window.showRegionTooltip(event, \'Essex\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(66.4% + 45px); top: 76.2%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Essex' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Essex' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Essex"></button>' +
+                '<button id="region-marker-London" onclick="window.selectCulture(\'London\')" onmouseover="window.showRegionTooltip(event, \'London\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(61.8% + 45px); top: 78.4%; transform: translate(-50%, -50%); width: 32px; height: 32px; border-radius: 50%; border: 5px solid ' + (currentCulture === 'London' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'London' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 15px rgba(255, 107, 53, 1.2), 0 0 8px rgba(255, 215, 0, 1), inset 0 0 10px rgba(255, 255, 255, 0.4); transition: all 0.3s; font-weight: bold; font-size: 16px; line-height: 32px;" title="London">⚔</button>' +
+                '<button id="region-marker-Kent" onclick="window.selectCulture(\'Kent\')" onmouseover="window.showRegionTooltip(event, \'Kent\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(70.5% + 45px); top: 83.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Kent' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Kent' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Kent"></button>' +
+                '<button id="region-marker-Somerset" onclick="window.selectCulture(\'Somerset\')" onmouseover="window.showRegionTooltip(event, \'Somerset\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(44.2% + 45px); top: 72.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Somerset' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Somerset' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Somerset"></button>' +
+                '<button id="region-marker-Cornwall" onclick="window.selectCulture(\'Cornwall\')" onmouseover="window.showRegionTooltip(event, \'Cornwall\')" onmouseout="window.hideRegionTooltip()" style="position: absolute; left: calc(36.2% + 45px); top: 89.5%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Cornwall' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Cornwall' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Cornwall"></button>' +
+                '<div id="region-tooltip" style="position: absolute; display: none; background: rgba(0, 0, 0, 0.95); border: 2px solid #d4af37; border-radius: 5px; padding: 12px; max-width: 300px; z-index: 1000; pointer-events: none; color: #d4af37; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.8);"></div>' +
+            '</div>' +
+            (currentCulture && regionFlavor[currentCulture] ? 
+                '<div style="padding: 12px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 5px; margin-top: 10px;">' +
+                    '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 8px;">Selected: ' + currentCulture + '</div>' +
+                    '<div style="color: #d4af37; font-style: italic; font-size: 13px; line-height: 1.5;">' + regionFlavor[currentCulture] + '</div>' +
+                '</div>' :
+                '<div style="padding: 10px; background: rgba(139, 105, 20, 0.1); border: 1px dashed #8b6914; border-radius: 5px; margin-top: 10px; text-align: center; color: #888; font-size: 12px;">Click a region on the map above to select your origin</div>') +
+        '</div>' +
+    '</div>';
+}
+
+function renderCharacterCreationStep2(currentAgeRange) {
+    const ageRanges = [
+        { id: 'youth', name: 'Youth (16-19)', description: 'Fresh-faced and eager, but untested in the ways of war.', advantages: ['+2 Initiative', '+1 Agility', 'Quick to learn'], drawbacks: ['-1 Endurance', '-1 Wits', 'Less respect from veterans'], statMods: { initiative: 2, agility: 1, endurance: -1, wits: -1 }, numericAge: 18 },
+        { id: 'young_adult', name: 'Young Adult (20-24)', description: 'In your prime, strong and fast with growing experience.', advantages: ['+1 Strength', '+1 Agility', 'Peak physical condition'], drawbacks: ['-1 Wits', 'Still learning tactics'], statMods: { strength: 1, agility: 1, wits: -1 }, numericAge: 22 },
+        { id: 'prime', name: 'Prime (25-30)', description: 'The perfect balance of strength, speed, and wisdom.', advantages: ['+1 Strength', '+1 Wits', 'Balanced capabilities'], drawbacks: ['None - the ideal age for a soldier'], statMods: { strength: 1, wits: 1 }, numericAge: 27 },
+        { id: 'veteran', name: 'Veteran (31-35)', description: 'Seasoned by years of service, wise but slower.', advantages: ['+2 Wits', '+1 Endurance', 'Respected by peers'], drawbacks: ['-1 Agility', 'Slower reflexes'], statMods: { wits: 2, endurance: 1, agility: -1 }, numericAge: 33 },
+        { id: 'old_hand', name: 'Old Hand (36-40)', description: 'A grizzled veteran with hard-won wisdom, but age takes its toll.', advantages: ['+2 Wits', '+1 Endurance', '+1 Charisma', 'Greatly respected'], drawbacks: ['-2 Agility', '-1 Strength', 'Slower in combat'], statMods: { wits: 2, endurance: 1, charisma: 1, agility: -2, strength: -1 }, numericAge: 38 }
+    ];
+    
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 2 — Age Range</h3>' +
+        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Choose the age range that best describes your character. Each has unique advantages and drawbacks.</p>' +
+        '<div style="display: grid; grid-template-columns: 1fr; gap: 12px;">' +
+            ageRanges.map(function(range) {
+                const isSelected = currentAgeRange === range.id;
+                return '<button onclick="window.selectAgeRange(\'' + range.id + '\')" style="padding: 15px; background: ' + (isSelected ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (isSelected ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left; transition: all 0.2s;">' +
+                    '<strong style="font-size: 1.1em; display: block; margin-bottom: 5px;">' + range.name + '</strong>' +
+                    '<div style="font-size: 13px; font-style: italic; color: ' + (isSelected ? '#1a0f08' : '#888') + '; margin-bottom: 10px;">' + range.description + '</div>' +
+                    '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">' +
+                        '<div style="padding: 8px; background: rgba(0, 150, 0, ' + (isSelected ? '0.3' : '0.1') + '); border-radius: 3px;">' +
+                            '<div style="font-size: 11px; font-weight: bold; color: ' + (isSelected ? '#0a5a0a' : '#0f0') + '; margin-bottom: 5px;">Advantages:</div>' +
+                            '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: ' + (isSelected ? '#1a0f08' : '#0f0') + ';">' +
+                                range.advantages.map(function(adv) { return '<li>' + adv + '</li>'; }).join('') +
+                            '</ul>' +
+                        '</div>' +
+                        '<div style="padding: 8px; background: rgba(150, 0, 0, ' + (isSelected ? '0.3' : '0.1') + '); border-radius: 3px;">' +
+                            '<div style="font-size: 11px; font-weight: bold; color: ' + (isSelected ? '#5a0a0a' : '#f00') + '; margin-bottom: 5px;">Drawbacks:</div>' +
+                            '<ul style="margin: 0; padding-left: 20px; font-size: 12px; color: ' + (isSelected ? '#1a0f08' : '#f66') + ';">' +
+                                range.drawbacks.map(function(draw) { return '<li>' + draw + '</li>'; }).join('') +
+                            '</ul>' +
+                        '</div>' +
+                    '</div>' +
+                '</button>';
+            }).join('') +
+        '</div>' +
+    '</div>';
+}
+
+function renderCharacterCreationStep3() {
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 3 — Origin Story</h3>' +
+        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Your origin unlocks unique story paths, advantages, and challenges that shape your journey.</p>' +
+        '<div style="display: grid; grid-template-columns: 1fr; gap: 15px;">' +
+            '<button onclick="window.selectOrigin(\'rural_peasant\')" style="padding: 20px; background: ' + (window.gameState.origin === 'rural_peasant' ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (window.gameState.origin === 'rural_peasant' ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left;">' +
+                '<strong style="font-size: 1.1em;">Rural Peasant</strong>' +
+                '<div style="font-size: 14px; margin-top: 8px; color: ' + (window.gameState.origin === 'rural_peasant' ? '#1a0f08' : '#888') + ';">' +
+                    '<div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Endurance, Insight into rural networks</div>' +
+                    '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> Low coin, no formal training</div>' +
+                '</div>' +
+            '</button>' +
+            '<button onclick="window.selectOrigin(\'manor_retainer\')" style="padding: 20px; background: ' + (window.gameState.origin === 'manor_retainer' ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (window.gameState.origin === 'manor_retainer' ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left;">' +
+                '<strong style="font-size: 1.1em;">Manor Retainer</strong>' +
+                '<div style="font-size: 14px; margin-top: 8px; color: ' + (window.gameState.origin === 'manor_retainer' ? '#1a0f08' : '#888') + ';">' +
+                    '<div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Strength, +Charisma in village contexts</div>' +
+                    '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> Fealty binds your options, owe service</div>' +
+                '</div>' +
+            '</button>' +
+            '<button onclick="window.selectOrigin(\'craftsman_apprentice\')" style="padding: 20px; background: ' + (window.gameState.origin === 'craftsman_apprentice' ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (window.gameState.origin === 'craftsman_apprentice' ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left;">' +
+                '<strong style="font-size: 1.1em;">Craftsman\'s Apprentice</strong>' +
+                '<div style="font-size: 14px; margin-top: 8px; color: ' + (window.gameState.origin === 'craftsman_apprentice' ? '#1a0f08' : '#888') + ';">' +
+                    '<div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Wits, +Agility when crafting/repairing</div>' +
+                    '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> No noble allies, urban ties pull into guild politics</div>' +
+                '</div>' +
+            '</button>' +
+            '<button onclick="window.selectOrigin(\'squire\')" style="padding: 20px; background: ' + (window.gameState.origin === 'squire' ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (window.gameState.origin === 'squire' ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left;">' +
+                '<strong style="font-size: 1.1em;">Squire to a Knight</strong>' +
+                '<div style="font-size: 14px; margin-top: 8px; color: ' + (window.gameState.origin === 'squire' ? '#1a0f08' : '#888') + ';">' +
+                    '<div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Strength, +Wits, Access to basic gear</div>' +
+                    '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> Bound by knight\'s agenda, must prove worth</div>' +
+                '</div>' +
+            '</button>' +
+            '<button onclick="window.selectOrigin(\'minor_noble\')" style="padding: 20px; background: ' + (window.gameState.origin === 'minor_noble' ? '#d4af37' : '#2a2a2a') + '; border: 2px solid #d4af37; color: ' + (window.gameState.origin === 'minor_noble' ? '#1a0f08' : '#d4af37') + '; border-radius: 5px; cursor: pointer; text-align: left;">' +
+                '<strong style="font-size: 1.1em;">Minor Noble or Garrison\'s Son/Daughter</strong>' +
+                '<div style="font-size: 14px; margin-top: 8px; color: ' + (window.gameState.origin === 'minor_noble' ? '#1a0f08' : '#888') + ';">' +
+                    '<div style="margin-bottom: 5px;"><strong>Advantages:</strong> +Charisma, +Wits, Political network</div>' +
+                    '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> Political stakes — errors are punished</div>' +
+                '</div>' +
+            '</button>' +
+        '</div>' +
+    '</div>';
+}
+
+function renderCharacterCreationStep4() {
+    const backgroundQuestions = [
+        { id: 'hard_father', text: "Your father was a hard, cruel man. Your entire life you have woken before the dawn to break hard Earth, scratching a living out of the frozen soil to appease him. You learned hard lessons from those days, but each day in that house is a stain of black misery in your memories.", effects: { strength: 1, endurance: 1, charisma: -1 } },
+        { id: 'mangled_hand', text: "Your hand was mangled as a youth. It wasn't ruined, but it bears the twisted scars of that old trauma and has never been quite the same. Your hand excused you from some of the chores that would have been assigned to a healthy boy. Instead, you often helped in the homestead with women's work, and learned to read at the local Abbey.", effects: { agility: -1, endurance: -1, wits: 3 } },
+        { id: 'lost_sibling', text: "You had a sibling who died young—fever, accident, or the simple cruelty of a world that takes children. Their absence shaped you. You learned to be careful, to watch for danger, but also to value what remains.", effects: { wits: 1, endurance: 1, morale: -1 } },
+        { id: 'village_hero', text: "When bandits came to your village, you stood with the others. You weren't the strongest or the fastest, but you were there when it mattered. The respect you earned that day still follows you.", effects: { charisma: 1, reputation: 2, strength: -1 } },
+        { id: 'apprentice_master', text: "Your master was a harsh teacher, but fair. Every mistake was a lesson, every success earned a nod. You learned discipline and precision, but also learned to fear failure.", effects: { wits: 2, agility: 1, stress: 1 } },
+        { id: 'first_love', text: "There was someone once—a first love, a promise made, a promise broken. Whether by war, by family, or by your own choices, it ended. The memory of what was lost makes you careful with new bonds.", effects: { charisma: -1, wits: 1, morale: 1 } }
+    ];
+    
+    if (!window.gameState.backgroundQuestionsAnswered) {
+        window.gameState.backgroundQuestionsAnswered = [];
+    }
+    
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 4 — Background Questions</h3>' +
+        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">These questions shape your past. Each answer adjusts your stats. You may answer as many or as few as you wish. <em style="color: #d4af37;">(Optional)</em></p>' +
+        '<div style="display: grid; grid-template-columns: 1fr; gap: 15px;">' +
+            backgroundQuestions.map(function(q) {
+                const isAnswered = window.gameState.backgroundQuestionsAnswered.includes(q.id);
+                const effectText = Object.entries(q.effects).map(function([stat, val]) {
+                    const sign = val > 0 ? '+' : '';
+                    const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+                    return sign + val + ' ' + statName;
+                }).join(', ');
+                
+                return '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (isAnswered ? '#d4af37' : '#555') + ';">' +
+                    '<div style="color: #d4af37; font-style: italic; margin-bottom: 10px; line-height: 1.6;">"' + q.text + '"</div>' +
+                    (isAnswered ? 
+                        '<div style="color: #0f0; font-size: 12px; margin-top: 8px;">✓ Answered: ' + effectText + '</div>' :
+                        '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">Secret result: ' + effectText + '</div>') +
+                    '<button onclick="window.answerBackgroundQuestion(\'' + q.id + '\')" style="margin-top: 10px; padding: 8px 15px; background: ' + (isAnswered ? '#444' : '#8b6914') + '; border: 1px solid #d4af37; color: ' + (isAnswered ? '#666' : '#d4af37') + '; border-radius: 3px; cursor: ' + (isAnswered ? 'not-allowed' : 'pointer') + '; font-size: 13px;" ' + (isAnswered ? 'disabled' : '') + '>' +
+                        (isAnswered ? 'Already Answered' : 'This Was My Past') +
+                    '</button>' +
+                '</div>';
+            }).join('') +
+        '</div>' +
+    '</div>';
+}
+
+function renderCharacterCreationStep5() {
+    if (!window.gameState.priorities) {
+        window.gameState.priorities = { might: null, finesse: null, wits: null, presence: null, fortune: null };
+    }
+    if (!window.gameState.kitTier) {
+        window.gameState.kitTier = "Standard";
+    }
+    
+    const categories = [
+        { id: 'might', name: '💪 Might', desc: 'Strength + Endurance' },
+        { id: 'finesse', name: '🏃 Finesse', desc: 'Agility' },
+        { id: 'wits', name: '🧠 Wits', desc: 'Intelligence & Tactics' },
+        { id: 'presence', name: '💬 Presence', desc: 'Charisma & Leadership' },
+        { id: 'fortune', name: '💰 Fortune', desc: 'Luck, Wealth & Starting Kit' }
+    ];
+    
+    const usedPriorities = Object.values(window.gameState.priorities || {}).filter(function(p) { return p !== null; });
+    
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 5 — Priorities</h3>' +
+        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Assign each priority (A, B, C, D, E) exactly once across the five categories. Your choices determine your starting capabilities and equipment.</p>' +
+        '<div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px;">' +
+            categories.map(function(cat) {
+                const currentPriority = (window.gameState.priorities || {})[cat.id] || '';
+                const priorityOptions = ['A', 'B', 'C', 'D', 'E'];
+                
+                return '<div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (currentPriority ? '#d4af37' : '#555') + ';">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">' +
+                        '<div><div style="color: #d4af37; font-weight: bold; font-size: 1.05em;">' + cat.name + '</div><div style="color: #888; font-size: 12px;">' + cat.desc + '</div></div>' +
+                        '<select onchange="window.setPriority(\'' + cat.id + '\', this.value);" style="padding: 6px 10px; background: #2a2a2a; border: 2px solid #d4af37; color: #d4af37; border-radius: 4px; font-size: 14px; font-weight: bold; min-width: 60px;">' +
+                            '<option value="">--</option>' +
+                            priorityOptions.map(function(letter) {
+                                const isUsed = usedPriorities.includes(letter) && letter !== currentPriority;
+                                return '<option value="' + letter + '" ' + (currentPriority === letter ? 'selected' : '') + (isUsed ? 'disabled' : '') + '>' + letter + (isUsed ? ' (used)' : '') + '</option>';
+                            }).join('') +
+                        '</select>' +
+                    '</div>' +
+                '</div>';
+            }).join('') +
+        '</div>' +
+        '<div style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px;">' +
+            '<div style="color: #d4af37; font-weight: bold; margin-bottom: 8px; font-size: 13px;">Quick Presets:</div>' +
+            '<div style="display: flex; flex-wrap: wrap; gap: 8px;">' +
+                '<button onclick="window.applyPriorityPreset(\'brawny\')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">💪 Brawny Footman</button>' +
+                '<button onclick="window.applyPriorityPreset(\'cunning\')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🧠 Cunning Scout</button>' +
+                '<button onclick="window.applyPriorityPreset(\'court\')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">👑 Court-Leaned</button>' +
+                '<button onclick="window.applyPriorityPreset(\'lucky\')" style="padding: 6px 12px; background: #2a2a2a; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 12px;">🎲 Lucky Bastard</button>' +
+            '</div>' +
+        '</div>' +
+        (function() {
+            try {
+                if (typeof window.recalculateFromPriorities === 'function') {
+                    window.recalculateFromPriorities();
+                }
+                const validation = typeof window.validatePrioritiesCompleteAndUnique === 'function' ? window.validatePrioritiesCompleteAndUnique() : { ok: false, message: "Priority system not initialized" };
+                const kitTier = window.gameState.kitTier || "Standard";
+                const startingSilver = (window.gameState.stats && window.gameState.stats.wealth) ? window.gameState.stats.wealth : 10;
+                
+                return '<div style="padding: 15px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 5px; margin-top: 15px;">' +
+                    '<div style="color: #f4d03f; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">Computed Stats & Resources</div>' +
+                    '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 10px;">' +
+                        '<div><strong style="color: #d4af37;">Strength:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.strength) ? window.gameState.stats.strength : 5) + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Agility:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.agility) ? window.gameState.stats.agility : 5) + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Endurance:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.endurance) ? window.gameState.stats.endurance : 5) + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Charisma:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.charisma) ? window.gameState.stats.charisma : 5) + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Wits:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.wits) ? window.gameState.stats.wits : 5) + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Luck:</strong> <span style="color: #f4d03f;">' + ((window.gameState.stats && window.gameState.stats.luck) ? window.gameState.stats.luck : 5) + '</span></div>' +
+                    '</div>' +
+                    '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #555;">' +
+                        '<div><strong style="color: #d4af37;">Starting Silver:</strong> <span style="color: #f4d03f;">' + startingSilver + '</span></div>' +
+                        '<div><strong style="color: #d4af37;">Kit Tier:</strong> <span style="color: #f4d03f;">' + kitTier + '</span></div>' +
+                    '</div>' +
+                    (!validation.ok ? '<div style="margin-top: 10px; padding: 8px; background: rgba(139, 0, 0, 0.3); border-left: 3px solid #8b0000; color: #ff6666; font-size: 12px;">⚠️ ' + validation.message + '</div>' : '') +
+                '</div>';
+            } catch (e) {
+                return '<div style="padding: 15px; background: rgba(139, 0, 0, 0.2); border: 2px solid #8b0000; border-radius: 5px; margin-top: 15px; color: #ff6666;">Error loading priority system.</div>';
+            }
+        })() +
+    '</div>';
+}
+
+function renderCharacterCreationStep6() {
+    const currentPatronId = window.gameState.patronId;
+    let patronSelectionHtml = '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
+        '<div style="color: #d4af37; font-weight: bold; margin-bottom: 15px; font-size: 16px;">Choose Your Patron</div>' +
+        '<p style="color: #888; font-size: 14px; margin-bottom: 15px;">Select a lord or captain to serve under. Your choice affects your starting stats, equipment, and future opportunities.</p>' +
+        '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">';
+    
+    // Render patron cards
+    Object.keys(window.PATRONS).forEach(function(patronId) {
+        const patron = window.PATRONS[patronId];
+        const isSelected = currentPatronId === patronId;
+        const statModsText = Object.entries(patron.statMods || {}).map(([stat, mod]) => {
+            return (mod > 0 ? '+' : '') + mod + ' ' + stat;
+        }).join(', ');
+        
+        patronSelectionHtml += '<div id="patron-card-' + patronId + '" onclick="window.setPatron(\'' + patronId + '\')" ' +
+            'style="padding: 15px; background: ' + (isSelected ? 'rgba(212, 175, 55, 0.3)' : 'rgba(42, 42, 42, 0.8)') + '; ' +
+            'border: 2px solid ' + (isSelected ? '#f4d03f' : '#8b6914') + '; ' +
+            'border-radius: 8px; cursor: pointer; transition: all 0.3s;" ' +
+            'onmouseover="this.style.borderColor=\'#d4af37\'; this.style.background=\'rgba(212, 175, 55, 0.2)\';" ' +
+            'onmouseout="this.style.borderColor=\'' + (isSelected ? '#f4d03f' : '#8b6914') + '\'; this.style.background=\'' + (isSelected ? 'rgba(212, 175, 55, 0.3)' : 'rgba(42, 42, 42, 0.8)') + '\';">' +
+            '<div style="color: ' + (isSelected ? '#f4d03f' : '#d4af37') + '; font-weight: bold; font-size: 15px; margin-bottom: 8px;">' + window.escapeHTML(patron.name) + '</div>' +
+            '<div style="color: #888; font-size: 12px; margin-bottom: 5px; font-style: italic;">' + window.escapeHTML(patron.type) + '</div>' +
+            '<div style="color: #aaa; font-size: 13px; margin-bottom: 8px;">' + window.escapeHTML(patron.blurb) + '</div>' +
+            '<div style="color: #d4af37; font-size: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #555;">' +
+                '<strong>Stat Modifiers:</strong> ' + (statModsText || 'None') +
+            '</div>' +
+            (isSelected ? '<div style="color: #f4d03f; font-size: 12px; margin-top: 5px; font-weight: bold;">✓ Selected</div>' : '') +
+        '</div>';
+    });
+    
+    patronSelectionHtml += '</div></div>';
+    
+    // Character summary
+    const patronName = currentPatronId && window.PATRONS[currentPatronId] ? window.PATRONS[currentPatronId].name : 'Not selected';
+    
+    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 6 — Choose Patron & Review</h3>' +
+        patronSelectionHtml +
+        '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-top: 20px;">' +
+            '<div style="color: #d4af37; font-weight: bold; margin-bottom: 10px;">Character Summary:</div>' +
+            '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Name:</strong> ' + window.escapeHTML(window.gameState.characterName || 'Unnamed') + '</div>' +
+            '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Region:</strong> ' + window.escapeHTML(window.gameState.culture || 'Not selected') + '</div>' +
+            '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Age Range:</strong> ' + window.escapeHTML(window.gameState.ageRange || 'Not selected') + '</div>' +
+            '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Origin:</strong> ' + window.escapeHTML(window.gameState.origin || 'Not selected') + '</div>' +
+            '<div style="color: #f4d03f; margin-bottom: 5px;"><strong>Patron:</strong> ' + window.escapeHTML(patronName) + '</div>' +
+        '</div>' +
+    '</div>';
+}
+
 // Quick Start Character Generation
-function window.generateQuickStartCharacter() {
+function generateQuickStartCharacter() {
     // Ensure stats are initialized
     if (!window.gameState.stats) {
         window.gameState.stats = {
@@ -994,7 +1398,7 @@ function window.generateQuickStartCharacter() {
     const preset = priorityPresets[Math.floor(Math.random() * priorityPresets.length)];
     const presets = {
         brawny: { might: 'A', finesse: 'C', wits: 'D', presence: 'E', fortune: 'B' },
-        cunning: { might: 'D', finesse: 'A', wits: 'A', presence: 'C', fortune: 'B' },
+        cunning: { might: 'D', finesse: 'A', wits: 'B', presence: 'C', fortune: 'E' },
         court: { might: 'C', finesse: 'D', wits: 'B', presence: 'A', fortune: 'E' },
         lucky: { might: 'C', finesse: 'C', wits: 'C', presence: 'C', fortune: 'A' }
     };
@@ -1221,7 +1625,7 @@ function getEquipmentQuality(slot) {
     return 0;
 }
 
-function window.getEquipmentName(slot) {
+function getEquipmentName(slot) {
     const slotData = window.gameState.equipment[slot];
     
     // Old format: direct name
@@ -1239,7 +1643,7 @@ function window.getEquipmentName(slot) {
     return null;
 }
 
-function window.setEquipmentQuality(slot, quality) {
+function setEquipmentQuality(slot, quality) {
     const slotData = window.gameState.equipment[slot];
     if (!slotData) return false;
     
@@ -1260,7 +1664,7 @@ function window.setEquipmentQuality(slot, quality) {
     
     return false;
 }
-function window.initializeEquipmentSystem() {
+function initializeEquipmentSystem() {
     // Initialize equipment manager - check if already initialized to prevent duplicates
     if (typeof EquipmentManager !== 'undefined' && 
         typeof EQUIPMENT_DATABASE !== 'undefined' && 
@@ -1311,7 +1715,7 @@ function window.initializeEquipmentSystem() {
     }
 }
 
-function window.openEquipmentScreen() {
+function openEquipmentScreen() {
     console.log('Opening equipment screen...');
     console.log('EquipmentUI available:', typeof EquipmentUI !== 'undefined');
     console.log('EquipmentManager available:', typeof EquipmentManager !== 'undefined');
@@ -1336,11 +1740,57 @@ function window.openEquipmentScreen() {
     }
 }
 
-function window.closeEquipmentScreen() {
+function closeEquipmentScreen() {
     if (equipmentUI) {
         equipmentUI.close();
     }
 }
+
+// Check required modules before initialization (defined at top level of IIFE)
+function checkRequiredModules() {
+    const missing = [];
+    
+    // Check EquipmentManager
+    if (typeof EquipmentManager === 'undefined') {
+        missing.push('Equipment system not loaded');
+    }
+    
+    // Check EquipmentUI
+    if (typeof EquipmentUI === 'undefined') {
+        missing.push('Equipment UI not loaded');
+    }
+    
+    // Check EQUIPMENT_DATABASE (global constant)
+    try {
+        if (typeof EQUIPMENT_DATABASE === 'undefined') {
+            missing.push('Equipment database not loaded');
+        }
+    } catch (e) {
+        missing.push('Equipment database not loaded');
+    }
+    
+    // Check ENEMY_PROFILES (global constant)
+    try {
+        if (typeof ENEMY_PROFILES === 'undefined') {
+            missing.push('Enemy profiles not loaded');
+        }
+    } catch (e) {
+        missing.push('Enemy profiles not loaded');
+    }
+    
+    if (missing.length > 0) {
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('Missing Modules', 
+                'Some game files failed to load:\n' + missing.join('\n') + 
+                '\n\nPlease refresh the page.', 
+                'error'
+            );
+        }
+        return false;
+    }
+    return true;
+}
+
 // Initialize on load
 window.addEventListener('load', function() {
     // Hide loading message immediately, even if initialization fails
@@ -1353,51 +1803,8 @@ window.addEventListener('load', function() {
         console.error('Error hiding loading message:', e);
     }
     
-    // Check required modules before initialization
-    function window.checkRequiredModules() {
-        const missing = [];
-        
-        // Check EquipmentManager
-        if (typeof EquipmentManager === 'undefined') {
-            missing.push('Equipment system not loaded');
-        }
-        
-        // Check EquipmentUI
-        if (typeof EquipmentUI === 'undefined') {
-            missing.push('Equipment UI not loaded');
-        }
-        
-        // Check EQUIPMENT_DATABASE (global constant)
-        try {
-            if (typeof EQUIPMENT_DATABASE === 'undefined') {
-                missing.push('Equipment database not loaded');
-            }
-        } catch (e) {
-            missing.push('Equipment database not loaded');
-        }
-        
-        // Check ENEMY_PROFILES (global constant)
-        try {
-            if (typeof ENEMY_PROFILES === 'undefined') {
-                missing.push('Enemy profiles not loaded');
-            }
-        } catch (e) {
-            missing.push('Enemy profiles not loaded');
-        }
-        
-        if (missing.length > 0) {
-            window.showNotification('Missing Modules', 
-                'Some game files failed to load:\n' + missing.join('\n') + 
-                '\n\nPlease refresh the page.', 
-                'error'
-            );
-            return false;
-        }
-        return true;
-    }
-    
     // Check modules, but still try to initialize (game may be partially playable)
-    const modulesOk = window.checkRequiredModules();
+    const modulesOk = checkRequiredModules();
     
     // Initialize game with error handling
     // Even if modules are missing, try to start the game (it may be playable without equipment)
@@ -1405,7 +1812,7 @@ window.addEventListener('load', function() {
         // Small delay to ensure DOM is fully ready
         setTimeout(function() {
             try {
-                window.initGame();
+                initGame();
             } catch (error) {
                 console.error('Fatal error during initialization:', error);
                 const storyEl = document.getElementById('story');
@@ -1802,7 +2209,189 @@ function showStats() {
     window.closeEquipmentScreen = closeEquipmentScreen;
     
     window.showLevelUpMenu = showLevelUpMenu;
+    window.checkRequiredModules = checkRequiredModules;
     window.initGame = initGame;
+    
+    // Character Creation Step Render Functions
+    window.renderCharacterCreationStep1 = renderCharacterCreationStep1;
+    window.renderCharacterCreationStep2 = renderCharacterCreationStep2;
+    window.renderCharacterCreationStep3 = renderCharacterCreationStep3;
+    window.renderCharacterCreationStep4 = renderCharacterCreationStep4;
+    window.renderCharacterCreationStep5 = renderCharacterCreationStep5;
+    window.renderCharacterCreationStep6 = renderCharacterCreationStep6;
+    
+    // Tempo Strike minigame
+    function startTempoStrike({title = 'Tempo Strike', subtitle = 'Tap to stop the marker in the orange zone.'} = {}) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('minigame-overlay');
+            const titleEl = document.getElementById('minigame-title');
+            const subtitleEl = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+            const progress = document.getElementById('combat-progress');
+            const log = document.getElementById('combat-log');
+
+            if (!overlay || !display || !titleEl || !instructions) {
+                console.warn('TempoStrike: minigame overlay elements missing');
+                resolve({bonus: 0, label: 'SKIP'});
+                return;
+            }
+
+            // Hide unused combat UI bits
+            if (progress) progress.style.display = 'none';
+            if (log) log.style.display = 'none';
+            const healthBars = overlay.querySelector('.health-bars');
+            if (healthBars) healthBars.style.display = 'none';
+
+            overlay.style.display = 'flex';
+            titleEl.textContent = title;
+            if (subtitleEl) subtitleEl.textContent = subtitle;
+
+            // State for this instance
+            let resolved = false;
+            const state = {
+                running: false,
+                raf: null,
+                startMs: 0,
+                speed: 0.9,
+                lastPos: 0
+            };
+
+            // Resolve helper
+            function resolveWithResult(bonus, label) {
+                if (resolved) return;
+                resolved = true;
+                state.running = false;
+                if (state.raf) cancelAnimationFrame(state.raf);
+                state.raf = null;
+                window.removeEventListener('keydown', keyHandler);
+                overlay.style.display = 'none';
+                resolve({bonus, label});
+            }
+
+            // Key handler
+            function keyHandler(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    resolveWithResult(0, 'SKIP');
+                } else if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    stopTempo();
+                }
+            }
+
+            // Stop function
+            function stopTempo() {
+                if (!state.running || resolved) return;
+                state.running = false;
+                if (state.raf) cancelAnimationFrame(state.raf);
+                state.raf = null;
+
+                const pos = state.lastPos; // 0..1
+                const dist = Math.abs(pos - 0.5);
+                let bonus = 0;
+                let label = 'MISS';
+                if (dist <= 0.025) { bonus = 2; label = 'PERFECT'; }
+                else if (dist <= 0.075) { bonus = 1; label = 'GOOD'; }
+
+                resolveWithResult(bonus, label);
+            }
+
+            // Start animation
+            function startTempo() {
+                const marker = document.getElementById('tempo-marker');
+                const result = document.getElementById('tempo-result');
+                if (!marker) {
+                    resolveWithResult(0, 'SKIP');
+                    return;
+                }
+
+                state.running = true;
+                state.startMs = performance.now();
+                if (result) result.innerHTML = `<strong>Running…</strong> Try to hit the center for <strong>+2</strong>.`;
+
+                const tick = (now) => {
+                    if (!state.running || resolved) return;
+                    const t = (now - state.startMs) / 1000;
+                    const phase = (t * state.speed) % 1;
+                    const tri = phase < 0.5 ? (phase * 2) : (2 - phase * 2);
+                    state.lastPos = tri;
+
+                    const bar = document.getElementById('tempo-bar');
+                    const w = bar ? bar.clientWidth : 300;
+                    const x = Math.floor(tri * (w - 10));
+                    marker.style.left = x + 'px';
+
+                    state.raf = requestAnimationFrame(tick);
+                };
+
+                if (state.raf) cancelAnimationFrame(state.raf);
+                state.raf = requestAnimationFrame(tick);
+            }
+
+            // Setup UI
+            display.innerHTML = `
+              <div style="max-width:520px;margin:0 auto;">
+                <div id="tempo-bar" style="position:relative;height:22px;border:2px solid #a8732a;background:#231a12;border-radius:6px;overflow:hidden;">
+                  <div id="tempo-sweet" style="position:absolute;left:42.5%;width:15%;top:0;bottom:0;background:rgba(214,116,32,0.35);"></div>
+                  <div id="tempo-sweet2" style="position:absolute;left:47.5%;width:5%;top:0;bottom:0;background:rgba(214,116,32,0.55);"></div>
+                  <div id="tempo-marker" style="position:absolute;top:-3px;width:10px;height:28px;background:#f4d03f;border-radius:4px;box-shadow:0 0 8px rgba(244,208,63,0.55);"></div>
+                </div>
+                <div id="tempo-result" style="margin-top:14px;font-size:14px;line-height:1.4;"></div>
+                <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                  <button class="control-button" id="tempo-stop-btn">Stop</button>
+                  <button class="control-button" id="tempo-skip-btn">Skip</button>
+                </div>
+              </div>
+            `;
+
+            instructions.innerHTML = `<div style="text-align:center;opacity:0.9;">Tap the bar (or press Space/Enter) to stop. Esc or Skip to skip.</div>`;
+
+            // Wire buttons
+            const stopBtn = document.getElementById('tempo-stop-btn');
+            const skipBtn = document.getElementById('tempo-skip-btn');
+            if (stopBtn) stopBtn.onclick = stopTempo;
+            if (skipBtn) skipBtn.onclick = () => resolveWithResult(0, 'SKIP');
+
+            // Tap anywhere on the bar to stop
+            const bar = document.getElementById('tempo-bar');
+            if (bar) {
+                bar.onclick = stopTempo;
+                bar.ontouchstart = (ev) => { ev.preventDefault(); stopTempo(); };
+            }
+
+            window.addEventListener('keydown', keyHandler);
+            startTempo();
+        });
+    }
+    
+    window.startTempoStrike = startTempoStrike;
+    
+    // Flag management functions
+    function setFlag(name, value = true) {
+        if (!window.gameState.flags) {
+            window.gameState.flags = {};
+        }
+        window.gameState.flags[name] = value;
+    }
+    
+    function getFlag(name) {
+        if (!window.gameState.flags) {
+            window.gameState.flags = {};
+        }
+        return window.gameState.flags[name] || false;
+    }
+    
+    function hasFlag(name) {
+        if (!window.gameState.flags) {
+            window.gameState.flags = {};
+        }
+        return window.gameState.flags[name] === true;
+    }
+    
+    window.setFlag = setFlag;
+    window.getFlag = getFlag;
+    window.hasFlag = hasFlag;
     
     // Equipment UI Integration (declared once at top level)
     var equipmentUI = null;

@@ -17,7 +17,7 @@
             let base = `<p>Winter quarters. Spring campaign. Summer raids. The rhythm becomes familiar. Predictable almost. You march. You fight. You survive. The years blur into seasons. Seasons into months. Months into days.</p>
                <p>You've learned the patterns. When to push forward. When to hold back. When to keep your head down. Your lord notices. Your comrades trust you. Experience is the only teacher that matters.</p>
                <p>But each season takes something. A friend. A piece of yourself. The man you were fades. The man you're becoming takes shape. Harder. Colder. More careful.</p>`;
-            if (hasFlag('Heartbroken')) {
+            if (window.hasFlag('Heartbroken')) {
                 const response = gameState.flags.MarieResponse;
                 if (response === 'silence') {
                     base += `<p>You still think of Marie sometimes. Of the silence you chose. Of the words you swallowed. It's easier now. The sting has faded to a dull ache. But on winter nights, when the fire burns low and the camp is quiet, you remember. And you wonder if silence was strength or cowardice.</p>`;

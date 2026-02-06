@@ -93,10 +93,112 @@
         };
     }
     
+    // Normalization functions for consistent vocabulary across systems
+    
+    // Normalize location to region tag
+    function normalizeRegion(location) {
+        if (!location) return 'England';
+        const loc = String(location).toLowerCase();
+        if (loc.includes('england') || loc.includes('portsmouth') || loc.includes('london')) return 'England';
+        if (loc.includes('france') || loc.includes('normandy') || loc.includes('caen') || loc.includes('calais')) return 'France';
+        if (loc.includes('flanders')) return 'Flanders';
+        if (loc.includes('italy') || loc.includes('milan')) return 'Northern Italy';
+        return 'England';
+    }
+    
+    // Normalize rank to social class for equipment availability
+    function normalizeSocialClass(rank) {
+        if (!rank) return 'retainer';
+        const rankStr = String(rank).toLowerCase();
+        
+        // Map game ranks to equipment system social classes
+        const rankMap = {
+            'common soldier': 'retainer',
+            'soldier': 'retainer',
+            'sergeant': 'man-at-arms',
+            'corporal': 'retainer',
+            'lieutenant': 'man-at-arms',
+            'captain': 'knightly',
+            'knight': 'knightly',
+            'squire': 'retainer',
+            // Direct mappings if rank already matches
+            'peasant': 'peasant',
+            'militia': 'militia',
+            'retainer': 'retainer',
+            'man-at-arms': 'man-at-arms',
+            'knightly': 'knightly'
+        };
+        
+        return rankMap[rankStr] || 'retainer'; // Default fallback
+    }
+    
+    // Normalize slot names to canonical form
+    function normalizeSlot(slot) {
+        if (!slot) return slot;
+        const slotStr = String(slot).toLowerCase();
+        
+        // Canonical slot mapping - use 'offhand' as canonical for shields/offhand items
+        const slotMap = {
+            'offhand': 'offhand',
+            'accessory': 'offhand', // Legacy → canonical
+            'weapon': 'weapon',
+            'mainhand': 'weapon',
+            'primary': 'weapon',
+            'secondary': 'weapon', // Secondary weapon slot → weapon
+            'head': 'head',
+            'torso': 'torso',
+            'arms': 'arms',
+            'legs': 'legs',
+            'missile': 'missile',
+            'ammo': 'missile'
+        };
+        
+        return slotMap[slotStr] || slotStr; // Return normalized or original if not in map
+    }
+    
+    // Check if player has a shield equipped (uses canonical slot names)
+    function hasShieldEquipped() {
+        if (!window.gameState || !window.gameState.equipment) return false;
+        
+        // Check canonical offhand slot
+        const offhandSlot = window.gameState.equipment.offhand;
+        if (offhandSlot && (offhandSlot.item?.id || offhandSlot.primary?.id || offhandSlot.secondary?.id)) {
+            const itemId = offhandSlot.item?.id || offhandSlot.primary?.id || offhandSlot.secondary?.id;
+            // Check if it's a shield (shields typically have 'shield' or 'buckler' in ID)
+            if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) {
+                return true;
+            }
+        }
+        
+        // Legacy check: accessory slot (for backward compatibility)
+        const accessorySlot = window.gameState.equipment.accessory;
+        if (accessorySlot && (accessorySlot.item?.id || accessorySlot.primary?.id)) {
+            const itemId = accessorySlot.item?.id || accessorySlot.primary?.id;
+            if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) {
+                return true;
+            }
+        }
+        
+        // Check weapon secondary slot (legacy)
+        const weaponSlot = window.gameState.equipment.weapon;
+        if (weaponSlot && weaponSlot.secondary?.id) {
+            const itemId = weaponSlot.secondary.id;
+            if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     // Make available globally
     window.clampStat = clampStat;
     window.applyStatChange = applyStatChange;
     window.escapeHTML = escapeHTML;
     window.rollDice = rollDice;
     window.resolveAction = resolveAction;
+    window.normalizeRegion = normalizeRegion;
+    window.normalizeSocialClass = normalizeSocialClass;
+    window.normalizeSlot = normalizeSlot;
+    window.hasShieldEquipped = hasShieldEquipped;
 })();

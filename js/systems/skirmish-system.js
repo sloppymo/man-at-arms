@@ -14,7 +14,7 @@ function computeSkirmishModifiers(choiceId) {
     };
     
     // Apply variant-specific modifiers
-    const variantContext = gameState.lastSkirmishContext || {};
+    const variantContext = window.gameState.lastSkirmishContext || {};
     if (variantContext.variantId === 'mud') {
         // Mud & Ruts: -1 to all bonuses (worse footing)
         mods.variantModifier = -1;
@@ -25,7 +25,7 @@ function computeSkirmishModifiers(choiceId) {
     }
     
     // Reach bonus: Check if weapon is spear
-    const weapon = gameState.equipment?.weapon?.item;
+    const weapon = window.gameState.equipment?.weapon?.item;
     if (weapon && weapon.id === 'spear') {
         mods.reachBonus = 2;
         // Narrow lane reduces spear effectiveness
@@ -35,13 +35,13 @@ function computeSkirmishModifiers(choiceId) {
     }
     
     // Armor defense bonus: Check if torso has mail
-    const torso = gameState.equipment?.torso?.item;
+    const torso = window.gameState.equipment?.torso?.item;
     if (torso && torso.id && (torso.id.includes('mail') || torso.id === 'mail_shirt')) {
         mods.armorDefenseBonus = 2;
     }
     
     // Morale delta bonus: Based on morale thresholds
-    const morale = gameState.stats.morale || 5;
+    const morale = window.gameState.stats.morale || 5;
     if (morale >= 7) {
         mods.moraleDeltaBonus = 1;
     } else if (morale <= 3) {
@@ -109,22 +109,22 @@ function computeSkirmishCosts(result, choiceId, mods) {
 function applySkirmishDeltas(deltas) {
     // Apply morale change
     if (deltas.morale !== 0) {
-        applyStatChange('morale', deltas.morale);
+        window.applyStatChange('morale', deltas.morale);
     }
     
     // Apply exertion (includes press cost + timing cost, all tracked in deltas)
     if (deltas.exertion !== 0) {
-        gameState.exertion = Math.max(0, Math.min(10, (gameState.exertion || 0) + deltas.exertion));
+        window.gameState.exertion = Math.max(0, Math.min(10, (window.gameState.exertion || 0) + deltas.exertion));
     }
     
     // Apply wear
     if (deltas.wear !== 0) {
-        gameState.wear = Math.max(0, Math.min(10, (gameState.wear || 0) + deltas.wear));
+        window.gameState.wear = Math.max(0, Math.min(10, (window.gameState.wear || 0) + deltas.wear));
     }
     
     // Apply wealth (if any)
     if (deltas.wealth !== 0) {
-        applyStatChange('wealth', deltas.wealth);
+        window.applyStatChange('wealth', deltas.wealth);
     }
 }
 
@@ -170,8 +170,8 @@ function buildFormulaText(choiceId, mods, exertion, effectiveStat) {
     
     // Add variant modifier if applicable (e.g., mud penalty, lane cramped space)
     if (mods.variantModifier !== 0) {
-        const variantContext = gameState.lastSkirmishContext || {};
-        if (variantContext.variantId === 'mud') {
+    const variantContext = window.gameState.lastSkirmishContext || {};
+    if (variantContext.variantId === 'mud') {
             parts.push(`- Mud (-1)`);
             bonusTotal += mods.variantModifier; // Already negative
         } else if (variantContext.variantId === 'lane') {
@@ -267,7 +267,7 @@ async function runSkirmish(choiceId) {
     
     // Run Tempo Strike timing minigame (only for Press choice, or all choices - comment your preference)
     // For now, applying to all choices for consistency
-    const timing = await startTempoStrike({
+    const timing = await window.startTempoStrike({
         title: 'Tempo Strike',
         subtitle: 'Tap to stop the marker in the orange zone for a timing bonus.'
     });
@@ -279,7 +279,7 @@ async function runSkirmish(choiceId) {
     }
     
     const mods = computeSkirmishModifiers(choiceId);
-    const exertion = gameState.exertion || 0;
+    const exertion = window.gameState.exertion || 0;
     
     let statKey, dc, bonus;
     if (choiceId === 'press') {
@@ -296,7 +296,7 @@ async function runSkirmish(choiceId) {
         bonus = mods.moraleDeltaBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
     }
     
-    const result = resolveAction(statKey, dc, bonus);
+    const result = window.resolveAction(statKey, dc, bonus);
     
     // Calculate total exertion cost for this skirmish
     let totalExertionCost = 0;
@@ -350,7 +350,7 @@ async function runSkirmish(choiceId) {
     if (!result.success) {
         // Clear any old first failure data and set new one
         // Store the mods object (will be recalculated in second chance, but keep for reference)
-        gameState.lastSkirmishFirstFailure = {
+        window.gameState.lastSkirmishFirstFailure = {
             statKey: statKey,
             dc: dc,
             bonus: bonus,
@@ -361,12 +361,12 @@ async function runSkirmish(choiceId) {
         };
         // Don't create lastSkirmish yet - wait for second chance result
         // Clear any existing lastSkirmish to avoid confusion
-        gameState.lastSkirmish = null;
+        window.gameState.lastSkirmish = null;
         return 'skirmish_second_chance';
     }
     
     // Success - clear any old first failure flag and create lastSkirmish data
-    gameState.lastSkirmishFirstFailure = null;
+    window.gameState.lastSkirmishFirstFailure = null;
     
     // Determine variant key for storage
     let variantKey = 'roadside_clash';
@@ -376,7 +376,7 @@ async function runSkirmish(choiceId) {
         variantKey = 'narrow_lane';
     }
     
-    gameState.lastSkirmish = {
+    window.gameState.lastSkirmish = {
         key: variantKey,
         variantId: variantContext.variantId || 'roadside',
         choiceId: choiceId,
@@ -398,7 +398,7 @@ async function runSkirmish(choiceId) {
         insideReach: costResult.flags.insideReach || false, // From cost calculation metadata
         timing: { bonus: timing.bonus, label: timing.label }, // Store timing data for deterministic rendering
         // Use same fallback logic as getPostSkirmishNextScene() to ensure consistency
-        returnScene: gameState.randomEncounter?.returnScene || (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null) // Fallback: null is safer than 'start'; getPostSkirmishNextScene() will handle it
+        returnScene: window.gameState.randomEncounter?.returnScene || (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null) // Fallback: null is safer than 'start'; getPostSkirmishNextScene() will handle it
     };
     
     // Transition to resolve scene (only reached on success)
@@ -407,9 +407,9 @@ async function runSkirmish(choiceId) {
 
 // Helper: Get the next scene after leaving skirmish resolve
 function getPostSkirmishNextScene() {
-    const fallback = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-    const rs = (gameState.lastSkirmish && typeof gameState.lastSkirmish.returnScene === "string")
-        ? gameState.lastSkirmish.returnScene
+    const fallback = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+    const rs = (window.gameState.lastSkirmish && typeof window.gameState.lastSkirmish.returnScene === "string")
+        ? window.gameState.lastSkirmish.returnScene
         : "";
     
     // Never route back into the skirmish loop from the resolve exit.
