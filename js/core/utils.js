@@ -1,0 +1,102 @@
+(function() {
+    'use strict';
+    
+    // Stub functions for dependencies that will be implemented in later phases
+    // These prevent errors during testing
+    if (typeof window.checkLevelUp === 'undefined') {
+        window.checkLevelUp = function() {
+            // Will be implemented in later phase
+        };
+    }
+    
+    if (typeof window.getEffectiveStat === 'undefined') {
+        window.getEffectiveStat = function(stat) {
+            // Stub: return base stat value for now
+            // Will be properly implemented in later phase with condition/equipment modifiers
+            return window.gameState.stats[stat] || 0;
+        };
+    }
+    
+    // Clamp stat value to its limits
+    function clampStat(key, value) {
+        const limits = window.statLimits[key];
+        if (!limits) return value;
+        return Math.max(limits.min, Math.min(limits.max, value));
+    }
+    
+    // Apply stat change with clamping
+    function applyStatChange(key, delta, opts = {}) {
+        if (window.gameState.stats[key] === undefined) return 0;
+        const oldValue = window.gameState.stats[key];
+        window.gameState.stats[key] = clampStat(key, oldValue + delta);
+        const actualChange = window.gameState.stats[key] - oldValue;
+        
+        // Check for level up if experience changed
+        if (key === 'experience' && actualChange > 0) {
+            window.checkLevelUp();
+        }
+        
+        // Only show notification if not silent and there was a change
+        if (!opts.silent && actualChange !== 0) {
+            // Notification logic can be added here if needed
+            // Currently notifications are handled elsewhere in the codebase
+        }
+        
+        return actualChange; // Return actual change
+    }
+    
+    // Sanitize HTML to prevent XSS attacks
+    function escapeHTML(text) {
+        if (typeof text !== 'string') return text;
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+    
+    // Roll dice (1d10 + modifier)
+    function rollDice(modifier = 0) {
+        const roll = Math.floor(Math.random() * 10) + 1;
+        return roll + modifier;
+    }
+    
+    // Resolution system: roll against difficulty (uses effective stat)
+    // Morale/stress can modify difficulty instead of stat for clearer feedback
+    function resolveAction(stat, difficulty = 7, bonus = 0) {
+        const effectiveStat = window.getEffectiveStat(stat);
+        
+        // Morale/stress modify difficulty (easier to succeed with high morale, harder with high stress)
+        let adjustedDifficulty = difficulty;
+        if (window.gameState.stats.morale >= 8) {
+            adjustedDifficulty -= 1; // High morale makes checks easier
+        } else if (window.gameState.stats.morale <= 2) {
+            adjustedDifficulty += 1; // Low morale makes checks harder
+        }
+        if (window.gameState.stats.stress >= 7) {
+            adjustedDifficulty += 1; // High stress makes checks harder
+        }
+        
+        const roll = rollDice(effectiveStat + bonus);
+        const success = roll >= adjustedDifficulty;
+        return { 
+            roll, 
+            success, 
+            margin: roll - adjustedDifficulty,
+            effectiveStat: effectiveStat,
+            baseStat: window.gameState.stats[stat] || 0,
+            difficulty: adjustedDifficulty,
+            baseDifficulty: difficulty
+        };
+    }
+    
+    // Make available globally
+    window.clampStat = clampStat;
+    window.applyStatChange = applyStatChange;
+    window.escapeHTML = escapeHTML;
+    window.rollDice = rollDice;
+    window.resolveAction = resolveAction;
+})();

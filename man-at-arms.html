@@ -1514,10 +1514,23 @@
             // - explicit "noCampfire" flagged scenes/choices
             // - critical scenes like death/ending
             
-            if (gameState.currentScene === 'character_creation' || 
+            // Check if current scene is a campfire scene
+            const currentSceneStr = String(gameState.currentScene || '');
+            const isCurrentCampfire = gameState.currentScene === 'character_creation' || 
                 gameState.currentScene === 'campfire_interlude' ||
-                nextSceneKey === 'character_creation' ||
-                nextSceneKey === 'campfire_interlude') {
+                currentSceneStr.startsWith('campfire_wat_') ||
+                currentSceneStr.startsWith('campfire_cook_') ||
+                currentSceneStr.startsWith('campfire_both_');
+            
+            // Check if next scene is a campfire scene
+            const nextSceneStr = String(nextSceneKey || '');
+            const isNextCampfire = nextSceneKey === 'character_creation' ||
+                nextSceneKey === 'campfire_interlude' ||
+                nextSceneStr.startsWith('campfire_wat_') ||
+                nextSceneStr.startsWith('campfire_cook_') ||
+                nextSceneStr.startsWith('campfire_both_');
+            
+            if (isCurrentCampfire || isNextCampfire) {
                 return false;
             }
             
@@ -1549,8 +1562,14 @@
         /** Insert campfire interlude if conditions are met */
         function maybeInsertCampfire(nextSceneKey) {
             // Fix D: Guard - campfire should never return to campfire
-            if (nextSceneKey === 'campfire_interlude') {
-                console.warn('[QA ROUTING GUARD] maybeInsertCampfire called with campfire_interlude as nextScene');
+            const nextSceneStr = String(nextSceneKey || '');
+            const isCampfireScene = nextSceneKey === 'campfire_interlude' ||
+                nextSceneStr.startsWith('campfire_wat_') ||
+                nextSceneStr.startsWith('campfire_cook_') ||
+                nextSceneStr.startsWith('campfire_both_');
+            
+            if (isCampfireScene) {
+                console.warn('[QA ROUTING GUARD] maybeInsertCampfire called with campfire scene as nextScene:', nextSceneKey);
                 return nextSceneKey; // Don't insert another campfire
             }
 
@@ -1561,9 +1580,14 @@
             // Guard: campfire should never return to itself or resolve scenes
             const invalidReturnScenes = ['campfire_interlude', 'skirmish_roadside_resolve',
                                         'skirmish_roadside', 'skirmish_roadside_mud', 'skirmish_roadside_lane'];
+            const isCampfireReturnScene = nextSceneKey === 'campfire_interlude' ||
+                nextSceneStr.startsWith('campfire_wat_') ||
+                nextSceneStr.startsWith('campfire_cook_') ||
+                nextSceneStr.startsWith('campfire_both_');
+            
             let safeReturnScene = nextSceneKey;
 
-            if (invalidReturnScenes.includes(nextSceneKey)) {
+            if (invalidReturnScenes.includes(nextSceneKey) || isCampfireReturnScene) {
                 // Fallback to a safe travel scene
                 safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
                 if (gameState.debug && gameState.debug.enabled) {
@@ -1572,7 +1596,13 @@
             }
 
             // Fix D: Assertion - verify we're not routing to ourselves
-            if (safeReturnScene === 'campfire_interlude') {
+            const safeReturnStr = String(safeReturnScene || '');
+            const isStillCampfire = safeReturnScene === 'campfire_interlude' ||
+                safeReturnStr.startsWith('campfire_wat_') ||
+                safeReturnStr.startsWith('campfire_cook_') ||
+                safeReturnStr.startsWith('campfire_both_');
+            
+            if (isStillCampfire) {
                 console.error('[QA ASSERTION FAILED] Campfire would return to campfire! Using fallback.');
                 safeReturnScene = (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
             }
@@ -1585,7 +1615,40 @@
             gameState.campfire.lastMode = gameState.campfire.mode;
             gameState.campfire.mode = (Math.random() < 0.30) ? 'full' : 'micro';
 
-            return "campfire_interlude";
+            // If micro mode, use micro campfire
+            if (gameState.campfire.mode === 'micro') {
+                return "campfire_interlude";
+            }
+
+            // For full mode, randomly select from 5 different campfire scenes
+            const availableCampfireScenes = [
+                'campfire_wat_01_the_sharpening',
+                'campfire_wat_02_the_rope',
+                'campfire_wat_03_the_boy_king',
+                'campfire_wat_04_the_dead_mules',
+                'campfire_wat_05_the_prayer'
+            ];
+
+            // Track seen campfire scenes to avoid immediate repetition
+            if (!gameState.campfire.seenScenes) {
+                gameState.campfire.seenScenes = [];
+            }
+
+            // Filter out recently seen scenes (last 2)
+            const recentSeen = gameState.campfire.seenScenes.slice(-2);
+            const available = availableCampfireScenes.filter(scene => !recentSeen.includes(scene));
+
+            // Select from available scenes, or fall back to all if all were recently seen
+            const scenePool = available.length > 0 ? available : availableCampfireScenes;
+            const selectedScene = scenePool[Math.floor(Math.random() * scenePool.length)];
+
+            // Track this selection
+            gameState.campfire.seenScenes.push(selectedScene);
+            if (gameState.campfire.seenScenes.length > 5) {
+                gameState.campfire.seenScenes = gameState.campfire.seenScenes.slice(-5);
+            }
+
+            return selectedScene;
         }
         
         // Roll dice (1d10 + modifier)
@@ -4623,7 +4686,7 @@
             character_creation: {
                 title: "Character Creation",
                 year: 1337,
-                age: 18,
+                age: function() { return gameState.age; },
                 location: "England",
                 artwork: "artwork/character-creation.jpg", // Medieval town square scene
                 artworkCaption: "Forge your path in the Hundred Years' War",
@@ -5525,7 +5588,7 @@
             training_peasant: {
                 title: "Training Begins",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "England",
                 text: `<p>You've joined a lord's retinue. The training is harsh. Brutal. Endless. But you're used to hard work. The fields taught you that. Taught you endurance. Taught you to keep going when everything hurts. When nothing matters but survival.</p>
                        <p>Months pass. Training. Drilling. Learning the ways of war. The ways of death. The ways of survival. Your endurance serves you well. Your strength grows. Your skill sharpens. You're ready. Or think you are. For what comes next.</p>
@@ -5546,7 +5609,7 @@
             training_merchant: {
                 title: "A Different Path",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "England",
                 text: `<p>Your family's wealth has secured you better equipment. Better armor. Better weapons. And education. Books. Learning. Tactics. Strategy. The ways of war. The ways of thinking. You understand tactics better than most. Better than the peasants. Better than the common soldiers. But understanding isn't always enough.</p>
                        <p>Your first campaign approaches. The French are raiding the coast. The villages. Your lord prepares to respond. To fight. You'll be part of it. Whether you want to be or not. Whether you're ready or not. That's how it works. But you have advantages. Education. Equipment. Tactics. They might help. Might save you. Or might not. In war, nothing is certain.</p>`,
@@ -5566,7 +5629,7 @@
             training_noble: {
                 title: "Noble Expectations",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "England",
                 text: `<p>As a noble's son, much is expected of you. By your family. By your lord. By everyone. Your reputation precedes you. Your name. Your blood. But so do the expectations. The pressure. The weight of being noble. Of being better. Of being more than common men. But you're not. Not really. Not yet. Maybe never. But you have to try. Have to become what they expect.</p>
                        <p>Your first campaign approaches. The French are raiding the coast. The villages. Your lord expects you to lead. To command. The pressure is real. The weight is heavy. You'll be part of it. Whether you want to be or not. Whether you're ready or not. That's how it works. But you have advantages. Name. Reputation. Training. They might help. Might save you. Or might not. In war, nothing is certain.</p>`,
@@ -5586,7 +5649,7 @@
             first_battle_brave: {
                 title: "First Blood",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-1.jpg", // French vs English battle scene
                 artworkCaption: "The clash of arms on the field of battle",
@@ -5622,7 +5685,7 @@
             first_battle_brave_resolve: {
                 title: "First Blood",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The first battle ends - blood and survival",
@@ -5675,7 +5738,7 @@
             first_battle_cautious: {
                 title: "First Battle",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-3.jpg",
                 artworkCaption: "The first battle - staying with the main force",
@@ -5698,7 +5761,7 @@
             first_battle_tactical: {
                 title: "A Tactical Mind",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-6.jpg",
                 artworkCaption: "A tactical mind - seeing the field differently",
@@ -5723,7 +5786,7 @@
             first_battle_leader: {
                 title: "Leading Men",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-4.jpg",
                 artworkCaption: "Leading a unit in your first battle",
@@ -5759,7 +5822,7 @@
             first_battle_leader_resolve: {
                 title: "The Price of Leadership",
                 year: 1338,
-                age: 19,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -5808,7 +5871,7 @@
             winter_quarters: {
                 title: "Winter Quarters",
                 year: 1340,
-                age: 21,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/drunkfire.jpg",
                 artworkCaption: "Winter in the camp - a moment of rest",
@@ -5850,7 +5913,7 @@
             equipment_upgrade_1340: {
                 title: "Better Gear",
                 year: 1340,
-                age: 21,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/blacksmith.jpg",
                 artworkCaption: "The forge glows - hammer on steel, like a heartbeat",
@@ -5903,7 +5966,7 @@
             between_years_1341: {
                 title: "The Years Pass",
                 year: 1341,
-                age: 22,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/campfire.jpg",
                 artworkCaption: "The years blur - seasons into months, months into days",
@@ -5955,7 +6018,7 @@
             between_years_1342: {
                 title: "Rising Through the Ranks",
                 year: 1342,
-                age: 23,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: `<p>The captain calls you forward. Five men. That's what you get. Five faces looking to you for orders. For decisions. For leadership you're not sure you have.</p>
                        <p>But you've earned this. Through service. Through survival. Through doing what needed doing when others wouldn't. The pay is better. Not much. But better. The responsibility is heavier. Much heavier.</p>
@@ -5999,7 +6062,7 @@
             between_years_1343: {
                 title: "Minor Campaigns",
                 year: 1343,
-                age: 24,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 noCampfire: true, // Prevent campfire insertion before location transition
                 text: `<p>Raids. Skirmishes. Patrols. The French come. You respond. They retreat. You advance. It's become routine. Almost comfortable. Almost.</p>
@@ -6037,7 +6100,7 @@
             return_to_england_1344: {
                 title: "The Journey Home",
                 year: 1344,
-                age: 25,
+                age: function() { return gameState.age; },
                 location: "At Sea / England",
                 noCampfire: true,
                 text: function() {
@@ -6071,7 +6134,7 @@
             between_years_1344: {
                 title: "The Calm Before the Storm",
                 year: 1344,
-                age: 25,
+                age: function() { return gameState.age; },
                 location: "England",
                 text: `<p>Rumors. Always rumors. But these feel different. More urgent. More real. King Edward is gathering men. Real men. Real armies. Not the small bands you've been fighting with. Something big is coming.</p>
                        <p>You hear it in taverns. In camps. In the way officers talk. Something is being planned. Something that will change everything. The war. Your life. The way you think about what you do.</p>
@@ -6115,7 +6178,7 @@
             between_years_1345: {
                 title: "Final Preparations",
                 year: 1345,
-                age: 26,
+                age: function() { return gameState.age; },
                 location: "England",
                 artwork: "artwork/map.jpg",
                 artworkCaption: "The king's army gathers - final preparations",
@@ -6132,7 +6195,7 @@
             campaign_delayed_1345: {
                 title: "Waiting",
                 year: 1345,
-                age: 26,
+                age: function() { return gameState.age; },
                 location: "England",
                 artwork: "artwork/campfire.jpg",
                 artworkCaption: "Tomorrow never comes - waiting for orders",
@@ -6152,7 +6215,7 @@
             marriage_joke: {
                 title: "The Joke",
                 year: 1340,
-                age: 21,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/blacksmith.jpg",
                 artworkCaption: "The blacksmith's daughter - a winter's cruel joke",
@@ -6188,7 +6251,7 @@
             forest_ambush_1340: {
                 title: "Ambush in the Woods",
                 year: 1340,
-                age: 22,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-2.jpg",
                 artworkCaption: "French archers emerge from the trees",
@@ -6228,7 +6291,7 @@
             forest_ambush_1340_resolve: {
                 title: "After the Ambush",
                 year: 1340,
-                age: 22,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The forest settles - men breathe hard, someone coughs",
@@ -6283,7 +6346,7 @@
             siege_defense_1345: {
                 title: "The Walls Hold",
                 year: 1345,
-                age: 26,
+                age: function() { return gameState.age; },
                 location: "Gascony",
                 artwork: "artwork/seige.jpg",
                 artworkCaption: "French forces assault the castle walls",
@@ -6323,7 +6386,7 @@
             siege_defense_1345_resolve: {
                 title: "The Assault Ends",
                 year: 1345,
-                age: 26,
+                age: function() { return gameState.age; },
                 location: "Gascony",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The wall holds - bodies piled where the ladder was",
@@ -6381,7 +6444,7 @@
             cavalry_skirmish_1342: {
                 title: "Horsemen on the Road",
                 year: 1342,
-                age: 23,
+                age: function() { return gameState.age; },
                 location: "Aquitaine",
                 artwork: "artwork/battle-scene-1.jpg",
                 artworkCaption: "French cavalry charges across the field",
@@ -6421,7 +6484,7 @@
             cavalry_skirmish_1342_resolve: {
                 title: "After the Charge",
                 year: 1342,
-                age: 23,
+                age: function() { return gameState.age; },
                 location: "Aquitaine",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The dust settles - men breathe and count the cost",
@@ -6475,7 +6538,7 @@
             night_raid_1347: {
                 title: "Darkness and Steel",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/campfire.jpg",
                 artworkCaption: "Shadows move in the darkness",
@@ -6515,7 +6578,7 @@
             night_raid_1347_resolve: {
                 title: "Dawn Breaks",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/campfire.jpg",
                 artworkCaption: "Dawn comes slow and gray - the camp still stands",
@@ -6573,7 +6636,7 @@
             town_fighting_1348: {
                 title: "Streets of Calais",
                 year: 1348,
-                age: 29,
+                age: function() { return gameState.age; },
                 location: "Calais",
                 artwork: "artwork/battle-scene-3.jpg",
                 artworkCaption: "Combat in the narrow streets",
@@ -6613,7 +6676,7 @@
             town_fighting_1348_resolve: {
                 title: "The Street is Clear",
                 year: 1348,
-                age: 29,
+                age: function() { return gameState.age; },
                 location: "Calais",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The street is yours - silence after the noise",
@@ -6668,7 +6731,7 @@
             archery_duel_1339: {
                 title: "The Archers' Stand",
                 year: 1339,
-                age: 20,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-1.jpg",
                 artworkCaption: "Arrows fly across the field",
@@ -6708,7 +6771,7 @@
             archery_duel_1339_resolve: {
                 title: "The Archers Break",
                 year: 1339,
-                age: 20,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "The ridge is quieter - less dying",
@@ -6765,7 +6828,7 @@
             river_crossing_1344: {
                 title: "The River Runs Red",
                 year: 1344,
-                age: 25,
+                age: function() { return gameState.age; },
                 location: "Gascony",
                 artwork: "artwork/bridgerain.jpg",
                 artworkCaption: "Men struggle across the river under fire",
@@ -6805,7 +6868,7 @@
             river_crossing_1344_resolve: {
                 title: "On the Far Bank",
                 year: 1344,
-                age: 25,
+                age: function() { return gameState.age; },
                 location: "Gascony",
                 artwork: "artwork/bridgerain.jpg",
                 artworkCaption: "The far bank - wet and angry and alive",
@@ -6860,7 +6923,7 @@
             last_stand_1350: {
                 title: "No Retreat",
                 year: 1350,
-                age: 31,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-scene-2.jpg",
                 artworkCaption: "Outnumbered and surrounded",
@@ -6901,7 +6964,7 @@
             last_stand_1350_resolve: {
                 title: "Survival",
                 year: 1350,
-                age: 31,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/battle-aftermath.jpg",
                 artworkCaption: "You survive the moment - but at what cost",
@@ -6960,7 +7023,7 @@
             spring_campaign: {
                 title: "The Campaign of 1346",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "England",
                 artwork: "artwork/map.jpg",
                 artworkCaption: "The campaign begins - England prepares for invasion",
@@ -6977,7 +7040,7 @@
             indenture_table: {
                 title: "The Indenture Table",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Portsmouth, England",
                 noCampfire: true, // Prevent campfire insertion during contract signing sequence
                 artwork: "artwork/signup.jpg",
@@ -7014,7 +7077,7 @@
             indenture_negotiate: {
                 title: "Negotiating Terms",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Portsmouth, England",
                 artwork: "artwork/signup.jpg",
                 artworkCaption: "Negotiating terms - the business of war",
@@ -7049,7 +7112,7 @@
             indenture_prisoners: {
                 title: "Prisoners and Ransoms",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Portsmouth, England",
                 artwork: "artwork/signup.jpg",
                 artworkCaption: "Learning the economics of war - prisoners and ransoms",
@@ -7082,7 +7145,7 @@
             indenture_sign: {
                 title: "Signing the Contract",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Portsmouth, England",
                 artwork: "artwork/signup.jpg",
                 artworkCaption: "The quill and the contract - commitment to war",
@@ -7116,7 +7179,7 @@
             portsmouth_muster: {
                 title: "The Muster",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Portsmouth, England",
                 noCampfire: true, // Prevent campfire insertion here
                 artwork: "artwork/dock.jpg",
@@ -7138,7 +7201,7 @@
             purveyance: {
                 title: "Purveyance",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Southern England",
                 artwork: "artwork/supplyshortage.jpg",
                 artworkCaption: "Empty wagons and hungry men - the supply train",
@@ -7174,7 +7237,7 @@
             purveyance_fair: {
                 title: "Fair Dealing",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Southern England",
                 artwork: "artwork/market.jpg",
                 artworkCaption: "Fair prices and proper receipts - small acts of kindness",
@@ -7212,7 +7275,7 @@
             purveyance_take: {
                 title: "Taking What's Needed",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Southern England",
                 artwork: "artwork/supplyshortage.jpg",
                 artworkCaption: "Taking supplies - the harsh reality of war",
@@ -7248,7 +7311,7 @@
             purveyance_refuse: {
                 title: "Refusing the Order",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Southern England",
                 artwork: "artwork/supplyshortage.jpg",
                 artworkCaption: "The weight of conscience - refusing the order",
@@ -7283,7 +7346,7 @@
             channel_crossing: {
                 title: "Channel Crossing: Vomit and Rope",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "English Channel",
                 artwork: "artwork/naval-battle-1.jpg", // Naval battle scene with ships
                 artworkCaption: "The crossing to France",
@@ -7319,7 +7382,7 @@
             channel_horses: {
                 title: "Tending the Horses",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "English Channel",
                 artwork: "artwork/BattleofSluys.jpeg",
                 artworkCaption: "Tending the horses through the night - the crossing continues",
@@ -7356,7 +7419,7 @@
             channel_gear: {
                 title: "Securing Your Gear",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "English Channel",
                 artwork: "artwork/Bataille_de_la_Rochelle.jpg",
                 artworkCaption: "Securing gear against saltwater - the crossing is harsh",
@@ -7393,7 +7456,7 @@
             channel_help: {
                 title: "Helping the Sick",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "English Channel",
                 artwork: "artwork/naval-battle-1.jpg",
                 artworkCaption: "Helping the sick and keeping order on the crossing",
@@ -7429,7 +7492,7 @@
             saint_vaast_landing: {
                 title: "Saint-Vaast Landing",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Saint-Vaast-la-Hougue, Normandy",
                 artwork: "artwork/naval-battle-2.jpg", // Naval battle with ships and coastal city
                 artworkCaption: "Landing at Saint-Vaast-la-Hougue",
@@ -7465,7 +7528,7 @@
             landing_scout: {
                 title: "Scouting Inland",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7502,7 +7565,7 @@
             landing_raid: {
                 title: "The First Raid",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/naval-battle-3.jpg", // Another naval battle scene
                 artworkCaption: "The first raid on French soil",
@@ -7558,7 +7621,7 @@
             landing_banner: {
                 title: "Staying with the Banner",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7591,7 +7654,7 @@
             chevauchée_burn: {
                 title: "Chevauchée: The Burn Line",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/burninglooting.jpg",
                 artworkCaption: "The burn line - making the countryside bleed",
@@ -7628,7 +7691,7 @@
             chevauchée_torch: {
                 title: "The Burn Line",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/burninglooting2.jpg",
                 artworkCaption: "Burning barns to deny supplies",
@@ -7665,7 +7728,7 @@
             chevauchée_hostages: {
                 title: "Taking Hostages",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7699,7 +7762,7 @@
             chevauchée_spare: {
                 title: "Sparing the Church",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Normandy",
                 artwork: "artwork/monk.jpg",
                 artworkCaption: "The ancient church stands against the smoke-filled sky",
@@ -7738,7 +7801,7 @@
             caen_bridge: {
                 title: "Caen: The Bridge Rush",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Caen, Normandy",
                 text: `<p><strong>26 July 1346 — Caen</strong></p>
                        <p>Orders exist. Then the first men sprint, and the town becomes a magnet for hunger, bravado, and unpaid grudges. Bridges choke with bodies. Someone shouts that the castle is still holding. Someone else shouts about silver in the new town.</p>`,
@@ -7772,7 +7835,7 @@
             caen_bridge_hold: {
                 title: "Holding the Bridge",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7809,7 +7872,7 @@
             caen_bridge_loot: {
                 title: "Breaking for Loot",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7850,7 +7913,7 @@
             caen_bridge_prisoner: {
                 title: "Taking a Noble Prisoner",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7885,7 +7948,7 @@
             prisoner_argument: {
                 title: "The Prisoner Argument",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Outside Caen, Normandy",
                 text: `<p><strong>Late July 1346 — Outside Caen</strong></p>
                        <p>A captured man-at-arms sits on the ground, helmet off, eyes flat. Two of your men both claim him. The law here is not clean. The stakes are not abstract: ransoms can change a life, and disputes can end in knives behind tents.</p>`,
@@ -7919,7 +7982,7 @@
             prisoner_formal: {
                 title: "Formal Division",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7952,7 +8015,7 @@
             prisoner_split: {
                 title: "Splitting the Claim",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7986,7 +8049,7 @@
             prisoner_steal: {
                 title: "Stealing the Purse",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Outside Caen, Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8023,7 +8086,7 @@
             denuded_country: {
                 title: "Denuded Country",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: `<p><strong>Early–Mid August 1346 — Northward march</strong></p>
                        <p>The French have stripped the land ahead: grain hauled off, wells fouled, bridges watched or broken. The army gets ragged. Men eat things they won't name. Someone suggests slaughtering baggage horses. Someone else suggests hanging thieves. Both are called "discipline."</p>`,
@@ -8057,7 +8120,7 @@
             denuded_forage: {
                 title: "Foraging with Restraint",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8093,7 +8156,7 @@
             denuded_horse: {
                 title: "Slaughtering a Horse",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8128,7 +8191,7 @@
             denuded_thief: {
                 title: "Making an Example",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8162,7 +8225,7 @@
             blanchetaque_ford: {
                 title: "Blanchetaque: Tidal Ford",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Blanchetaque, Somme River",
                 artwork: "artwork/bridgerain.jpg",
                 artworkCaption: "Crossing the Somme at Blanchetaque - the tide waits for no man",
@@ -8198,7 +8261,7 @@
             blanchetaque_wade: {
                 title: "Wading First",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8238,7 +8301,7 @@
             blanchetaque_cover: {
                 title: "Covering Others",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8272,7 +8335,7 @@
             blanchetaque_rescue: {
                 title: "Rescuing a Drowning Man",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Blanchetaque, Somme River",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8307,7 +8370,7 @@
             battle_crecy: {
                 title: "The Battle of Crécy, 1346",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 artwork: "artwork/battle-scene-2.jpg", // Mountainous battle scene with French vs English
                 artworkCaption: "The Battle of Crécy - 26 August 1346",
@@ -8343,7 +8406,7 @@
             crecy_defensive: {
                 title: "Holding the Line",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8391,7 +8454,7 @@
             crecy_loot: {
                 title: "Stripping the Fallen",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 artwork: "artwork/looting.jpg",
                 artworkCaption: "Stripping the dead - the business of war",
@@ -8443,7 +8506,7 @@
             crecy_rescue: {
                 title: "Pulling Wounded Back",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8491,7 +8554,7 @@
             crecy_night: {
                 title: "Night on the Field",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 text: `<p><strong>Night of 26 August 1346 — Outside Crécy</strong></p>
                        <p>The field isn't quiet; it's busy in a different way. You can hear metal being unbuckled in the dark. Some men look for friends. Some look for profit. Some look for a way to sleep without dreaming.</p>`,
@@ -8525,7 +8588,7 @@
             crecy_night_wounded: {
                 title: "Tending the Wounded",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 artwork: "artwork/afterbattle.jpg",
                 artworkCaption: "Night on the field - tending the wounded",
@@ -8563,7 +8626,7 @@
             crecy_night_gear: {
                 title: "Stripping Gear Carefully",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 artwork: "artwork/battle-aftermath.jpg", // Post-battle scene with fallen soldiers
                 artworkCaption: "The aftermath of battle",
@@ -8621,14 +8684,14 @@
                     {
                         text: "Continue",
                         effects: {},
-                        nextScene: "calais_siege"
+                        nextScene: "march_to_calais"
                     }
                 ]
             },
             crecy_night_ransom: {
                 title: "Hunting for Captives",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Crécy, Picardy",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8662,7 +8725,7 @@
             march_to_calais: {
                 title: "The March to Calais",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Northern France",
                 artwork: "artwork/march.jpg",
                 artworkCaption: "The long march - eight days to Calais",
@@ -8684,7 +8747,7 @@
             calais_siege: {
                 title: "Calais: The Siege Town",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 artwork: "artwork/seige.jpg",
                 artworkCaption: "The siege camp outside Calais - endless work and waiting",
@@ -8752,7 +8815,7 @@
             calais_latrines: {
                 title: "Improving Sanitation",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8783,7 +8846,7 @@
             calais_night: {
                 title: "Night Duty",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8821,7 +8884,7 @@
             calais_skim: {
                 title: "Skimming Supplies",
                 year: 1346,
-                age: 27,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8857,7 +8920,7 @@
             winter_flux: {
                 title: "Winter 1346–47: The Flux",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: `<p><strong>Winter 1346–47 — Calais lines / Neuville area</strong></p>
                        <p>Men call it "bad water" until it isn't a joke. The camp shrinks. Rotations get longer. A cook is found watering the stew. A man hangs himself from a wagon frame before dawn and no one claims to have heard anything.</p>`,
@@ -8888,7 +8951,7 @@
             flux_clean: {
                 title: "Enforcing Cleanliness",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8923,7 +8986,7 @@
             flux_food: {
                 title: "Buying Better Food",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const cost = 15;
@@ -8957,7 +9020,7 @@
             flux_survive: {
                 title: "Looking Away",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -8992,7 +9055,7 @@
             calais_keys: {
                 title: "The Keys of Calais",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: `<p><strong>3–4 August 1347 — Calais surrenders</strong></p>
                        <p>Months have passed since the siege began. The town has held. Starved. Suffered. But held. Now word spreads through the camp: negotiations have concluded. The terms are set. Calais will surrender.</p>
@@ -9027,7 +9090,7 @@
             keys_disciplined: {
                 title: "Staying Disciplined",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -9061,7 +9124,7 @@
             keys_water: {
                 title: "Offering Water",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -9097,7 +9160,7 @@
             keys_souvenir: {
                 title: "Taking a Souvenir",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -9131,7 +9194,7 @@
             after_calais: {
                 title: "After Calais",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 location: "Calais, France",
                 text: `<p>Calais has fallen. After months of siege. After starvation. After everything. The gates opened. The keys surrendered. The town is yours. England's. The king's. Yours. For now.</p>
                        <p>The siege was long. Hard. Brutal. Men died. Of disease. Of hunger. Of wounds. But you survived. You're alive. For now. That's something. That's all you have. Sometimes that's all you get.</p>
@@ -9148,7 +9211,7 @@
             end_game: {
                 title: "Your Legacy",
                 year: 1347,
-                age: 28,
+                age: function() { return gameState.age; },
                 text: `<p>This is but the beginning. Of your story. Of the war. The 100 Years War will span your lifetime. And beyond. Decades. Generations. Until it ends. Or doesn't.</p>
                        <p>You have survived the siege of Calais. Months of waiting. Of disease. Of hunger. Of watching men die. Your choices have shaped you. Made you. Broken you. Into what you are. Into what you've become.</p>
                        <p><strong>Your Final Stats:</strong></p>
@@ -10664,7 +10727,7 @@
             reset: {
                 title: "Starting Over",
                 year: 1337,
-                age: 18,
+                age: function() { return gameState.age; },
                 text: `<p>Your journey begins. Anew. Again. From the start. From the beginning. The year is 1337. The war is new. You are young. Or think you are. For what comes next.</p>
                        <p>The path stretches ahead. Full of choices. Full of danger. Full of everything that makes war terrible. You'll face it. Endure it. Survive it. That's all you can do. All you can be. The journey begins. Again.</p>`,
                 choices: [
@@ -10768,6 +10831,47 @@
                 ]
             },
             
+            better_route: {
+                title: "A Clearer Path",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.jpg",
+                artworkCaption: "Finding a better way through the marsh",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You look for another path...</p>`;
+                    if (result.success) {
+                        return `<p>You leave the main path. Strike out on your own. Looking. Thinking. The marsh stretches in all directions. But you've seen patterns. Learned to read the land. You look for higher ground. For firmer soil. For anything that might make the crossing easier.</p>
+                               <p>There. To the north. A slight rise. The ground looks different. Less waterlogged. You head that way. Your boots sink less. The going is easier. Not easy. Never easy. But better. You've found something. A way through. A better way.</p>
+                               <p>You signal to others. Point the way. They follow. The column shifts. Moves to your path. Your discovery. The crossing becomes easier. Not easy. But better. Fewer men struggle. Fewer sink. You've saved time. Saved effort. Saved lives maybe. Through thinking. Through looking. Through finding what others missed.</p>
+                               <p>The marsh is behind you. The solid ground ahead. You've done it. Found a better way. Made a difference. Small. But real. The men know it. You can see it in their eyes. The gratitude. The respect. You've earned it. Not through strength. Through wits.</p>`;
+                    } else {
+                        return `<p>You leave the main path. Strike out. Looking. Searching. But there's nothing. No better way. No easier path. Just more marsh. More water. More mud. You waste time. Precious time. The column waits. The French might be coming. Every moment matters.</p>
+                               <p>You return. Empty-handed. No better route. No alternative. Just the same difficult crossing. The same struggle. You've gained nothing. Lost time. The sergeant's eyes show his frustration. You tried. But trying isn't enough. Not always.</p>
+                               <p>You rejoin the column. Take your place. The crossing begins. The same as it would have been. Hard. Exhausting. Dangerous. You've learned nothing. Gained nothing. But you're still here. Still moving. That's something. That's enough.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('wits', 1);
+                        applyStatChange('reputation', 1);
+                        applyStatChange('stress', -1);
+                    } else if (result) {
+                        applyStatChange('stress', 1);
+                        applyStatChange('endurance', -1);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
             night_march: {
                 title: "March Under Stars",
                 year: function() { return gameState.year; },
@@ -10854,6 +10958,127 @@
                 ]
             },
             
+            hunting_expedition: {
+                title: "The Hunt",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "Into the woods - hunting for food",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You follow Will into the trees...</p>`;
+                    if (result.success) {
+                        return `<p>The woods are quiet. Too quiet. But you move carefully. Watchful. Will knows what he's doing. He's done this before. You follow his lead. Stay low. Stay quiet. Wait. Watch. Listen.</p>
+                               <p>There. Movement. A deer. Young. Thin. But meat. Will signals. You move. Slow. Careful. The deer doesn't see you. Doesn't hear you. You're close. Close enough. Will's arrow flies. True. The deer falls. Quick. Clean. Dead.</p>
+                               <p>You dress it. Fast. Efficient. The meat is lean. But it's food. Real food. You carry it back. The men see it. Their eyes light up. Hope. Real hope. You've done it. Found food. When there was none. When everyone was hungry. You've made a difference.</p>
+                               <p>The meat is divided. Shared. Everyone gets something. Not much. But something. It's enough. For now. The hunger fades. The morale lifts. You've saved the day. Through skill. Through luck. Through being in the right place at the right time.</p>`;
+                    } else {
+                        return `<p>The woods are empty. Or the game is too smart. Too wary. You walk for hours. See nothing. Hear nothing. The forest gives you nothing. You return empty-handed. Tired. Frustrated. Hungry. Still hungry.</p>
+                               <p>The men see you come back. See your empty hands. Their faces fall. The hope dies. You've failed. Not through lack of trying. But trying isn't enough. Not always. The hunger remains. The morale sinks. You've let them down. Let yourself down.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('morale', 2);
+                        applyStatChange('stress', -1);
+                        applyStatChange('reputation', 1);
+                    } else if (result) {
+                        applyStatChange('morale', -1);
+                        applyStatChange('stress', 1);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Return to camp",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            village_raid: {
+                title: "Taking What You Need",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/burninglooting.jpg",
+                artworkCaption: "The village - taking what the army needs",
+                text: function() {
+                    return `<p>The village is small. Poor. Like most villages. But it has food. Grain. Chickens. Maybe a pig. Things you need. Things they won't give willingly. But you're soldiers. You take. That's how it works. That's how it's always worked.</p>
+                           <p>You move through the village. Taking. Demanding. Threatening. The villagers watch. Fearful. Resigned. They've seen this before. They know what to expect. They give what they have. Or you take it. Either way, you get what you need.</p>
+                           <p>You find grain. Bread. Some cheese. A few chickens. Not much. But something. You take it. Load it. Carry it back. The men eat. The hunger fades. But something else grows. Shame. Guilt. The knowledge of what you've done. What you've become.</p>
+                           <p>The villagers will remember. They'll tell others. Your reputation suffers. But you're fed. The men are fed. That's what matters. That's what you tell yourself. But the look in their eyes. The fear. The hatred. That stays with you. Long after the food is gone.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            supply_arrives: {
+                title: "Waiting",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "Empty wagons and hungry men - waiting",
+                text: function() {
+                    return `<p>You wait. Ration what you have. Make it last. One meal becomes two. Two becomes three. You stretch it. Make it work. The hunger grows. But you endure. You've done this before. You can do it again.</p>
+                           <p>Days pass. Maybe. Time blurs when you're hungry. The days and nights run together. You wait. Hope. Pray. That the supply train will come. That food will arrive. That this will end.</p>
+                           <p>Then. Finally. Wagons. On the horizon. The supply train. Late. But here. The food arrives. Bread. Meat. Ale. Real food. The men eat. Greedily. Desperately. The hunger fades. The morale lifts. You've made it. Endured. Survived.</p>
+                           <p>But the waiting took something from you. The hunger. The uncertainty. The fear. It wears you down. Makes you weaker. Less sure. But you're alive. You're fed. That's enough. For now.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            gambling_outcome: {
+                title: "The Wager",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Dice and desperation - gambling for food",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You find a game. Men betting rations...</p>`;
+                    if (result.success) {
+                        return `<p>The dice roll. You watch. Wait. Hope. The numbers come up. In your favor. You've won. The rations are yours. The other man hands them over. Reluctantly. But fairly. You've won them. Fair and square.</p>
+                               <p>You eat. The food tastes better. Because you won it. Because you earned it. Through luck. Through chance. Through the roll of the dice. It's not much. But it's yours. You've fed yourself. When others couldn't. When the army couldn't. You've survived. Through luck. Through skill. Through whatever it takes.</p>`;
+                    } else {
+                        return `<p>The dice roll. You watch. Wait. Hope. The numbers come up. Against you. You've lost. The rations are gone. Your coin is gone. You've lost everything. And gained nothing. The other man takes it. Smiles. You've been beaten. Outplayed. Outlucked.</p>
+                               <p>You're still hungry. Still empty. But now you're poorer. You've lost coin. Lost rations. Lost everything. The gamble didn't pay off. It rarely does. You should have known. Should have been smarter. But you weren't. And now you pay the price.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('morale', 1);
+                        applyStatChange('wealth', 2);
+                    } else if (result) {
+                        applyStatChange('morale', -1);
+                        applyStatChange('stress', 1);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Return to camp",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
             river_crossing: {
                 title: "The Swollen River",
                 year: function() { return gameState.year; },
@@ -10898,6 +11123,126 @@
                         resolutionStat: "wits",
                         resolutionDifficulty: 8,
                         nextScene: "alternate_ford"
+                    }
+                ]
+            },
+            
+            successful_crossing: {
+                title: "Across the River",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "The river behind you - cold and wet but alive",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You step into the water...</p>`;
+                    if (result.success) {
+                        return `<p>The water is cold. Colder than you expected. It seeps through your clothes. Through your mail. The weight doubles. Triples. But you push forward. One step. Then another. Your feet find the ford. The solid ground beneath the flood. You move carefully. Deliberately. The current pulls at you. Tries to take you. But you're strong. You've done this before. Or something like it.</p>
+                               <p>You reach the far bank. Your legs shake. From the cold. From the effort. From the fear that's only now leaving you. You look back. Others are crossing. Some struggle. Some make it. Some don't. But you did. You're across. The river is behind you. Ahead is the march. The war. Everything that comes next.</p>`;
+                    } else {
+                        return `<p>You step into the water. The current is stronger than you thought. Much stronger. Your foot slips. The river takes you. You go under. Cold. Dark. Panic. You fight. Thrash. Come up gasping. Someone grabs you. Hauls you back. You're on the bank. Shaking. Soaked. Alive. Barely.</p>
+                               <p>You'll try again. When you're ready. When the fear has passed. But for now, you're here. On this side. With the others who couldn't make it. The river won. This time.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('endurance', 1);
+                        applyStatChange('stress', -1);
+                    } else if (result) {
+                        applyStatChange('stress', 2);
+                        if (hasCondition('Fatigued')) {
+                            // Already fatigued, no change
+                        } else {
+                            addCondition('Fatigued', 'negative', 1);
+                        }
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            safer_crossing: {
+                title: "Learning from Others",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "Watching others cross - learning the way",
+                text: function() {
+                    return `<p>You wait. Watch. The first group goes. You see where they struggle. Where the current is strongest. Where the ford dips. Where it rises. You mark it in your mind. The safe path. The dangerous spots. Knowledge. That's what waiting gives you.</p>
+                           <p>When it's your turn, you know where to step. Where to avoid. The crossing is still hard. The water still cold. The current still pulls. But you're prepared. You've seen it. You know what to expect. That makes all the difference.</p>
+                           <p>You reach the far bank. Wet. Cold. But safe. You look back. Others are still crossing. Some will make it. Some won't. But you did. Because you waited. Because you learned. Because you were smart enough not to be first.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            organized_crossing: {
+                title: "Roping the Crossing",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "A rope across the river - making it safer for all",
+                text: function() {
+                    return `<p>You find rope. Old. Worn. But strong enough. You tie one end to a tree on this bank. Strip your gear. Wade into the water. The current pulls. But you hold the rope. Use it to guide you. To steady you. You reach the far side. Tie the other end. Secure it. The rope stretches across. A lifeline. A guide. Something to hold onto.</p>
+                           <p>Others see it. Use it. The crossing becomes easier. Safer. Not safe. Never safe. But better. Men grab the rope. Pull themselves across. Some still slip. Still struggle. But fewer. The rope helps. Your rope. Your idea. Your work.</p>
+                           <p>You see the gratitude in their eyes. The relief. You've made a difference. Small. But real. The captain nods. Good work, he says. Simple words. But they mean something. You've earned respect. Not through killing. Through helping. Through thinking. Through doing what needed doing.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Continue the march",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
+                    }
+                ]
+            },
+            
+            alternate_ford: {
+                title: "Finding Another Way",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location; },
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "A different path - upstream, looking for another crossing",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You look upstream...</p>`;
+                    if (result.success) {
+                        return `<p>You walk upstream. Away from the column. Away from the chaos. You look for another way. Another ford. A fallen tree. Anything. The river curves. Follows the land. You follow it. Looking. Searching. Thinking.</p>
+                               <p>There. Up ahead. A narrower point. The water still runs fast. But it's shallower. The ford is clearer. More visible. Less treacherous. You mark it. Remember it. Head back. Report to the captain. He listens. Nods. Sends scouts to verify. They come back. Confirm it. The column shifts. Moves upstream. To your ford. Your discovery.</p>
+                               <p>The crossing is easier here. Still dangerous. Still cold. But better. Men make it across. More of them. Fewer lost. You've saved lives. Not through strength. Through wits. Through looking. Through finding what others missed.</p>`;
+                    } else {
+                        return `<p>You walk upstream. Looking. Searching. But there's nothing. No better ford. No easier crossing. Just more river. More water. More danger. You waste time. Precious time. The column waits. The French might be coming. Every moment matters.</p>
+                               <p>You return. Empty-handed. No better way. No alternative. Just the same dangerous crossing. The same risk. You've gained nothing. Lost time. The captain's eyes show his disappointment. You tried. But trying isn't enough. Not always.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('wits', 1);
+                        applyStatChange('reputation', 1);
+                    } else if (result) {
+                        applyStatChange('stress', 1);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Return to the crossing",
+                        effects: {},
+                        nextScene: "march_through_normandy_1"
                     }
                 ]
             },
@@ -13348,7 +13693,12 @@
             
             campfire_wat_01_the_sharpening: {
                 title: "Campfire — The Sharpening",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
                 location: "Camp",
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function () {
                     const name = gameState.characterName || "Soldier";
                     return `
@@ -13362,16 +13712,61 @@
                     `;
                 },
                 choices: [
-                    { text: "Ask Wat how he learned to fight like this.", effects: { wits: 1, stress: 1 }, nextScene: "start" },
-                    { text: "Say nothing. Warm your hands and listen.", effects: { stress: -1 }, nextScene: "start" },
-                    { text: "Trade a sharp remark with him, just to see if he bites.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
-                    { text: "Watch The Cook instead. Ask what's in the pot.", effects: { morale: 1 }, nextScene: "start" }
+                    { 
+                        text: "Ask Wat how he learned to fight like this.", 
+                        effects: { wits: 1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Say nothing. Warm your hands and listen.", 
+                        effects: { stress: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Trade a sharp remark with him, just to see if he bites.", 
+                        effects: { morale: 1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Watch The Cook instead. Ask what's in the pot.", 
+                        effects: { morale: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    }
                 ]
             },
             
             campfire_wat_02_the_rope: {
                 title: "Campfire — The Rope",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
                 location: "Camp",
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function () {
                     const name = gameState.characterName || "Soldier";
                     return `
@@ -13386,16 +13781,61 @@
                     `;
                 },
                 choices: [
-                    { text: "Tell Wat a man runs when he has no other door.", effects: { morale: 1, stress: 1 }, nextScene: "start" },
-                    { text: "Agree with Wat: discipline is the only thing holding it together.", effects: { morale: -1 }, nextScene: "start" },
-                    { text: "Ask The Cook why he's so calm about it.", effects: { wits: 1 }, nextScene: "start" },
-                    { text: "Change the subject to tomorrow's march.", effects: { stress: -1 }, nextScene: "start" }
+                    { 
+                        text: "Tell Wat a man runs when he has no other door.", 
+                        effects: { morale: 1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Agree with Wat: discipline is the only thing holding it together.", 
+                        effects: { morale: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Ask The Cook why he's so calm about it.", 
+                        effects: { wits: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Change the subject to tomorrow's march.", 
+                        effects: { stress: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    }
                 ]
             },
             
             campfire_wat_03_the_boy_king: {
                 title: "Campfire — The Boy King",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
                 location: "Camp",
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function () {
                     const name = gameState.characterName || "Soldier";
                     return `
@@ -13412,16 +13852,61 @@
                     `;
                 },
                 choices: [
-                    { text: "Say you believe. Better to have a story than none.", effects: { morale: 1 }, nextScene: "start" },
-                    { text: "Say Wat is right. It's about coin and power.", effects: { wits: 1, morale: -1 }, nextScene: "start" },
-                    { text: "Say you don't know. You're here now. That's enough.", effects: { stress: -1 }, nextScene: "start" },
-                    { text: "Ask what Wat thinks happens to men who stop believing.", effects: { wits: 1, stress: 1 }, nextScene: "start" }
+                    { 
+                        text: "Say you believe. Better to have a story than none.", 
+                        effects: { morale: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Say Wat is right. It's about coin and power.", 
+                        effects: { wits: 1, morale: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Say you don't know. You're here now. That's enough.", 
+                        effects: { stress: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Ask what Wat thinks happens to men who stop believing.", 
+                        effects: { wits: 1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    }
                 ]
             },
             
             campfire_wat_04_the_dead_mules: {
                 title: "Campfire — The Dead Mules",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
                 location: "Camp",
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function () {
                     return `
                         <p>There is a smell near the picket line where the animals stand. Not all of them are standing. War eats beasts too.</p>
@@ -13433,16 +13918,61 @@
                     `;
                 },
                 choices: [
-                    { text: "Offer to help The Cook tomorrow. Fetch water, chop wood.", effects: { morale: 1 }, nextScene: "start" },
-                    { text: "Ask Wat how he keeps going when it's like this.", effects: { stress: -1 }, nextScene: "start" },
-                    { text: "Complain about rations and the march.", effects: { morale: -1, stress: 1 }, nextScene: "start" },
-                    { text: "Make a joke about mules outranking soldiers.", effects: { morale: 1 }, nextScene: "start" }
+                    { 
+                        text: "Offer to help The Cook tomorrow. Fetch water, chop wood.", 
+                        effects: { morale: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Ask Wat how he keeps going when it's like this.", 
+                        effects: { stress: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Complain about rations and the march.", 
+                        effects: { morale: -1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Make a joke about mules outranking soldiers.", 
+                        effects: { morale: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    }
                 ]
             },
             
             campfire_wat_05_the_prayer: {
                 title: "Campfire — The Prayer",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
                 location: "Camp",
+                noCampfire: true, // Prevent recursion
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening by the fire - a moment of rest and reflection",
                 text: function () {
                     const name = gameState.characterName || "Soldier";
                     return `
@@ -13458,10 +13988,50 @@
                     `;
                 },
                 choices: [
-                    { text: "Say you pray. Quietly. For the morning.", effects: { morale: 1, stress: -1 }, nextScene: "start" },
-                    { text: "Say you don't pray. You prepare.", effects: { wits: 1 }, nextScene: "start" },
-                    { text: "Say you don't know what you believe anymore.", effects: { stress: 1 }, nextScene: "start" },
-                    { text: "Deflect with humor. Better laughing than trembling.", effects: { morale: 1, stress: 1 }, nextScene: "start" }
+                    { 
+                        text: "Say you pray. Quietly. For the morning.", 
+                        effects: { morale: 1, stress: -1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Say you don't pray. You prepare.", 
+                        effects: { wits: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Say you don't know what you believe anymore.", 
+                        effects: { stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    },
+                    { 
+                        text: "Deflect with humor. Better laughing than trembling.", 
+                        effects: { morale: 1, stress: 1 }, 
+                        nextScene: function() {
+                            const next = (gameState.campfire && gameState.campfire.returnScene) || "start";
+                            if (gameState.campfire) {
+                                gameState.campfire.returnScene = null;
+                            }
+                            return next;
+                        }
+                    }
                 ]
             },
             
@@ -19075,7 +19645,7 @@
                     initiative: 5
                 },
                 faction: "English",
-                age: 18,
+                age: function() { return gameState.age; },
                 year: 1337,
                 location: "England",
                 region: "England", // Add region for equipment system
