@@ -1770,6 +1770,31 @@ class EquipmentManager {
         return true;
     }
     
+    // Unequip an item from a specific slot and layer
+    unequipItem(slot, layer) {
+        if (!this.gameState.equipment[slot]) {
+            return { success: false, error: 'Slot does not exist' };
+        }
+        
+        const equipped = this.gameState.equipment[slot][layer];
+        if (!equipped || !equipped.id) {
+            return { success: false, error: 'No item equipped in this slot/layer' };
+        }
+        
+        // Store item data before removal
+        const itemData = {
+            id: equipped.id,
+            condition: equipped.condition || 100,
+            fit: equipped.fit || 'off-the-rack',
+            stackCount: equipped.stackCount || 1 // Preserve stack count if present
+        };
+        
+        // Remove from equipment
+        delete this.gameState.equipment[slot][layer];
+        
+        return { success: true, item: itemData };
+    }
+    
     // Normalize location to region
     normalizeRegion(location) {
         if (!location) return 'England';

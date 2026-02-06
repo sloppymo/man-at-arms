@@ -898,7 +898,29 @@
         .health-fill.medium {
             background: linear-gradient(90deg, #fa0, #a50);
         }
+        
+        /* Map region marker styles with glow and pulse effects */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+        }
+        
+        /* Region marker buttons - base style with pulse animation */
+        [id^="region-marker-"] {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Enhanced hover glow effect for region markers */
+        [id^="region-marker-"]:hover {
+            box-shadow: 0 0 15px 5px rgba(212, 175, 55, 0.8), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3) !important;
+            transform: translate(-50%, -50%) scale(1.4) !important;
+        }
     </style>
+    <!-- External JavaScript modules -->
+    <script src="man-at-arms-enemy-profiles.js"></script>
+    <script src="man-at-arms-equipment-system.js"></script>
+    <script src="man-at-arms-equipment-ui.js"></script>
 </head>
 <body>
     <div class="game-container">
@@ -1159,9 +1181,11 @@
             }
             
             // Chapter 2: Siege of Calais (1346-1347)
+            // Only transition when player actually enters the Calais arc (scene-based gating)
             if (gameState.year >= 1346 && gameState.year <= 1347 && gameState.chapter !== 'calais') {
-                // Transition to Calais after Chevauchée or if year is 1347
-                if (gameState.chapter === 'chevauchée' || (gameState.year === 1347 && !gameState.chapterProgress.calais.started)) {
+                const calaisScenes = ['calais_siege', 'march_to_calais', 'calais_latrines', 'calais_night', 'calais_skim'];
+                const inCalaisArc = calaisScenes.includes(gameState.currentScene);
+                if (inCalaisArc || (gameState.year === 1347 && !gameState.chapterProgress.calais.started)) {
                     gameState.chapter = 'calais';
                     gameState.chapterProgress.chevauchée.completed = true;
                     gameState.chapterProgress.calais.started = true;
@@ -1461,6 +1485,25 @@
         const ensureFlags = (gs) => (gs.flags ??= {});
         
         /** Check if campfire should be inserted */
+        // M5: Emotional pacing — tracks scene intensity to prevent tonal whiplash
+        function getSceneIntensity(sceneKey) {
+            if (!sceneKey) return 0;
+            // High-intensity scenes (combat, death, key narrative moments)
+            if (sceneKey.startsWith('battle_') || sceneKey.startsWith('crecy_') ||
+                sceneKey.startsWith('death_') || sceneKey.startsWith('skirmish_') ||
+                sceneKey.startsWith('blanchetaque_') || sceneKey.startsWith('caen_bridge')) {
+                return 3;
+            }
+            // Medium intensity (siege, encounter resolution)
+            if (sceneKey.includes('resolve') || sceneKey.startsWith('calais_') ||
+                sceneKey.startsWith('siege_') || sceneKey === 'village_pillage' ||
+                sceneKey === 'prisoner_ransom') {
+                return 2;
+            }
+            // Low intensity (travel, camp, between_years)
+            return 0;
+        }
+        
         function shouldInsertCampfire(nextSceneKey) {
             // Never interrupt:
             // - character creation scenes
@@ -1479,6 +1522,12 @@
             // Check if scene has noCampfire flag
             const nextScene = scenes[nextSceneKey];
             if (nextScene && nextScene.noCampfire) {
+                return false;
+            }
+            
+            // M5: Skip insertion if exiting high-intensity scene (emotional cooldown)
+            const currentIntensity = getSceneIntensity(gameState.currentScene);
+            if (currentIntensity >= 2) {
                 return false;
             }
             
@@ -2407,9 +2456,25 @@
                     {
                         text: function(gs) {
                             const name = gs.characterName || "Soldier";
+                            const region = gs.culture || '';
+                            let regionLine = '';
+                            if (region === 'Yorkshire') {
+                                regionLine = `<p>He looks at you sideways. <em>"Yorkshire, are you? Aye, I can tell. You lot walk like the moors shaped you."</em></p>`;
+                            } else if (region === 'Lancashire') {
+                                regionLine = `<p>He squints at you. <em>"Lancashire, eh? We'll see if you're worth the name."</em></p>`;
+                            } else if (region === 'Cornwall') {
+                                regionLine = `<p>He eyes you. <em>"Cornish? Long way from home, lad. But then, so's everyone here."</em></p>`;
+                            } else if (region === 'Welsh Marches') {
+                                regionLine = `<p>He nods at you. <em>"Marcher country, is it? You'll know about raids then. That's something."</em></p>`;
+                            } else if (region === 'Kent') {
+                                regionLine = `<p>He grunts. <em>"Kent. Garden of England, they call it. Not much garden here though, is there?"</em></p>`;
+                            } else if (region) {
+                                regionLine = `<p>He looks at you appraisingly. <em>"${region}, is it? Everyone's from somewhere. Doesn't matter much out here."</em></p>`;
+                            }
                             return `
                                 <p>Wat sits with his back to a stump. Knife in hand. Not carving. Just holding it like a thought.</p>
                                 <p>He spits into the coals. <em>"You keep your boots close. A man wakes barefoot, he wakes dead."</em></p>
+                                ${regionLine}
                                 <p>He looks at you without kindness. Without hate. Like weighing iron.</p>
                             `;
                         },
@@ -2506,9 +2571,19 @@
                 stages: [
                     {
                         text: function(gs) {
+                            const region = gs.culture || '';
+                            let regionLine = '';
+                            if (region === 'Norfolk' || region === 'Essex') {
+                                regionLine = `<p>He glances at you. <em>"East country. I know the marshes. Knew a cook from ${region} once. Made good eel pie."</em></p>`;
+                            } else if (region === 'Somerset') {
+                                regionLine = `<p>He looks you over. <em>"Somerset? Apple country. I could use some cider for this slop."</em></p>`;
+                            } else if (region) {
+                                regionLine = `<p>He looks at you. <em>"${region}, eh? Don't matter where you're from. Food tastes the same when you're starving."</em></p>`;
+                            }
                             return `
                                 <p>The Cook pours salt into his palm and counts it under his breath. Not prayer. Measure.</p>
                                 <p><em>"Too little and men hate you. Too much and they thirst. Hunger is loud. Thirst is louder."</em></p>
+                                ${regionLine}
                                 <p>He offers you the pinch like it is evidence.</p>
                             `;
                         },
@@ -5340,12 +5415,19 @@
                             showNotification('Equipment Acquired', 'You purchased a Mail Haubergeon!');
                         }
                         
-                        // Old format compatibility
+                        // Old format compatibility - use adapter
                         if (gameState.equipment && gameState.equipment.weapon) {
-                            gameState.equipment.weapon.quality = 1;
+                            setEquipmentQuality('weapon', 1);
                         }
+                        // Note: 'armor' slot doesn't exist in new format, map to 'torso'
                         if (gameState.equipment && gameState.equipment.armor) {
-                            gameState.equipment.armor.quality = 1;
+                            setEquipmentQuality('armor', 1);
+                        } else if (gameState.equipment && gameState.equipment.torso) {
+                            // For new format, set torso quality if needed
+                            const currentQuality = getEquipmentQuality('torso');
+                            if (currentQuality === 0) {
+                                setEquipmentQuality('torso', 1);
+                            }
                         }
                         
                         gameState.enteredScenes.add(sceneKey);
@@ -5357,16 +5439,50 @@
                 year: 1341,
                 age: 22,
                 location: "Northern France",
-                text: `<p>Winter quarters. Spring campaign. Summer raids. The rhythm becomes familiar. Predictable almost. You march. You fight. You survive. The years blur into seasons. Seasons into months. Months into days.</p>
+                text: function() {
+                    let base = `<p>Winter quarters. Spring campaign. Summer raids. The rhythm becomes familiar. Predictable almost. You march. You fight. You survive. The years blur into seasons. Seasons into months. Months into days.</p>
                        <p>You've learned the patterns. When to push forward. When to hold back. When to keep your head down. Your lord notices. Your comrades trust you. Experience is the only teacher that matters.</p>
-                       <p>But each season takes something. A friend. A piece of yourself. The man you were fades. The man you're becoming takes shape. Harder. Colder. More careful.</p>`,
+                       <p>But each season takes something. A friend. A piece of yourself. The man you were fades. The man you're becoming takes shape. Harder. Colder. More careful.</p>`;
+                    if (hasFlag('Heartbroken')) {
+                        const response = gameState.flags.MarieResponse;
+                        if (response === 'silence') {
+                            base += `<p>You still think of Marie sometimes. Of the silence you chose. Of the words you swallowed. It's easier now. The sting has faded to a dull ache. But on winter nights, when the fire burns low and the camp is quiet, you remember. And you wonder if silence was strength or cowardice.</p>`;
+                        } else if (response === 'confrontation') {
+                            base += `<p>Marie's face still flashes unbidden. The anger you showed. The words you spat. They didn't change anything — she still laughed, the others still mocked — but you said what needed saying. The memory burns less now. Almost. On some nights you even believe you've let it go.</p>`;
+                        } else {
+                            base += `<p>You laughed with them. Pretended it was nothing. Sometimes you almost believe it was. But at night, when the mask slips, you feel it. That hollow place where hope used to be. You've learned to fill it with drink, or duty, or the simple exhaustion of soldiering.</p>`;
+                        }
+                    }
+                    return base;
+                },
                 choices: [
                     {
-                        text: "Continue",
-                        effects: { experience: 20, patronFavor: 1 },
+                        text: "Drill relentlessly — become sharper",
+                        effects: { experience: 25, combat: 1 },
+                        nextScene: "between_years_1342"
+                    },
+                    {
+                        text: "Carouse with the lads — keep your spirits up",
+                        effects: { experience: 15, stress: -2, morale: 2 },
+                        nextScene: "between_years_1342"
+                    },
+                    {
+                        text: "Curry favour with your lord",
+                        effects: { experience: 15, patronFavor: 2, reputation: 1 },
                         nextScene: "between_years_1342"
                     }
-                ]
+                ],
+                onEnter: function() {
+                    // Annual upkeep: equipment maintenance, food, etc.
+                    const upkeep = 2;
+                    if (gameState.stats.wealth >= upkeep) {
+                        applyStatChange('wealth', -upkeep, {silent: true});
+                        showNotification('Upkeep', `You spend ${formatCurrency(upkeep)} on gear maintenance and provisions.`, 'info');
+                    } else {
+                        showNotification('Broke', 'You cannot afford upkeep. Your gear degrades.', 'warning');
+                        applyStatChange('combat', -1, {silent: true});
+                    }
+                }
             },
             between_years_1342: {
                 title: "Rising Through the Ranks",
@@ -5378,16 +5494,37 @@
                        <p>You look at your men. They look back. Waiting. Trusting. Or pretending to. Either way, they're yours now. Their lives. Their deaths. That weight settles on you. You carry it. Because you have to.</p>`,
                 choices: [
                     {
-                        text: "Continue",
-                        effects: { wealth: 5, reputation: 2 },
+                        text: "Drill your men hard — earn their respect",
+                        effects: { experience: 20, combat: 1, reputation: 2 },
+                        nextScene: "between_years_1343"
+                    },
+                    {
+                        text: "Look after them — build loyalty",
+                        effects: { experience: 15, morale: 2, wealth: 3 },
+                        onChoose: function() { changeRel('Wat', 1); },
+                        nextScene: "between_years_1343"
+                    },
+                    {
+                        text: "Focus on keeping coin flowing in",
+                        effects: { wealth: 8, reputation: 1, experience: 10 },
                         nextScene: "between_years_1343"
                     }
                 ],
                 onEnter: function() {
+                    // Promotion check
                     if (gameState.stats.patronFavor >= 3 && gameState.rank === "Common Soldier") {
                         gameState.rank = "Sergeant";
                         gameState.career.promotions++;
                         showNotification('Promotion!', 'You have been promoted to Sergeant!');
+                    }
+                    // Annual upkeep
+                    const upkeep = 3;
+                    if (gameState.stats.wealth >= upkeep) {
+                        applyStatChange('wealth', -upkeep, {silent: true});
+                        showNotification('Upkeep', `You spend ${formatCurrency(upkeep)} on gear and provisions.`, 'info');
+                    } else {
+                        showNotification('Broke', 'You cannot afford upkeep. Your gear degrades.', 'warning');
+                        applyStatChange('combat', -1, {silent: true});
                     }
                 }
             },
@@ -5396,13 +5533,69 @@
                 year: 1343,
                 age: 24,
                 location: "Northern France",
+                noCampfire: true, // Prevent campfire insertion before location transition
                 text: `<p>Raids. Skirmishes. Patrols. The French come. You respond. They retreat. You advance. It's become routine. Almost comfortable. Almost.</p>
                        <p>But routine doesn't mean safe. You've seen men die from arrows. From disease. From a horse that stumbled. From a blade that found a gap. From nothing at all. Just bad luck. Just being in the wrong place at the wrong time.</p>
                        <p>Each death teaches you something. Each year makes you more careful. Or more resigned. You can't tell which anymore. Maybe both. Maybe that's what survival means. Learning to accept what you can't change. Learning to change what you can.</p>`,
                 choices: [
                     {
-                        text: "Continue",
-                        effects: { experience: 15 },
+                        text: "Take every fight offered — hone your edge",
+                        effects: { experience: 20, combat: 1, stress: 1 },
+                        nextScene: "return_to_england_1344"
+                    },
+                    {
+                        text: "Keep your head down — survive",
+                        effects: { experience: 10, endurance: 1, stress: -1 },
+                        nextScene: "return_to_england_1344"
+                    },
+                    {
+                        text: "Learn from the veterans around you",
+                        effects: { experience: 15, wits: 1 },
+                        onChoose: function() { changeRel('Wat', 1); },
+                        nextScene: "return_to_england_1344"
+                    }
+                ],
+                onEnter: function() {
+                    const upkeep = 3;
+                    if (gameState.stats.wealth >= upkeep) {
+                        applyStatChange('wealth', -upkeep, {silent: true});
+                        showNotification('Upkeep', `You spend ${formatCurrency(upkeep)} on gear and provisions.`, 'info');
+                    } else {
+                        showNotification('Broke', 'You cannot afford upkeep. Your gear degrades.', 'warning');
+                        applyStatChange('combat', -1, {silent: true});
+                    }
+                }
+            },
+            return_to_england_1344: {
+                title: "The Journey Home",
+                year: 1344,
+                age: 25,
+                location: "At Sea / England",
+                noCampfire: true,
+                text: function() {
+                    const region = gameState.culture || 'England';
+                    const regionNote = (region && region !== 'England') ? `<p>You think of ${region}. Of home. Of the life you left behind. It feels further away than France ever did.</p>` : '';
+                    return `<p>The campaign in Northern France ends. Not with victory. Not with defeat. Just... done. Orders come down. Your unit is being rotated home. Back to England. Back to waiting.</p>
+                       <p>The crossing is rough. Cold. Wet. Men huddle below decks. Above, the sea churns. You've seen worse. But that doesn't make it easier. Just familiar. Just another thing to endure.</p>
+                       <p>When land appears—the white cliffs of Dover—you feel something. Relief? Maybe. Or just the weight of what comes next. Because you know. This isn't peace. This is preparation. Something bigger is coming. You can feel it in the air. In the way officers talk. In the way men look at maps.</p>
+                       <p>You're home. But not for long.</p>${regionNote}`;
+                },
+                choices: [
+                    {
+                        text: "Visit your kin — see what's left of home",
+                        effects: { stress: -3, morale: 2 },
+                        onChoose: function() { setFlag('visitedKin', true); },
+                        nextScene: "between_years_1344"
+                    },
+                    {
+                        text: "Stay in a tavern — drink and forget",
+                        effects: { stress: -2, morale: 1 },
+                        nextScene: "between_years_1344"
+                    },
+                    {
+                        text: "Remain in camp — this is your home now",
+                        effects: { experience: 10, endurance: 1 },
+                        onChoose: function() { changeRel('Wat', 1); },
                         nextScene: "between_years_1344"
                     }
                 ]
@@ -5417,11 +5610,39 @@
                        <p>You prepare. Check your gear. Sharpen your blade. Say your prayers. Because you know. This won't be a skirmish. This won't be routine. This will be real. This will be history. And you'll be part of it. Whether you want to be or not.</p>`,
                 choices: [
                     {
-                        text: "Continue",
-                        effects: {},
+                        text: "Train obsessively — be ready for what's coming",
+                        effects: { combat: 1, endurance: 1, stress: 1 },
+                        nextScene: "between_years_1345"
+                    },
+                    {
+                        text: "Enjoy England while you can — drink, rest, live",
+                        effects: { stress: -3, morale: 2 },
+                        nextScene: "between_years_1345"
+                    },
+                    {
+                        text: "Invest in better equipment",
+                        effects: function(gs) { applyStatChange('wealth', -5, {silent:true}); },
+                        onChoose: function() {
+                            if (gameState.stats.wealth >= 5) {
+                                showNotification('Equipment', 'You purchase a good gambeson and new boots.', 'info');
+                                if (!gameState.equipment) gameState.equipment = {};
+                                gameState.equipment.gambeson = true;
+                            } else {
+                                showNotification('Too Poor', 'You cannot afford proper equipment.', 'warning');
+                            }
+                        },
                         nextScene: "between_years_1345"
                     }
-                ]
+                ],
+                onEnter: function() {
+                    const upkeep = 2;
+                    if (gameState.stats.wealth >= upkeep) {
+                        applyStatChange('wealth', -upkeep, {silent: true});
+                    } else {
+                        showNotification('Broke', 'You cannot afford upkeep. Your gear degrades.', 'warning');
+                        applyStatChange('combat', -1, {silent: true});
+                    }
+                }
             },
             between_years_1345: {
                 title: "Final Preparations",
@@ -5429,10 +5650,28 @@
                 age: 26,
                 location: "England",
                 text: `<p>King Edward's army gathers. You check your equipment one last time.</p>
-                       <p>Tomorrow, you sail to France. The biggest campaign of your life awaits.</p>`,
+                       <p>Preparations intensify. The king's plans are taking shape. A major campaign is being planned, but timing remains uncertain. The biggest campaign of your life awaits—when the orders finally come.</p>`,
                 choices: [
                     {
-                        text: "March to battle",
+                        text: "Wait for orders",
+                        effects: {},
+                        nextScene: "campaign_delayed_1345"
+                    }
+                ]
+            },
+            campaign_delayed_1345: {
+                title: "Waiting",
+                year: 1345,
+                age: 26,
+                location: "England",
+                text: `<p>Tomorrow never comes.</p>
+                       <p>Orders change. Plans shift. The king's attention turns elsewhere. A diplomatic mission. A border dispute. Something always comes up. Something that matters more than your unit. More than your plans.</p>
+                       <p>You wait. Train. Drill. Check your gear again. And again. Because you know. When it comes, it will come fast. No warning. No time to prepare. Just orders. Just movement. Just war.</p>
+                       <p>Months pass. Seasons change. The promise of France hangs in the air. Unfulfilled. Unforgotten. Just... waiting.</p>
+                       <p>Then spring arrives. And with it, new orders. Real orders. This time, it's different. This time, it's real.</p>`,
+                choices: [
+                    {
+                        text: "The call comes",
                         effects: {},
                         nextScene: "spring_campaign"
                     }
@@ -5452,16 +5691,19 @@
                     {
                         text: "Walk away in silence",
                         effects: { stress: 3, morale: -2 },
+                        onChoose: function() { setFlag('Heartbroken', true); setFlag('MarieResponse', 'silence'); },
                         nextScene: "between_years_1341"
                     },
                     {
                         text: "Confront them",
                         effects: { stress: 2, reputation: -1 },
+                        onChoose: function() { setFlag('Heartbroken', true); setFlag('MarieResponse', 'confrontation'); },
                         nextScene: "between_years_1341"
                     },
                     {
                         text: "Laugh with them, pretend it doesn't hurt",
                         effects: { stress: 4, morale: -1 },
+                        onChoose: function() { setFlag('Heartbroken', true); setFlag('MarieResponse', 'laughed'); },
                         nextScene: "between_years_1341"
                     }
                 ]
@@ -6222,8 +6464,8 @@
                 year: 1346,
                 age: 27,
                 location: "England",
-                text: `<p>Spring arrives, and with it, the call to arms. King Edward III prepares to invade France with a large army.</p>
-                       <p>Your lord calls for all available men. This will be a major campaign...</p>`,
+                text: `<p>Spring arrives, and with it, the call to arms. After months of waiting, King Edward III's plans finally come to fruition. The invasion of France begins now.</p>
+                       <p>Your lord calls for all available men. This will be a major campaign. The ships gather in the harbor. The army assembles. The time for waiting is over.</p>`,
                 choices: [
                     {
                         text: "Prepare for what's coming",
@@ -6237,6 +6479,7 @@
                 year: 1346,
                 age: 27,
                 location: "Portsmouth, England",
+                noCampfire: true, // Prevent campfire insertion during contract signing sequence
                 text: `<p><strong>June 1346 — Portsmouth</strong></p>
                        <p>A clerk reads the contract terms aloud while your captain watches faces for hesitation. You're not swearing fealty for life—you're signing for a term, a wage, and a share of what can be lawfully taken. The ink smells like iron. Someone nearby is already drunk enough to mis-hear his own name.</p>`,
                 choices: [
@@ -6295,7 +6538,7 @@
                     {
                         text: "Continue to muster",
                         effects: {},
-                        nextScene: "purveyance"
+                        nextScene: "portsmouth_muster"
                     }
                 ]
             },
@@ -6326,7 +6569,7 @@
                     {
                         text: "Continue to muster",
                         effects: {},
-                        nextScene: "purveyance"
+                        nextScene: "portsmouth_muster"
                     }
                 ]
             },
@@ -6357,6 +6600,26 @@
                 choices: [
                     {
                         text: "Continue to muster",
+                        effects: {},
+                        nextScene: "portsmouth_muster"
+                    }
+                ]
+            },
+            portsmouth_muster: {
+                title: "The Muster",
+                year: 1346,
+                age: 27,
+                location: "Portsmouth, England",
+                noCampfire: true, // Prevent campfire insertion here
+                text: `<p><strong>Mid-June 1346 — Portsmouth</strong></p>
+                       <p>After signing the contract, you step out of the clerk's tent into the open air. The docks are a chaos of activity, but you're directed away from the harbor, up the hillside to the muster field.</p>
+                       <p>Tents stretch across the hillside. Men from a dozen lords. Archers. Men-at-arms. Sergeants. All waiting. All preparing. The transition from the quiet formality of contract signing to the sprawling military camp is jarring, but familiar. You've done this before. Just never on this scale.</p>
+                       <p>You find your unit's section. Set up your tent. Check your gear. The routine is familiar. But the scale is different. This isn't a raid. This isn't a skirmish. This is an army.</p>
+                       <p>Days pass. More men arrive. More ships. The harbor fills. The camp grows. You drill. You wait. You watch the horizon. Because you know. Soon, the order will come. Soon, you'll board those ships. Soon, you'll sail to France.</p>
+                       <p>But first, there's the matter of supplies. The army must eat. And that means purveyance.</p>`,
+                choices: [
+                    {
+                        text: "Continue",
                         effects: {},
                         nextScene: "purveyance"
                     }
@@ -6590,9 +6853,11 @@
                 onEnter: function() {
                     const result = gameState.lastResolution;
                     if (result && result.success) {
-                        gameState.equipment.weapon.quality = Math.min(2, gameState.equipment.weapon.quality + 1);
+                        const currentQuality = getEquipmentQuality('weapon');
+                        setEquipmentQuality('weapon', Math.min(2, currentQuality + 1));
                     } else if (result) {
-                        gameState.equipment.weapon.quality = Math.max(0, gameState.equipment.weapon.quality - 1);
+                        const currentQuality = getEquipmentQuality('weapon');
+                        setEquipmentQuality('weapon', Math.max(0, currentQuality - 1));
                     }
                 },
                 choices: [
@@ -6805,7 +7070,8 @@
                 age: 27,
                 location: "Normandy",
                 text: `<p><strong>Mid-July 1346 — Normandy villages</strong></p>
-                       <p>You smell smoke before you see it. The raid is not "battle," it's pressure: make the countryside bleed wealth and confidence, force the enemy to respond, and keep the army fed while doing it.</p>`,
+                       <p>You smell smoke before you see it. The raid is not "battle," it's pressure: make the countryside bleed wealth and confidence, force the enemy to respond, and keep the army fed while doing it.</p>
+                       <p>As you move through the village, you pass a small stone church. Its cross stands against the smoke-filled sky. Some of your men eye it with interest—churches hold silver, gold, offerings. Easy plunder. But something makes you pause. The building has stood here for generations. Sacred ground. Or so they say.</p>`,
                 choices: [
                     {
                         text: "Torch barns to deny supplies",
@@ -6824,7 +7090,7 @@
                         resolutionDifficulty: 9
                     },
                     {
-                        text: "Spare a church and move on",
+                        text: "Encounter the church—spare it and move on",
                         effects: {},
                         nextScene: "chevauchée_spare",
                         requiresResolution: true,
@@ -6909,7 +7175,8 @@
                 location: "Normandy",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>The church stands. Stone. Ancient. Sacred. Or supposed to be. Supposed to mean something. Supposed to be protected. Respected. Left alone. But war doesn't respect. War doesn't protect. War doesn't care.</p>
+                    if (!result) return `<p>You approach the church. The decision weighs on you. This is not a tactical choice. Not about supplies or hostages or military advantage. This is something else. Something deeper. A question of what you're willing to destroy. What you're willing to spare.</p>
+                                           <p>The church stands. Stone. Ancient. Sacred. Or supposed to be. Supposed to mean something. Supposed to be protected. Respected. Left alone. But war doesn't respect. War doesn't protect. War doesn't care.</p>
                                            <p>You look at it. The cross. The walls. The silence. The peace. Or what's left of it. What war hasn't taken. What soldiers haven't destroyed. Yet. Because everything gets destroyed. Eventually. Everything gets taken. Everything gets broken.</p>`;
                     if (result.success) {
                         return `<p>You spare it. Order your men to move on. Leave it alone. Leave it whole. Leave it sacred. Some of your men respect the gesture. Nod. Understand. Or pretend to. Others don't. Others grumble. Others resent. But you did it. You made the choice. The right choice. The hard choice.</p>
@@ -7567,6 +7834,7 @@
                     }
                 },
                 onEnter: function() {
+                    setFlag('survivedCrecy', true);
                     const result = gameState.lastResolution;
                     if (result && result.success) {
                         applyStatChange('patronFavor', 2);
@@ -7614,6 +7882,7 @@
                     }
                 },
                 onEnter: function() {
+                    setFlag('survivedCrecy', true);
                     const result = gameState.lastResolution;
                     if (result && result.success) {
                         applyStatChange('wealth', 15);
@@ -7663,6 +7932,7 @@
                     }
                 },
                 onEnter: function() {
+                    setFlag('survivedCrecy', true);
                     const result = gameState.lastResolution;
                     if (result && result.success) {
                         applyStatChange('morale', 1);
@@ -7750,7 +8020,7 @@
                     {
                         text: "Continue",
                         effects: {},
-                        nextScene: "calais_siege"
+                        nextScene: "march_to_calais"
                     }
                 ]
             },
@@ -7800,7 +8070,8 @@
                             // Old format compatibility
                             const gearRoll = Math.random();
                             if (gearRoll < 0.5 && gameState.equipment && gameState.equipment.weapon) {
-                                gameState.equipment.weapon.quality = Math.min(3, (gameState.equipment.weapon.quality || 0) + 1);
+                                const currentQuality = getEquipmentQuality('weapon');
+                                setEquipmentQuality('weapon', Math.min(3, currentQuality + 1));
                             } else {
                                 applyStatChange('wealth', 8);
                             }
@@ -7844,6 +8115,26 @@
                         applyStatChange('stress', 1);
                     }
                 },
+                choices: [
+                    {
+                        text: "Continue",
+                        effects: {},
+                        nextScene: "march_to_calais"
+                    }
+                ]
+            },
+            march_to_calais: {
+                title: "The March to Calais",
+                year: 1346,
+                age: 27,
+                location: "Northern France",
+                text: `<p><strong>Late August–Early September 1346 — Northern France</strong></p>
+                       <p>The field at Crécy grows quiet. The dead are buried or left to the crows. The wounded are tended or abandoned. The living gather what they can and prepare to move.</p>
+                       <p>King Edward's decision comes down: we march north. To Calais. The port town that controls the Channel. Capture it, and England has a permanent foothold in France. A gateway. A base. A prize worth the risk.</p>
+                       <p>The French army is broken. Scattered. But not gone. They'll regroup. They'll pursue. You know this. Everyone knows this. But for now, the road north is open. The march begins.</p>
+                       <p>Eight days. That's how long it takes. Eight days of marching through French countryside. Past burned villages. Past fields stripped bare. Past the evidence of what war does to a land. The column moves steadily. Purposefully. Toward Calais.</p>
+                       <p>You march with the others. Your gear is heavier now. Your body aches. But you keep moving. Because that's what you do. That's what soldiers do. You march. You fight. You survive. And you keep marching.</p>
+                       <p>On the horizon, Calais appears. A walled town. A fortress. A prize. The siege will be long. Hard. But that's tomorrow's problem. Today, you've arrived. Today, the real work begins.</p>`,
                 choices: [
                     {
                         text: "Continue",
@@ -7956,11 +8247,12 @@
                 location: "Calais, France",
                 text: function() {
                     const result = gameState.lastResolution;
-                    if (!result) return `<p>Night duty. Dangerous. Dark. Deadly. The enemy watches. Waits. Plans. Attacks. In the dark. In the silence. In the moment when you're weakest. When you're tired. When you're alone.</p>
+                    if (!result) return `<p>The conversation around the fire ends. Men drift to their tents. The night watch needs volunteers. Someone must stand guard in the dark, watching for French sorties, for enemy scouts, for anything that moves in the shadows.</p>
+                                           <p>Night duty. Dangerous. Dark. Deadly. The enemy watches. Waits. Plans. Attacks. In the dark. In the silence. In the moment when you're weakest. When you're tired. When you're alone.</p>
                                            <p>You volunteer. Step forward. Take the risk. Because someone has to. Because if you don't, someone else will. And they might not be ready. Might not be able. Might not survive. But you might. You hope. You try.</p>`;
                     if (result.success) {
-                        return `<p>You perform well. On the duty. In the danger. Your courage shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. You've done right. Done well. That's something. That's enough.</p>
-                               <p>You've earned favor. Significant favor. And improved morale. Through service. Through courage. Through everything that makes you human. Makes you good. Or at least less bad. Less terrible. You've done right. Done well. That's something. That's enough.</p>`;
+                        return `<p>You perform well on the duty, in the danger. Your courage shows and is noted, is remembered by the captain, by your men, by everyone who matters. You've done right, done well. That's something. That's enough.</p>
+                               <p>You've earned significant favor and improved morale through service, through courage, through everything that makes you human and good. Or at least less bad, less terrible. You've done right, done well. That's something. That's enough.</p>`;
                     } else {
                         return `<p>Night duty is dangerous. Terrible. Deadly. You're wounded. In a skirmish. Or an accident. Or something else. Something bad. You're hurt. But you're alive. For now. That's something. That's all you have.</p>
                                <p>You've been wounded. But you tried. To serve. To do right. To be good. That's something. That's enough. Sometimes trying is enough. Sometimes being human is enough.</p>`;
@@ -8096,8 +8388,8 @@
                 text: function() {
                     const cost = 15;
                     if (gameState.stats.wealth >= cost) {
-                        return `<p>You buy it. Better food. At ruinous prices. Three times what it should cost. Four times. Five. But you pay. Because you have to. Because you need to. Because hunger kills. Slowly. Quietly. Without glory. Without honor. Just weakness. Just waste.</p>
-                               <p>You're fed. Your morale improves. Your health holds. For now. That's something. That's enough. You've spent wealth. To prevent fatigue. To maintain health. To stay alive. To stay whole. To stay human. Or what's left of it. What war hasn't broken. Yet.</p>`;
+                        return `<p>You buy it. Better food at ruinous prices—three times what it should cost, four times, five. But you pay because you have to, because you need to. Hunger kills slowly, quietly, without glory or honor. Just weakness. Just waste.</p>
+                               <p>You're fed. Your morale improves. Your health holds for now. That's something. That's enough. You've spent wealth to prevent fatigue, to maintain health, to stay alive and whole and human. Or what's left of it. What war hasn't broken yet.</p>`;
                     } else {
                         return `<p>You can't afford it. Better food. Better health. Better chance of survival. Of living. The hunger grows. The despair deepens. The weakness spreads. Through you. Through your men. The knowledge weighs. Heavy. Real. Permanent. You don't have enough. You never do.</p>
                                <p>You're shaken. By your poverty. By the suffering. By everything you can't change. Everything you can't fix. The guilt. The shame. The knowledge that you're part of this. That you're complicit. For the hunger. For the death. For everything that makes war terrible.</p>`;
@@ -8163,6 +8455,7 @@
                 age: 28,
                 location: "Calais, France",
                 text: `<p><strong>3–4 August 1347 — Calais surrenders</strong></p>
+                       <p>Months have passed since the siege began. The town has held. Starved. Suffered. But held. Now word spreads through the camp: negotiations have concluded. The terms are set. Calais will surrender.</p>
                        <p>The gates open on terms. Six citizens step out with the keys. You see what starvation does to a wealthy city: not dramatic collapse, just thinning. The king's anger is a thing you can feel in your teeth—then it turns, because a queen speaks.</p>`,
                 choices: [
                     {
@@ -8201,8 +8494,8 @@
                     if (!result) return `<p>You stand at attention. Silent. Still. Professional. Because that's what you do. That's what you're trained to do. That's what keeps you alive. Keeps you whole. Keeps you human. Or what's left of it. What war hasn't broken. Yet.</p>
                                            <p>The citizens step forward. With keys. With surrender. They're thin. Starved. Broken. By the siege. By the hunger. You watch. Silent. Respectful. Or trying to be. Trying to be human. Trying to be good. In a moment. In a world that makes it hard.</p>`;
                     if (result.success) {
-                        return `<p>You stay disciplined. Stay silent. During the surrender. Your professionalism shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. You've done right. Done well. That's something. That's enough.</p>
-                               <p>You've earned favor. And maintained honor. Kept your respect. Kept your humanity. Kept yourself. Whole. Good. Human. Or what's left of it. What war hasn't broken. Yet. You've done right. Done well. That's something. That's enough.</p>`;
+                        return `<p>You stay disciplined and silent during the surrender. Your professionalism shows and is noted, is remembered by the captain, by your men, by everyone who matters. You've done right, done well. That's something. That's enough.</p>
+                               <p>You've earned favor and maintained honor, kept your respect and humanity, kept yourself whole and good and human. Or what's left of it, what war hasn't broken yet. You've done right, done well. That's something. That's enough.</p>`;
                     } else {
                         return `<p>You join them. The jeering crowd. The mocking voices. Your lack of discipline shows. Is noted. Is remembered. By the captain. By your men. By everyone who matters. You've done wrong. Done poorly. That's something.</p>
                                <p>You've dishonored yourself. Through poor behavior. Through lack of respect. Through everything that makes you less. Less human. Less good. You've lost honor. Lost respect. Lost yourself. This will follow you. Haunt you. Define you. Until you die. Or until you make it right.</p>`;
@@ -8221,7 +8514,7 @@
                     {
                         text: "Continue",
                         effects: {},
-                        nextScene: "after_crecy"
+                        nextScene: "after_calais"
                     }
                 ]
             },
@@ -8235,8 +8528,8 @@
                     if (!result) return `<p>You see him. A citizen. Thin. Starved. Broken. By the siege. By the hunger. He stands. With keys. With surrender. Waiting for judgment. For mercy. For death. Maybe. Or maybe something else. Something better. Something human. If you're willing. If you're able. To risk yourself. To help him. To do what's right. Even when it's wrong. Even when it's dangerous.</p>
                                            <p>The choice is simple. Offer water. Or don't. Help him. Or leave him. Show mercy. Or show nothing. The decision is yours. But you know. Deep down. You know. That mercy costs something. That kindness has a price. That humanity comes with a burden. A weight. A debt. That you'll pay. Eventually.</p>`;
                     if (result.success) {
-                        return `<p>You offer it. Water. Life. Mercy. To a citizen. To a stranger. To a human. The small act matters. Improves morale. Makes you human. Makes you good. Or at least less bad. Less terrible. You've done right. Done well. That's something. That's enough.</p>
-                               <p>You've reduced hardness. Maintained humanity. Kept yourself. Whole. Good. Human. Or what's left of it. What war hasn't broken. Yet. You've done right. Done well. That's something. That's enough.</p>`;
+                        return `<p>You offer it—water, life, mercy—to a citizen, to a stranger, to a human. The small act matters, improves morale, makes you human and good. Or at least less bad, less terrible. You've done right, done well. That's something. That's enough.</p>
+                               <p>You've reduced hardness, maintained humanity, kept yourself whole and good and human. Or what's left of it, what war hasn't broken yet. You've done right, done well. That's something. That's enough.</p>`;
                     } else {
                         return `<p>You're mocked. For showing mercy. For being human. For doing right. The taunts get under your skin. Into your head. Into your heart. They call you weak. Call you soft. Call you names that cut. That hurt. That make you doubt. You did right. You know you did right. But knowing doesn't help. Doesn't stop the doubt. Sometimes doing right feels wrong. Sometimes being human feels like failure.</p>
                                <p>Your morale suffers. From the mockery. From the doubt. The knowledge weighs. Heavy. Real. Permanent. You tried. To be human. To be good. To do right. But it wasn't enough. It never is. Sometimes trying isn't enough. Sometimes being human isn't enough.</p>`;
@@ -8257,7 +8550,7 @@
                     {
                         text: "Continue",
                         effects: {},
-                        nextScene: "after_crecy"
+                        nextScene: "after_calais"
                     }
                 ]
             },
@@ -8271,8 +8564,8 @@
                     if (!result) return `<p>You see it. An opportunity. A chance. Keys. Cloth. Coin. Worth something. Worth taking. Worth stealing. If you're fast. If you're careful. If you're willing. To risk everything. For nothing. For greed.</p>
                                            <p>The surrender is happening. The moment is now. The opportunity is here. The choice is simple. Take it. Or leave it. Steal it. Or respect it. The decision is yours. But you know. Deep down. You know. That taking costs something. That greed has a price. That dishonor comes with a burden. A weight. A debt. That you'll pay. Eventually.</p>`;
                     if (result.success) {
-                        return `<p>You grab it. A souvenir. Keys. Cloth. Coin. Something. Anything. Worth something. You're richer. Better off. Better equipped. For what comes next.</p>
-                               <p>But you've dishonored yourself. Lost your honor. Lost your respect. Lost everything that makes you human. You've gained wealth. But lost honor. Lost trust. Lost yourself. This will follow you. Haunt you. Define you. Until you die. Or until you make it right.</p>`;
+                        return `<p>You grab it—a souvenir. Keys, cloth, coin, something, anything worth taking. You're richer now, better off, better equipped for what comes next.</p>
+                               <p>But you've dishonored yourself. Lost your honor and respect, lost everything that makes you human. You've gained wealth but lost honor, lost trust, lost yourself. This will follow you, haunt you, define you until you die or until you make it right.</p>`;
                     } else {
                         return `<p>You're caught. Taking. Stealing. Betraying. The punishment is severe. The reputation is ruined. The trust is lost. Everything you've built. Everything you've earned. Gone. In a moment. In a choice. In a mistake you can't take back.</p>
                                <p>You've lost favor. Through your greed. Through your want. The knowledge weighs. Heavy. Real. Permanent. You tried. To take. To steal. To profit. But it went wrong. It always goes wrong. Eventually. You've lost everything. For nothing. For greed.</p>`;
@@ -8291,18 +8584,19 @@
                     {
                         text: "Continue",
                         effects: {},
-                        nextScene: "after_crecy"
+                        nextScene: "after_calais"
                     }
                 ]
             },
-            after_crecy: {
-                title: "After Crécy",
+            after_calais: {
+                title: "After Calais",
                 year: 1347,
                 age: 28,
                 location: "Calais, France",
-                text: `<p>Crécy was a disaster. For the French. For everyone. Thousands fell. To arrows. To blades. To death. But you survived. You're alive. For now. That's something. That's all you have. Sometimes that's all you get.</p>
-                       <p>The war continues. Always continues. Never ends. You've learned. That battles are won. Not just by courage. But by strategy. By knowing when to advance. When to hold. When to retreat. When to survive.</p>
-                       <p>Your journey continues. As a man-at-arms. As a soldier. As a survivor. The war has only begun. The years stretch ahead. Full of battles. Full of death. Full of everything that makes war terrible. You'll face it. Endure it. Survive it. That's all you can do. All you can be.</p>`,
+                text: `<p>Calais has fallen. After months of siege. After starvation. After everything. The gates opened. The keys surrendered. The town is yours. England's. The king's. Yours. For now.</p>
+                       <p>The siege was long. Hard. Brutal. Men died. Of disease. Of hunger. Of wounds. But you survived. You're alive. For now. That's something. That's all you have. Sometimes that's all you get.</p>
+                       <p>The war continues. Always continues. Never ends. You've learned. That sieges are won. Not just by courage. But by patience. By endurance. By outlasting. By surviving. One day at a time. One week at a time. Until it ends. However it ends.</p>
+                       <p>Your journey continues. As a man-at-arms. As a soldier. As a survivor. The war has only begun. The years stretch ahead. Full of battles. Full of sieges. Full of everything that makes war terrible. You'll face it. Endure it. Survive it. That's all you can do. All you can be.</p>`,
                 choices: [
                     {
                         text: "Your story continues...",
@@ -8316,7 +8610,7 @@
                 year: 1347,
                 age: 28,
                 text: `<p>This is but the beginning. Of your story. Of the war. The 100 Years War will span your lifetime. And beyond. Decades. Generations. Until it ends. Or doesn't.</p>
-                       <p>You have survived Crécy. One of history's great battles. One of history's great slaughters. Your choices have shaped you. Made you. Broken you. Into what you are. Into what you've become.</p>
+                       <p>You have survived the siege of Calais. Months of waiting. Of disease. Of hunger. Of watching men die. Your choices have shaped you. Made you. Broken you. Into what you are. Into what you've become.</p>
                        <p><strong>Your Final Stats:</strong></p>
                        <p>You have become a veteran. Of war. Of death. Your story is written. In the choices you made. In the battles you fought. In the men you killed. In the men you saved. The war continues. Without you. With you. Around you. Through you. Until it ends. Or doesn't.</p>`,
                 choices: [
@@ -9275,7 +9569,8 @@
                 title: "Words as Weapons",
                 text: `<p>Two men are at it by the cookfire. Not blades. Tongues. They're close enough to smell each other.</p>
                        <p>"Your mother sells turnips to pigs," one says.</p>
-                       <p>The other laughs too loud. "Better than your father, who couldn't sell a pisspot at a feast."</p>`,
+                       <p>The other laughs too loud. "Better than your father, who couldn't sell a pisspot at a feast."</p>
+                       <p>The insults fly back and forth. Crude. Creative. Mean. But they stay words. No blades drawn. No blood spilled. Just men letting off steam. Passing time. Surviving the boredom. The tension. The everything that makes camp life what it is.</p>`,
                 choices: [
                     {
                         text: "Watch and let it stay words",
@@ -9515,8 +9810,8 @@
 
             skirmish_roadside_lane: {
                 title: "Narrow Lane",
-                text: `<p>Hedgerows press close. The lane is narrow. No room for grand gestures. Spears are awkward here—too long, too unwieldy.</p>
-                       <p>This is close work. Inside reach. The enemy knows it.</p>`,
+                text: `<p>The patrol takes you down a narrow lane. Hedgerows press close on either side. French countryside. Or what's left of it. The lane is narrow. No room for grand gestures. Spears are awkward here—too long, too unwieldy.</p>
+                       <p>Movement ahead. Shadows in the hedgerows. French scouts. Or bandits. Or desperate men looking for plunder. It doesn't matter who. They're between you and your destination. This is close work. Inside reach. The enemy knows it.</p>`,
                 choices: [
                     {
                         text: "Press Them (Aggressive) - 1d10 + Strength + Reach - Exertion vs DC 8",
@@ -10255,15 +10550,42 @@
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
                 text: function() {
+                    const eq = gameState.equipment || {};
+                    const hasCloak = eq.cloak || (gameState.inventory && gameState.inventory.some && gameState.inventory.some(function(i) { return i && (i.id === 'cloak' || i.name === 'cloak'); }));
+                    const hasBoots = eq.wool_hose || eq.boots || (gameState.inventory && gameState.inventory.some && gameState.inventory.some(function(i) { return i && (i.id === 'wool_hose' || i.id === 'boots'); }));
+
+                    let gearNote = '';
+                    if (hasCloak && hasBoots) {
+                        gearNote = `<p>Thank God for your cloak and good boots. The wool holds what warmth there is. Your feet, at least, have feeling. You are better off than most.</p>`;
+                    } else if (hasCloak) {
+                        gearNote = `<p>Your cloak does its work — traps what warmth your body can make. But your feet are numb in their wrappings. No boots good enough for this.</p>`;
+                    } else if (hasBoots) {
+                        gearNote = `<p>Your boots keep the worst of the cold from your feet. But without a proper cloak, the wind cuts through you like a blade.</p>`;
+                    } else {
+                        gearNote = `<p>You have nothing against this cold. No proper cloak. No decent boots. Just what you stand in and whatever prayers God still listens to.</p>`;
+                    }
+
                     return `<p>Cold. Not the kind you could fight with movement. The kind that settled into your bones. Made them ache. The frost had come in the night. Now everything was white. Crystalline. Beautiful and deadly. Your breath came in clouds. Each exhale a visible thing. Floating. Dissipating. Gone.</p>
                            
                            <p>The road was ice. Treacherous. Men slipped. Fell. Got up cursing. Fell again. The horses fared worse. Their hooves couldn't grip. Several had already gone lame. Left behind. Their riders walking now. Carrying what they could. The frost didn't care. It just kept biting. Finding every gap in your clothing. Every weakness in your defenses.</p>
-                           
+                           ${gearNote}
                            <p>Your hands were numb. Even through gloves. Mittens of wool. Useless against this cold. You flexed your fingers. Trying to keep blood moving. Feeling nothing. That scared you. Couldn't fight if you couldn't feel your sword. Couldn't defend yourself. The cold was an enemy more dangerous than the French. You couldn't negotiate with it. Couldn't run from it. Could only endure.</p>
                            
                            <p>Someone fell and didn't get up. Men rushed to him. Shook him. Called his name. Nothing. He was breathing. But barely. His lips were blue. His skin pale. Frostbite. Exposure. Death by degrees. They carried him to a cart. Wrapped him in what blankets remained. He might live. He might not. The cold would decide. Not you. Not medicine. Just the cold and whether his body could fight it.</p>
                            
                            <p>The column kept moving. Had to. Stopping meant freezing. Meant dying. So you walked. Numb. Aching. Miserable. But alive. For now. The frost glittered around you. Beautiful. Pitiless. Caring nothing for your struggle. This was winter in France. This was war in the cold months. This was what it meant to serve. Not glory. Not honor. This. The frost. The numbness. The endless walking toward some destination that might not even matter.</p>`;
+                },
+                onEnter: function() {
+                    // Equipment protects you — or its absence hurts
+                    const eq = gameState.equipment || {};
+                    const hasCloak = eq.cloak || (gameState.inventory && gameState.inventory.some && gameState.inventory.some(function(i) { return i && (i.id === 'cloak' || i.name === 'cloak'); }));
+                    const hasBoots = eq.wool_hose || eq.boots || (gameState.inventory && gameState.inventory.some && gameState.inventory.some(function(i) { return i && (i.id === 'wool_hose' || i.id === 'boots'); }));
+                    if (!hasCloak && !hasBoots) {
+                        applyStatChange('endurance', -1, {silent: true});
+                        if (Math.random() < 0.3) addCondition('Frostbitten', 'negative', 2);
+                    } else if (hasCloak && hasBoots) {
+                        applyStatChange('stress', -1, {silent: true});
+                    }
                 },
                 choices: [
                     {
@@ -11011,17 +11333,17 @@
                     {
                         text: "Stand firm—you're English, you don't break",
                         effects: { morale: 2, endurance: 1 },
-                        nextScene: "crecy_battle"
+                        nextScene: "battle_crecy"
                     },
                     {
                         text: "Pray—you'll need God's help",
                         effects: { morale: 1, stress: -1 },
-                        nextScene: "crecy_battle"
+                        nextScene: "battle_crecy"
                     },
                     {
                         text: "Check your gear one last time",
                         effects: { initiative: 1 },
-                        nextScene: "crecy_battle"
+                        nextScene: "battle_crecy"
                     }
                 ]
             },
@@ -11158,6 +11480,15 @@
                         text: "Refuse to pillage—this is wrong",
                         effects: { reputation: 2, morale: 1, stress: -1 },
                         nextScene: "refusal_honor"
+                    },
+                    {
+                        text: "Claim the village for your lord—secure it formally",
+                        requires: { custom: function() { return gameState.patronId === 'earl_northampton' || gameState.patronId === 'king_edward'; } },
+                        effects: { patronFavor: 3, reputation: 2, wealth: 60 },
+                        onChoose: function() {
+                            showNotification('Patron', 'Your lord is pleased by your diligence. The village is claimed in his name.', 'info');
+                        },
+                        nextScene: "respect_shown"
                     }
                 ]
             },
@@ -12687,8 +13018,425 @@
                 ]
             },
 
+            // ============================================================================
+            // STUB SCENES — Bridge scenes for previously undefined nextScene targets
+            // These provide brief narrative text and route back to the main arc flow.
+            // ============================================================================
+
+            march_continues: {
+                title: "The March Continues",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    const fatigue = hasCondition('Fatigued') ? " Every step is a labor now." : "";
+                    return `<p>The column moves on.${fatigue} The road stretches ahead, rutted and muddied by the passage of thousands. You fall into the rhythm of it — boot, breath, boot, breath. Putting one foot before the other. The same as yesterday. The same as tomorrow.</p>
+                    <p>Wat walks beside you. Neither of you speaks. There's nothing to say that the road doesn't say for you.</p>`;
+                },
+                choices: [
+                    { text: "Keep marching", effects: { endurance: 1, stress: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            dawn_arrival: {
+                title: "Dawn",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>Dawn comes grey and cold. You wake stiff. Muscles aching. The fire is ash. Around you men stir. Cough. Spit. Begin the slow process of becoming soldiers again instead of sleeping men.</p>
+                    <p>The sergeant's voice cuts through the mist. <em>"On your feet. We march."</em> No one argues. No one asks where. You know where. Forward. Always forward.</p>`;
+                },
+                choices: [
+                    { text: "Fall in with the column", effects: { endurance: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            forest_exit: {
+                title: "Out of the Trees",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>The trees thin. Light breaks through. You emerge from the forest onto open ground. The relief is immediate — no more shadows, no more unseen threats behind every trunk. The column reforms on the road ahead.</p>`;
+                },
+                choices: [
+                    { text: "Rejoin the column", effects: { stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            marsh_exit: {
+                title: "Solid Ground",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>Your boots find solid ground. After hours in the mire, the feeling is almost holy. You scrape the worst of the mud off. Your legs tremble. Your feet are numb and wrinkled. But you're through. The marsh is behind you.</p>`;
+                },
+                choices: [
+                    { text: "Press on", effects: { endurance: 1, stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            cavalry_decision: {
+                title: "The Horsemen Pass",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>The cavalry thunders past. Hooves throwing up clods of earth. Knights in their finery, squires trailing behind. They barely glance at you. Foot soldiers. Beneath their notice. The dust settles. You keep walking.</p>`;
+                },
+                choices: [
+                    { text: "Continue the march", nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            scout_discovery: {
+                title: "What the Scout Found",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You circle wide of the obstacle. Through a copse of trees. Over a low stone wall. And there — beyond the ridge — you see the road clear. Whatever blocked the column, it's passable from this side. You report back.</p>
+                    <p>The sergeant nods. <em>"Good eyes. We'll go around."</em> The column shifts. It costs time. But time is cheaper than blood.</p>`;
+                },
+                choices: [
+                    { text: "Fall back in with the column", effects: { experience: 5, reputation: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            camp_rest: {
+                title: "Rest in Camp",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    const wounded = hasCondition('Wounded') || hasCondition('Seriously Wounded');
+                    const woundText = wounded ? " You ease yourself down carefully, mindful of your injuries." : "";
+                    return `<p>You find a spot near the fire.${woundText} The ground is hard but you've slept on worse. Around you, the camp settles into its evening routine — men eating, talking in low voices, sharpening blades.</p>`;
+                },
+                choices: [
+                    { text: "Sleep — you need it", effects: { stress: -1, endurance: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            camp_life: {
+                title: "Camp Life",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>Another evening in camp. The fire. The talk. The weight of your gear piled beside you. You eat what there is and drink what there is and try not to think too far ahead. Tomorrow will come. It always does.</p>`;
+                },
+                choices: [
+                    { text: "Get some sleep", effects: { stress: -1, endurance: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            camp_continues: {
+                title: "Camp Continues",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>The camp goes on around you. Fires burning. Men talking. The ordinary business of war when there is no fighting to be done. You find your place in it, as you always do.</p>`;
+                },
+                choices: [
+                    { text: "Settle in", effects: { stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            camp_settled: {
+                title: "Settled In",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>You settle into the camp. Your spot is claimed, your gear is stowed. The fire crackles. For a moment, there is something almost like peace.</p>`;
+                },
+                choices: [
+                    { text: "Rest", effects: { stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            camp_observed: {
+                title: "Observations",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>You watch the camp from your position. Men move with purpose or without it. Some laugh. Some stare at nothing. War does different things to different men. You're still trying to figure out what it's doing to you.</p>`;
+                },
+                choices: [
+                    { text: "Return to your duties", nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            siege_continues: {
+                title: "The Siege Drags On",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: "Calais",
+                text: function() {
+                    return `<p>Another day before the walls of Calais. The routine is numbing — watch, eat, sleep, watch again. The French won't come out. You won't go in. Both sides waiting for the other to break.</p>`;
+                },
+                choices: [
+                    { text: "Return to your duties", effects: { stress: 1 }, nextScene: "calais_siege" }
+                ]
+            },
+
+            respect_shown: {
+                title: "Respect",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You chose respect. Over cruelty. Over convenience. It cost you nothing but a moment's restraint. And perhaps gained you something harder to measure. The look in their eyes. Not fear. Something else. Something closer to recognition.</p>
+                    <p>Whether it matters in the end, who can say. But you can look at yourself and know what you did. That has to count for something.</p>`;
+                },
+                choices: [
+                    { text: "Move on", effects: { reputation: 1, morale: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            mercy_shown: {
+                title: "Mercy",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>Mercy. A strange word for a soldier. But you gave it. Stayed your hand when you could have struck. Let live what you could have killed. The world didn't change. The war didn't stop. But somewhere inside you, something held.</p>`;
+                },
+                choices: [
+                    { text: "Continue", effects: { reputation: 1, stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            acceptance: {
+                title: "Acceptance",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You accept it. What happened. What you saw. What you did. Not forgiveness — that's too generous a word. Just acknowledgment. This is the war. This is what it does. To everyone. To you.</p>
+                    <p>You shoulder your pack and keep walking.</p>`;
+                },
+                choices: [
+                    { text: "Keep walking", effects: { stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            lesson_learned: {
+                title: "A Lesson",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You won't forget this. What you learned. What it cost to learn it. War is the harshest teacher — but its lessons stick. Next time, you'll know better. Next time, you'll be ready.</p>`;
+                },
+                choices: [
+                    { text: "Press on", effects: { experience: 5 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            rest_earned: {
+                title: "Rest Earned",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>You've earned this rest. The ground is hard, the blanket thin, but your body doesn't care. Sleep takes you fast and holds you like a mother holds a child. Dreamless. Deep. The kind of sleep only exhaustion can buy.</p>`;
+                },
+                choices: [
+                    { text: "Wake with the dawn", effects: { stress: -2, endurance: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            confession: {
+                title: "Confession",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "Camp"; },
+                text: function() {
+                    return `<p>The priest listens. Nods. His face betrays nothing. He's heard worse. Much worse. Everyone confesses before battle. The words spill out — sins real and imagined, fears too heavy to carry alone. He offers absolution. Whether God hears, you can't know. But the weight lifts. A little.</p>`;
+                },
+                choices: [
+                    { text: "Return to camp", effects: { stress: -2, morale: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            negotiation: {
+                title: "Negotiation",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>Words instead of steel. Sometimes that's enough. Sometimes it isn't. Today it was. The matter is settled — not to everyone's satisfaction, but settled. That's more than most disputes in wartime can claim.</p>`;
+                },
+                choices: [
+                    { text: "Move on", effects: { wits: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            battle_prepared: {
+                title: "Ready",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>Your equipment is checked. Your blade is sharp. Your shield is tight on your arm. Your prayers are said. You're as ready as any man can be for what comes next. The waiting is the worst part. But even the waiting ends.</p>`;
+                },
+                choices: [
+                    { text: "To battle", effects: { morale: 1 }, nextScene: "battle_crecy" }
+                ]
+            },
+
+            // --- Winter march outcome stubs ---
+            frost_survival: {
+                title: "Surviving the Frost",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You kept moving. Didn't stop. Didn't sit. Didn't let the cold win. Your feet are numb, your hands like claws, but you're alive. Others weren't so lucky. You see them by the road — men who stopped. Men who sat down. Men who won't get up again.</p>
+                    <p>The column keeps moving. You keep moving with it. That's all there is.</p>`;
+                },
+                choices: [
+                    { text: "Press forward", effects: { endurance: 2, stress: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            compassion_shown: {
+                title: "A Moment of Warmth",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You shared what warmth you had. Your cloak. Your body heat. The man looked at you with eyes that had given up — then didn't. He gripped your arm. Held on. You pulled him forward. One step. Then another.</p>
+                    <p>He'll live. Maybe. But he'll remember. And so will the others who watched. Kindness in the cold. It means something. Even here.</p>`;
+                },
+                choices: [
+                    { text: "Return to the column", effects: { reputation: 2, morale: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            desperate_warmth: {
+                title: "Desperate Measures",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>The fire caught. Barely. Wet wood smoking and sputtering. But it was heat. Real heat. Men crowded around it. Hands extended. Faces lit by the guttering flame. For ten precious minutes, you were warm. It cost you — time, material, the sergeant's disapproval. But your fingers work again. That's worth something.</p>`;
+                },
+                choices: [
+                    { text: "Rejoin the march", effects: { morale: 1, stress: -1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            shelter_found: {
+                title: "Shelter",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>A barn. Half-collapsed, missing its door. But the walls still stood and the roof mostly held. Out of the wind. Out of the rain. The column filed in — those who could fit. The rest huddled against the walls outside. For one night, you had shelter. Real shelter. The luxury of it was almost obscene.</p>`;
+                },
+                choices: [
+                    { text: "Rest and recover", effects: { stress: -2, endurance: 1 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            // --- Village pillage outcome stubs ---
+            thorough_pillage: {
+                title: "The Thorough Search",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You searched every house. Every cellar. Every hidden space. Pried up floorboards. Dug in gardens. Found what was hidden — coins sewn into mattresses, silver buried under hearthstones. The village gave up its secrets. All of them.</p>
+                    <p>When you were done, there was nothing left worth taking. The village was a shell. Empty. Stripped. You tried not to think about who had lived here. What they'd come back to find.</p>`;
+                },
+                choices: [
+                    { text: "Rejoin the column", effects: { experience: 5 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            cruel_extraction: {
+                title: "Cruelty's Wages",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>They told you where it was. Eventually. Fear is a reliable informant. The old man pointed with a shaking hand. The woman wouldn't stop crying. You found their hoard — more than expected. Enough to matter.</p>
+                    <p>You left them alive. That was your only mercy. Whether they'll survive the winter without their savings — that's not your problem. That's what you tell yourself.</p>`;
+                },
+                choices: [
+                    { text: "Move on", effects: { experience: 5 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            quick_pillage: {
+                title: "Quick and Gone",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You took what was obvious. What was easy. Didn't linger. Didn't search. Didn't look in the eyes of the people you were robbing. In and out. Professional. Quick. Like pulling a tooth — better done fast.</p>
+                    <p>It wasn't much. But it was something. And you didn't have to live with the memory of doing worse.</p>`;
+                },
+                choices: [
+                    { text: "Return to the column", effects: { experience: 5 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            refusal_honor: {
+                title: "Honor's Price",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age; },
+                location: function() { return gameState.location || "France"; },
+                noCampfire: true,
+                text: function() {
+                    return `<p>You refused. Stood apart while others looted. Kept your hands clean. Your comrades looked at you — some with contempt, some with something harder to name. Maybe respect. Maybe confusion. Who refuses plunder?</p>
+                    <p>You walked away poorer than you went in. But something in your chest felt lighter. Maybe that's worth more than silver. Maybe.</p>`;
+                },
+                choices: [
+                    { text: "Rejoin the march", effects: { experience: 5 }, nextScene: "march_through_normandy_1" }
+                ]
+            },
+
+            // ============================================================================
+            // END STUB SCENES
+            // ============================================================================
+
             campfire_interlude: {
-                title: "Campfire",
+                title: function() {
+                    const cf = gameState.campfire || {};
+                    const vid = cf.currentVignetteId;
+                    if (vid) {
+                        const v = CAMPFIRE_VIGNETTES.find(function(vg) { return vg.id === vid; });
+                        if (v && v.title) return v.title;
+                    }
+                    return "Campfire";
+                },
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age || 18; },
                 location: function() { return gameState.location || "Camp"; },
@@ -12722,6 +13470,18 @@
                             // Check year range if specified
                             if (v.minYear && gameState.year < v.minYear) return false;
                             if (v.maxYear && gameState.year > v.maxYear) return false;
+                            // P6: Check prereq field (flag name or function)
+                            if (v.prereq) {
+                                if (typeof v.prereq === 'function') {
+                                    if (!v.prereq(gameState)) return false;
+                                } else if (typeof v.prereq === 'string') {
+                                    if (!hasFlag(v.prereq)) return false;
+                                }
+                            }
+                            // P7: Check condition function (e.g., Oana location guard)
+                            if (v.condition && typeof v.condition === 'function') {
+                                if (!v.condition(gameState)) return false;
+                            }
                             return true;
                         });
                         
@@ -14032,7 +14792,7 @@
             if (scene.artwork && artworkElement && artworkImage) {
                 // Scene has artwork - display it
                 artworkImage.src = scene.artwork;
-                artworkImage.alt = scene.artworkCaption || scene.title || 'Scene artwork';
+                artworkImage.alt = scene.artworkCaption || (typeof scene.title === 'function' ? scene.title() : scene.title) || 'Scene artwork';
                 
                 // Add error handling for broken images
                 artworkImage.onerror = function() {
@@ -14065,11 +14825,13 @@
             // Add equipment display (skip for character creation)
             let equipmentDisplay = '';
             if (gameState.currentScene !== 'character_creation') {
-                // Old equipment format check - skip if using new layered system
+                // Use adapter functions for old/new format compatibility
                 try {
-                    if (gameState.equipment && gameState.equipment.weapon && gameState.equipment.weapon.quality > 0) {
+                    const weaponQuality = getEquipmentQuality('weapon');
+                    if (weaponQuality > 0) {
+                        const weaponName = getEquipmentName('weapon') || 'Weapon';
                         equipmentDisplay = `<div style="margin-top: 5px; font-size: 0.9em;">
-                            Equipment: ${gameState.equipment.weapon.name || 'Weapon'} (Quality +${gameState.equipment.weapon.quality})
+                            Equipment: ${weaponName} (Quality +${weaponQuality})
                         </div>`;
                     }
                 } catch (e) {
@@ -14089,7 +14851,7 @@
             
             // Render the story - ensure we always set innerHTML even if something is undefined
             try {
-                const title = scene.title || 'Untitled Scene';
+                const title = (typeof scene.title === 'function' ? scene.title() : scene.title) || 'Untitled Scene';
                 storyElement.innerHTML = 
                     `<h2 style="margin-bottom: 15px; color: #f4d03f;">${title}</h2>
                      ${rankDisplay || ''}
@@ -14204,7 +14966,16 @@
                 return;
             }
             
-            choicesContainer.innerHTML = choices.map((choice, index) => {
+            // Build indexed pairs, then filter out custom-hidden choices
+            const indexedChoices = choices.map((choice, idx) => ({ choice, originalIndex: idx }))
+                .filter(({ choice }) => {
+                    if (choice.requires && choice.requires.custom && typeof choice.requires.custom === 'function') {
+                        return choice.requires.custom();
+                    }
+                    return true;
+                });
+            
+            choicesContainer.innerHTML = indexedChoices.map(({ choice, originalIndex: index }) => {
                 let effectsText = '';
                 if (choice.effects) {
                     effectsText = Object.entries(choice.effects)
@@ -16070,37 +16841,58 @@
             if (typeof EquipmentManager !== 'undefined' && window.equipmentManager) {
                 kit.forEach(function(item) {
                     try {
-                        if (item.type === "weapon" && !gameState.equipment.weapon.item) {
-                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
-                            if (invItem) {
-                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'weapon');
-                                // Verify equipment actually changed (if equipItem returns a boolean)
-                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.weapon.item)) {
-                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: weapon');
+                        if (item.type === "weapon") {
+                            // Check if weapon already equipped using adapter
+                            const currentWeapon = getEquippedItem('weapon', 'primary');
+                            if (!currentWeapon || !currentWeapon.id) {
+                                const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                                if (invItem) {
+                                    const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'weapon', 'primary');
+                                    // Verify equipment actually changed
+                                    const afterEquip = getEquippedItem('weapon', 'primary');
+                                    if (equipSuccess === false || !afterEquip || afterEquip.id !== invItem.id) {
+                                        console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: weapon');
+                                    }
                                 }
                             }
-                        } else if (item.type === "armor" && item.id.includes("hat") && !gameState.equipment.head.item) {
-                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
-                            if (invItem) {
-                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'head');
-                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.head.item)) {
-                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: head');
+                        } else if (item.type === "armor" && item.id.includes("hat")) {
+                            // Check if head already equipped using adapter
+                            const currentHead = getEquippedItem('head', 'plate');
+                            if (!currentHead || !currentHead.id) {
+                                const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                                if (invItem) {
+                                    const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'head', 'plate');
+                                    // Verify equipment actually changed
+                                    const afterEquip = getEquippedItem('head', 'plate');
+                                    if (equipSuccess === false || !afterEquip || afterEquip.id !== invItem.id) {
+                                        console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: head');
+                                    }
                                 }
                             }
-                        } else if (item.type === "armor" && !gameState.equipment.torso.item) {
-                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id && i.type === "armor"; });
-                            if (invItem) {
-                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'torso');
-                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.torso.item)) {
-                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: torso');
+                        } else if (item.type === "armor") {
+                            // Check if torso already equipped using adapter
+                            const currentTorso = getEquippedItem('torso', 'plate');
+                            if (!currentTorso || !currentTorso.id) {
+                                const invItem = gameState.inventory.find(function(i) { return i.id === item.id && i.type === "armor"; });
+                                if (invItem) {
+                                    const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'torso', 'plate');
+                                    // Verify equipment actually changed
+                                    const afterEquip = getEquippedItem('torso', 'plate');
+                                    if (equipSuccess === false || !afterEquip || afterEquip.id !== invItem.id) {
+                                        console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: torso');
+                                    }
                                 }
                             }
-                        } else if (item.type === "shield" && !gameState.equipment.accessory.item) {
-                            const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
-                            if (invItem) {
-                                const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'accessory');
-                                if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.accessory.item)) {
-                                    console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: accessory');
+                        } else if (item.type === "shield") {
+                            // Check if accessory/offhand already equipped using adapter
+                            const currentOffhand = getEquippedItem('offhand', 'item') || getEquippedItem('accessory', 'item');
+                            if (!currentOffhand || !currentOffhand.id) {
+                                const invItem = gameState.inventory.find(function(i) { return i.id === item.id; });
+                                if (invItem) {
+                                    const equipSuccess = window.equipmentManager.equipItem(invItem.id, 'accessory');
+                                    if (equipSuccess === false || (equipSuccess !== true && !gameState.equipment.accessory.item)) {
+                                        console.warn('[QA] Auto-equip failed for:', invItem.id, 'slot: accessory');
+                                    }
                                 }
                             }
                         }
@@ -16475,25 +17267,27 @@
                 '<div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">' +
                     '<label style="display: block; color: #d4af37; margin-bottom: 10px; font-weight: bold;">Your Region:</label>' +
                     '<div style="position: relative; margin-bottom: 15px; display: inline-block; width: 100%; max-width: 800px;">' +
-                        '<img id="uk-map-image" src="artwork/uk-map.png" alt="Map of England" style="width: 100%; max-width: 800px; height: auto; border: 2px solid #d4af37; border-radius: 5px; display: block; margin: 0 auto; background: rgba(26, 15, 8, 0.8);" />' +
+                        '<img id="uk-map-image" src="artwork/map.jpg" alt="Map of England" style="width: 100%; max-width: 800px; height: auto; border: 2px solid #d4af37; border-radius: 5px; display: block; margin: 0 auto; background: rgba(26, 15, 8, 0.8);" />' +
                         // Region markers positioned absolutely over the map
-                        // Positions adjusted based on detailed feedback
-                        // Yorkshire (North East England) - moved down from Scotland, slightly east
-                        '<button id="region-marker-Yorkshire" onclick="selectCulture(\'Yorkshire\')" onmouseover="showRegionTooltip(event, \'Yorkshire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 60%; top: 38%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Yorkshire' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Yorkshire' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Yorkshire"></button>' +
-                        // Lancashire (North West England) - moved down from Scotland, slightly west
-                        '<button id="region-marker-Lancashire" onclick="selectCulture(\'Lancashire\')" onmouseover="showRegionTooltip(event, \'Lancashire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 46%; top: 38%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Lancashire' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Lancashire' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Lancashire"></button>' +
-                        // Norfolk (East Anglia) - moved down from NE England, slightly east
-                        '<button id="region-marker-Norfolk" onclick="selectCulture(\'Norfolk\')" onmouseover="showRegionTooltip(event, \'Norfolk\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 66%; top: 52%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Norfolk' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Norfolk' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Norfolk"></button>' +
-                        // Essex (Southeast, NE of London) - moved up and slightly left
-                        '<button id="region-marker-Essex" onclick="selectCulture(\'Essex\')" onmouseover="showRegionTooltip(event, \'Essex\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 58%; top: 54%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Essex' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Essex' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Essex"></button>' +
-                        // London (Southeast England) - moved down and slightly right
-                        '<button id="region-marker-London" onclick="selectCulture(\'London\')" onmouseover="showRegionTooltip(event, \'London\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 54%; top: 60%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'London' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'London' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 10px rgba(212, 175, 55, 1); transition: all 0.3s; font-weight: bold;" title="London">⚔</button>' +
-                        // Kent (Southeast corner) - small nudge down and right
-                        '<button id="region-marker-Kent" onclick="selectCulture(\'Kent\')" onmouseover="showRegionTooltip(event, \'Kent\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 64%; top: 68%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Kent' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Kent' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Kent"></button>' +
-                        // Somerset (South West England) - moved right and slightly down
-                        '<button id="region-marker-Somerset" onclick="selectCulture(\'Somerset\')" onmouseover="showRegionTooltip(event, \'Somerset\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 44%; top: 72%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Somerset' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Somerset' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Somerset"></button>' +
-                        // Cornwall (Far Southwest peninsula) - moved right and slightly down
-                        '<button id="region-marker-Cornwall" onclick="selectCulture(\'Cornwall\')" onmouseover="showRegionTooltip(event, \'Cornwall\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: 32%; top: 82%; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; border: 3px solid ' + (currentCulture === 'Cornwall' ? '#f4d03f' : '#d4af37') + '; background: ' + (currentCulture === 'Cornwall' ? 'rgba(244, 208, 63, 0.8)' : 'rgba(212, 175, 55, 0.6)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); transition: all 0.3s;" title="Cornwall"></button>' +
+                        // FINAL VERIFIED COORDINATES (Based on image_3e51f1.jpg) - All shifted 45px to the right (75px - 30px)
+                        // Using transform: translate(-50%, -50%) for centering - CRITICAL for proper alignment
+                        // Coordinates use calc() to add 45px offset to the right
+                        // Lancashire (Scotland) - Top Red Mass (geographically Scotland, game uses "Lancashire")
+                        '<button id="region-marker-Lancashire" onclick="selectCulture(\'Lancashire\')" onmouseover="showRegionTooltip(event, \'Lancashire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(44.8% + 45px); top: 25.2%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Lancashire' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Lancashire' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Lancashire"></button>' +
+                        // Yorkshire (Northumbria) - Purple Mass (East coast)
+                        '<button id="region-marker-Yorkshire" onclick="selectCulture(\'Yorkshire\')" onmouseover="showRegionTooltip(event, \'Yorkshire\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(57.2% + 45px); top: 47.5%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Yorkshire' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Yorkshire' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Yorkshire"></button>' +
+                        // Norfolk (East Anglia) - Brown Mass (Norfolk/Suffolk)
+                        '<button id="region-marker-Norfolk" onclick="selectCulture(\'Norfolk\')" onmouseover="showRegionTooltip(event, \'Norfolk\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(69.2% + 45px); top: 69.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Norfolk' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Norfolk' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Norfolk"></button>' +
+                        // Essex - Gap above London
+                        '<button id="region-marker-Essex" onclick="selectCulture(\'Essex\')" onmouseover="showRegionTooltip(event, \'Essex\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(66.4% + 45px); top: 76.2%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Essex' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Essex' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Essex"></button>' +
+                        // London (Mercia) - Pink/Red Circle (dead center)
+                        '<button id="region-marker-London" onclick="selectCulture(\'London\')" onmouseover="showRegionTooltip(event, \'London\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(61.8% + 45px); top: 78.4%; transform: translate(-50%, -50%); width: 32px; height: 32px; border-radius: 50%; border: 5px solid ' + (currentCulture === 'London' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'London' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 15px rgba(255, 107, 53, 1.2), 0 0 8px rgba(255, 215, 0, 1), inset 0 0 10px rgba(255, 255, 255, 0.4); transition: all 0.3s; font-weight: bold; font-size: 16px; line-height: 32px;" title="London">⚔</button>' +
+                        // Kent (Wessex) - Bottom Right Tip
+                        '<button id="region-marker-Kent" onclick="selectCulture(\'Kent\')" onmouseover="showRegionTooltip(event, \'Kent\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(70.5% + 45px); top: 83.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Kent' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Kent' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Kent"></button>' +
+                        // Somerset (Wales) - Yellow/Gold Mass (West)
+                        '<button id="region-marker-Somerset" onclick="selectCulture(\'Somerset\')" onmouseover="showRegionTooltip(event, \'Somerset\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(44.2% + 45px); top: 72.8%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Somerset' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Somerset' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Somerset"></button>' +
+                        // Cornwall - Bottom Left Tip
+                        '<button id="region-marker-Cornwall" onclick="selectCulture(\'Cornwall\')" onmouseover="showRegionTooltip(event, \'Cornwall\')" onmouseout="hideRegionTooltip()" style="position: absolute; left: calc(36.2% + 45px); top: 89.5%; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 50%; border: 4px solid ' + (currentCulture === 'Cornwall' ? '#ffd700' : '#ff6b35') + '; background: ' + (currentCulture === 'Cornwall' ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)') + '; cursor: pointer; z-index: 10; box-shadow: 0 0 12px rgba(255, 107, 53, 1), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3); transition: all 0.3s;" title="Cornwall"></button>' +
                         '<div id="region-tooltip" style="position: absolute; display: none; background: rgba(0, 0, 0, 0.95); border: 2px solid #d4af37; border-radius: 5px; padding: 12px; max-width: 300px; z-index: 1000; pointer-events: none; color: #d4af37; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.8);"></div>' +
                     '</div>' +
                     (currentCulture && regionFlavor[currentCulture] ? 
@@ -17300,14 +18094,25 @@
             }
             
             if (!scenes[nextSceneName]) {
-                console.error("Scene not found:", nextSceneName);
-                console.error("Available scenes:", Object.keys(scenes).slice(0, 20));
-                // Reset to safe state instead of breaking
-                console.warn("Invalid scene, resetting to character_creation");
-                gameState.currentScene = 'character_creation';
-                showNotification('Error', 'Invalid scene transition. Resetting to character creation.');
-                updateDisplay();
-                return;
+                console.warn("[FALLBACK] Scene not found:", nextSceneName, "— using arc-aware fallback");
+                // Route to the best available scene based on current chapter/year
+                const fallbackMap = {
+                    'chevauchée': 'march_through_normandy_1',
+                    'calais': 'calais_siege',
+                    'plague': 'start',
+                    'poitiers': 'start'
+                };
+                const fallback = fallbackMap[gameState.chapter] || 'march_through_normandy_1';
+                if (scenes[fallback]) {
+                    nextSceneName = fallback;
+                    showNotification('Narrative', 'The road continues...', 'info');
+                } else {
+                    // Last resort
+                    gameState.currentScene = 'character_creation';
+                    showNotification('Error', 'Scene not found. Resetting.');
+                    updateDisplay();
+                    return;
+                }
             }
             
             // Scene insertion pipeline (skirmish → campfire → random encounter)
@@ -17321,15 +18126,22 @@
                     console.log('[QA] Running global insertion pipeline from:', gameState.currentScene, '→', nextSceneName);
                 }
                 
-                // Check if we should insert a skirmish (before campfire, shares cooldown with random encounters)
+                // Mutual exclusion: only one insertion per transition
                 const afterSkirmish = maybeInsertSkirmish(nextSceneName);
-                
-                // Check if we should insert a campfire interlude
-                const afterCampfire = maybeInsertCampfire(afterSkirmish);
-
-                // Random encounter insertion (with cooldown to avoid back-to-back interruptions)
-                tickRandomEncounterCooldown(gameState.currentScene);
-                finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, afterCampfire);
+                if (afterSkirmish !== nextSceneName) {
+                    // Skirmish was inserted — skip campfire and random encounter
+                    finalNextScene = afterSkirmish;
+                } else {
+                    const afterCampfire = maybeInsertCampfire(nextSceneName);
+                    if (afterCampfire !== nextSceneName) {
+                        // Campfire was inserted — skip random encounter
+                        finalNextScene = afterCampfire;
+                    } else {
+                        // No skirmish or campfire — try random encounter
+                        tickRandomEncounterCooldown(gameState.currentScene);
+                        finalNextScene = maybeInsertRandomEncounter(gameState.currentScene, nextSceneName);
+                    }
+                }
             } else {
                 // QA: Log when global insertion pipeline is skipped
                 if (gameState.debug && gameState.debug.enabled) {
@@ -17572,7 +18384,22 @@
             
             // Sanitize arrays
             base.scenesVisited = Array.isArray(loaded.scenesVisited) ? loaded.scenesVisited : [];
-            base.inventory = Array.isArray(loaded.inventory) ? loaded.inventory : [];
+            
+            // Sanitize inventory: validate all items exist in database
+            if (Array.isArray(loaded.inventory)) {
+                base.inventory = loaded.inventory
+                    .filter(invItem => invItem && invItem.id && 
+                        (typeof EQUIPMENT_DATABASE === 'undefined' || EQUIPMENT_DATABASE[invItem.id]))
+                    .map(invItem => ({
+                        id: String(invItem.id),
+                        condition: Math.max(0, Math.min(100, invItem.condition ?? 100)),
+                        fit: invItem.fit || 'off-the-rack',
+                        stackCount: Math.max(1, Math.floor(invItem.stackCount ?? 1))
+                    }));
+            } else {
+                base.inventory = [];
+            }
+            
             base.conditions = Array.isArray(loaded.conditions) ? loaded.conditions : [];
             base.backgroundQuestionsAnswered = Array.isArray(loaded.backgroundQuestionsAnswered) ? loaded.backgroundQuestionsAnswered : [];
             
@@ -17740,6 +18567,27 @@
             console.log("Current scene:", hydrated.currentScene);
             console.log("Background:", hydrated.background);
             
+            // M6: Validate the saved scene still exists
+            if (hydrated.currentScene && !scenes[hydrated.currentScene]) {
+                console.warn("[SAVE] Scene", hydrated.currentScene, "no longer exists. Finding nearest checkpoint.");
+                const checkpoints = [
+                    { year: 1337, scene: 'start' },
+                    { year: 1340, scene: 'winter_quarters' },
+                    { year: 1344, scene: 'return_to_england_1344' },
+                    { year: 1346, scene: 'spring_campaign' },
+                    { year: 1347, scene: 'calais_siege' }
+                ];
+                const playerYear = hydrated.year || 1337;
+                let best = 'start';
+                for (const cp of checkpoints) {
+                    if (cp.year <= playerYear && scenes[cp.scene]) {
+                        best = cp.scene;
+                    }
+                }
+                hydrated.currentScene = best;
+                showNotification('Save Migration', 'Your save referenced a scene that no longer exists. Resuming from nearest checkpoint.', 'info');
+            }
+            
             // Overwrite the existing live state safely
             Object.keys(gameState).forEach(k => delete gameState[k]);
             Object.assign(gameState, hydrated);
@@ -17802,18 +18650,33 @@
                 
                 const career = `Battles: ${gameState.career.battles}\nWounds: ${gameState.career.wounds}\nPromotions: ${gameState.career.promotions}`;
                 
-                // Handle equipment display for both old and new format
+                // Handle equipment display for both old and new format using adapters
                 let equipment = 'None equipped';
                 try {
-                    if (gameState.equipment && gameState.equipment.weapon && gameState.equipment.weapon.name) {
-                        // Old format
-                        equipment = `Weapon: ${gameState.equipment.weapon.name} (+${gameState.equipment.weapon.quality || 0})\nArmor: ${gameState.equipment.armor?.name || 'None'} (+${gameState.equipment.armor?.quality || 0})`;
-                    } else if (gameState.equipment && (gameState.equipment.weapon?.item || gameState.equipment.torso?.plate?.item)) {
-                        // New layered format
+                    const weaponName = getEquipmentName('weapon');
+                    const weaponQuality = getEquipmentQuality('weapon');
+                    const armorName = getEquipmentName('armor') || getEquipmentName('torso');
+                    const armorQuality = getEquipmentQuality('armor') || getEquipmentQuality('torso');
+                    
+                    if (weaponName || armorName) {
+                        const parts = [];
+                        if (weaponName) {
+                            parts.push(`Weapon: ${weaponName} (+${weaponQuality})`);
+                        }
+                        if (armorName) {
+                            parts.push(`Armor: ${armorName} (+${armorQuality})`);
+                        }
+                        equipment = parts.length > 0 ? parts.join('\n') : 'None equipped';
+                    } else {
+                        // Try new format direct access as fallback
                         const equipped = [];
-                        if (gameState.equipment.weapon?.item) equipped.push(`Weapon: ${gameState.equipment.weapon.item.id}`);
-                        if (gameState.equipment.torso?.plate?.item) equipped.push(`Torso: ${gameState.equipment.torso.plate.item.id}`);
-                        if (gameState.equipment.head?.plate?.item) equipped.push(`Head: ${gameState.equipment.head.plate.item.id}`);
+                        const weaponItem = getEquippedItem('weapon', 'primary');
+                        const torsoItem = getEquippedItem('torso', 'plate');
+                        const headItem = getEquippedItem('head', 'plate');
+                        
+                        if (weaponItem && weaponItem.id) equipped.push(`Weapon: ${weaponItem.id}`);
+                        if (torsoItem && torsoItem.id) equipped.push(`Torso: ${torsoItem.id}`);
+                        if (headItem && headItem.id) equipped.push(`Head: ${headItem.id}`);
                         equipment = equipped.length > 0 ? equipped.join('\n') : 'None equipped';
                     }
                 } catch (e) {
@@ -17927,6 +18790,90 @@
         var equipmentUI = null;
         var equipmentManager = null;
         
+        // Equipment adapter functions for old/new format compatibility
+        function getEquippedItem(slot, layer) {
+            const slotData = gameState.equipment[slot];
+            if (!slotData) return null;
+            
+            // New format: slotData[layer]
+            if (layer && slotData[layer] && slotData[layer].id) {
+                return slotData[layer];
+            }
+            
+            // Old format: slotData.item
+            if (slotData.item && slotData.item.id) {
+                return slotData.item;
+            }
+            
+            // Legacy weapon.primary fallback
+            if (slot === 'weapon' && slotData.primary && slotData.primary.id) {
+                return slotData.primary;
+            }
+            
+            return null;
+        }
+        
+        function getEquipmentQuality(slot) {
+            const slotData = gameState.equipment[slot];
+            
+            // Old format: direct quality
+            if (slotData && slotData.quality !== undefined) {
+                return slotData.quality; // 0-3
+            }
+            
+            // New format: derive from condition (map to 0-3 scale)
+            const item = getEquippedItem(slot, 'primary') || getEquippedItem(slot);
+            if (item && item.condition !== undefined) {
+                // Map 0-100 condition to 0-3 quality (aligned with old system)
+                if (item.condition >= 75) return 3;
+                if (item.condition >= 50) return 2;
+                if (item.condition >= 25) return 1;
+                return 0;
+            }
+            
+            return 0;
+        }
+        
+        function getEquipmentName(slot) {
+            const slotData = gameState.equipment[slot];
+            
+            // Old format: direct name
+            if (slotData && slotData.name) {
+                return slotData.name;
+            }
+            
+            // New format: get from database
+            const item = getEquippedItem(slot, 'primary') || getEquippedItem(slot);
+            if (item && item.id && typeof EQUIPMENT_DATABASE !== 'undefined') {
+                const itemSpec = EQUIPMENT_DATABASE[item.id];
+                return itemSpec ? itemSpec.name : item.id;
+            }
+            
+            return null;
+        }
+        
+        function setEquipmentQuality(slot, quality) {
+            const slotData = gameState.equipment[slot];
+            if (!slotData) return false;
+            
+            // Old format: direct quality
+            if (slotData.quality !== undefined) {
+                slotData.quality = Math.max(0, Math.min(3, quality));
+                return true;
+            }
+            
+            // New format: update condition (map 0-3 quality to 0-100 condition)
+            const item = getEquippedItem(slot, 'primary') || getEquippedItem(slot);
+            if (item) {
+                // Map 0-3 quality to 0-100 condition
+                const conditionMap = { 0: 0, 1: 33, 2: 66, 3: 100 };
+                item.condition = conditionMap[Math.max(0, Math.min(3, quality))] || 0;
+                return true;
+            }
+            
+            return false;
+        }
+        
         function initializeEquipmentSystem() {
             // Initialize equipment manager - check if already initialized to prevent duplicates
             if (typeof EquipmentManager !== 'undefined' && 
@@ -17941,6 +18888,9 @@
                         equipmentUI = new EquipmentUI(gameState, equipmentManager);
                         window.equipmentUI = equipmentUI; // Make globally accessible
                     }
+                    
+                    // Reset retry count on successful initialization
+                    window._equipmentInitRetryCount = 0;
                 } catch (e) {
                     console.error("Failed to initialize equipment system:", e);
                     // Gracefully degrade - game still playable without equipment
@@ -17948,6 +18898,30 @@
             } else if (window.equipmentManager && !equipmentManager) {
                 // If window.equipmentManager exists but local doesn't, sync them
                 equipmentManager = window.equipmentManager;
+            } else if (typeof EQUIPMENT_DATABASE === 'undefined') {
+                // Bounded retry: only retry once, then show error
+                if (!window._equipmentInitRetryCount) {
+                    window._equipmentInitRetryCount = 1;
+                    console.warn('EQUIPMENT_DATABASE not loaded, retrying once...');
+                    setTimeout(initializeEquipmentSystem, 200);
+                } else {
+                    console.error('EQUIPMENT_DATABASE failed to load after retry');
+                    showNotification('Equipment System', 
+                        'Equipment database failed to load. Please refresh the page.', 
+                        'error');
+                }
+            }
+            
+            // Handle partial init: equipmentManager exists but equipmentUI doesn't
+            if (equipmentManager && !equipmentUI && typeof EquipmentUI !== 'undefined') {
+                try {
+                    equipmentUI = new EquipmentUI(gameState, equipmentManager);
+                    window.equipmentUI = equipmentUI;
+                    // Reset retry count on successful UI initialization
+                    window._equipmentInitRetryCount = 0;
+                } catch (e) {
+                    console.error("Failed to initialize equipment UI:", e);
+                }
             }
         }
         

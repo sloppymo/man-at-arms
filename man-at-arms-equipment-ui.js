@@ -144,6 +144,56 @@ class EquipmentUIController {
         return { valid: true };
     }
     
+    // Get equipped item (read-only adapter for old/new format compatibility)
+    getEquippedItem(slot, layer) {
+        const slotData = this.gameState.equipment[slot] || {};
+        
+        // New format: direct layer access
+        if (layer && slotData[layer] && slotData[layer].id) {
+            return slotData[layer];
+        }
+        
+        // Old format: adapt on read (no mutation)
+        // Only return old-format item when layer matches canonical legacy layer
+        if (slotData.item && slotData.item.id) {
+            // Determine canonical layer for this slot
+            let canonicalLayer = null;
+            if (slot === 'weapon') {
+                canonicalLayer = 'primary';
+            } else if (slot === 'missile') {
+                // Handle both bow and ammo for old-format missile items
+                canonicalLayer = (layer === 'ammo') ? 'ammo' : 'bow';
+            } else if (slot === 'accessory' || slot === 'offhand' || slot === 'back') {
+                canonicalLayer = 'item';
+            } else {
+                // For armor slots, default to 'plate' layer
+                canonicalLayer = 'plate';
+            }
+            
+            // Only return old-format item if requested layer matches canonical, or layer is falsy
+            // For missile, allow both bow and ammo
+            if (!layer || layer === canonicalLayer || (slot === 'missile' && (layer === 'bow' || layer === 'ammo'))) {
+                const itemSpec = typeof EQUIPMENT_DATABASE !== 'undefined' ? EQUIPMENT_DATABASE[slotData.item.id] : null;
+                if (itemSpec) {
+                    // Return normalized view without mutating state
+                    return {
+                        id: slotData.item.id,
+                        condition: slotData.item.condition || 100,
+                        fit: slotData.item.fit || 'off-the-rack',
+                        _isOldFormat: true // Flag for migration
+                    };
+                }
+            }
+        }
+        
+        // Legacy weapon.primary fallback
+        if (slot === 'weapon' && slotData.primary && slotData.primary.id) {
+            return slotData.primary;
+        }
+        
+        return null;
+    }
+    
     // Equip item
     equipItem(itemId, slot, layer) {
         const result = this.canDrop(itemId, slot, layer);
@@ -151,12 +201,16 @@ class EquipmentUIController {
             return { success: false, error: result.reason };
         }
         
-        // Get current item in slot/layer for swap
-        const current = this.gameState.equipment[slot]?.[layer];
+        // Get current item in slot/layer for swap - use read-only adapter
+        const current = this.getEquippedItem(slot, layer);
         let swappedItem = null;
         
         if (current && current.id) {
-            swappedItem = { id: current.id, condition: current.condition, fit: current.fit };
+            swappedItem = { 
+                id: current.id, 
+                condition: current.condition || 100, 
+                fit: current.fit || 'off-the-rack' 
+            };
         }
         
         // Equip new item
@@ -170,32 +224,24 @@ class EquipmentUIController {
             this.addToInventory(swappedItem);
         }
         
-        // Remove from inventory
-        this.removeFromInventory(itemId);
+        // Remove from inventory - explicit count for stability
+        this.removeFromInventory(itemId, 1);
         
         return { success: true, swapped: swappedItem };
     }
     
     // Unequip item
     unequipItem(slot, layer) {
-        const equipped = this.gameState.equipment[slot]?.[layer];
-        if (!equipped || !equipped.id) {
-            return { success: false, error: 'No item equipped' };
+        // Use manager method instead of direct delete
+        const result = this.equipmentManager.unequipItem(slot, layer);
+        if (!result.success) {
+            return result;
         }
         
-        const itemData = {
-            id: equipped.id,
-            condition: equipped.condition || 100,
-            fit: equipped.fit || 'off-the-rack'
-        };
-        
-        // Remove from equipment
-        delete this.gameState.equipment[slot][layer];
-        
         // Add to inventory
-        this.addToInventory(itemData);
+        this.addToInventory(result.item);
         
-        return { success: true, item: itemData };
+        return { success: true, item: result.item };
     }
     
     // Inventory management
@@ -277,6 +323,7 @@ class PaperDollPanel {
         this.controller = controller;
         this.container = document.getElementById(containerId);
         this.dragOverSlot = null;
+        this.listenersAttached = false; // Track attachment state
     }
     
     render() {
@@ -343,19 +390,22 @@ class PaperDollPanel {
     
     renderLayerDisplay() {
         const slots = ['head', 'neck', 'torso', 'shoulders', 'arms', 'hands', 'legs', 'feet', 'weapon', 'offhand', 'missile'];
-        const layers = ['textile', 'padding', 'mail', 'plate', 'surcoat', 'primary', 'secondary', 'item', 'bow', 'ammo'];
         
         let html = '<div class="layer-display-grid">';
         
         for (const slot of slots) {
-            const slotData = this.controller.gameState.equipment[slot] || {};
+            // Get valid layers for this slot from SLOT_LAYER_MAP (exists at module scope, line 33)
+            const validLayers = SLOT_LAYER_MAP[slot] || [];
+            
             html += `<div class="slot-layers" data-slot="${slot}">`;
             html += `<div class="slot-name">${slot.charAt(0).toUpperCase() + slot.slice(1)}</div>`;
             
-            for (const layer of layers) {
-                const equipped = slotData[layer];
+            // Only render layers valid for this slot
+            for (const layer of validLayers) {
+                // Use read-only adapter instead of direct access
+                const equipped = this.controller.getEquippedItem(slot, layer);
                 if (equipped && equipped.id) {
-                    const item = EQUIPMENT_DATABASE[equipped.id];
+                    const item = typeof EQUIPMENT_DATABASE !== 'undefined' ? EQUIPMENT_DATABASE[equipped.id] : null;
                     html += this.renderEquippedItem(slot, layer, equipped, item);
                 } else {
                     html += `<div class="layer-slot empty" data-slot="${slot}" data-layer="${layer}" 
@@ -408,36 +458,59 @@ class PaperDollPanel {
     }
     
     attachEventListeners() {
-        // Drag and drop handlers
-        const slots = this.container.querySelectorAll('.slot-zone, .layer-slot');
-        slots.forEach(slot => {
-            slot.addEventListener('dragover', (e) => this.handleDragOver(e));
-            slot.addEventListener('drop', (e) => this.handleDrop(e));
-            slot.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+        // Guard: only attach once
+        if (this.listenersAttached) {
+            return;
+        }
+        
+        // Use event delegation on container, delegate to existing handler methods
+        const container = this.container;
+        
+        // Delegate dragover to existing handleDragOver
+        container.addEventListener('dragover', (e) => {
+            const slotEl = e.target.closest('.slot-zone, .layer-slot');
+            if (!slotEl) return;
+            this.handleDragOver(e, slotEl);
         });
+        
+        // Delegate drop to existing handleDrop
+        container.addEventListener('drop', (e) => {
+            const slotEl = e.target.closest('.slot-zone, .layer-slot');
+            if (!slotEl) return;
+            this.handleDrop(e, slotEl);
+        });
+        
+        // Delegate dragleave to existing handleDragLeave
+        container.addEventListener('dragleave', (e) => {
+            const slotEl = e.target.closest('.slot-zone, .layer-slot');
+            if (!slotEl) return;
+            this.handleDragLeave(e, slotEl);
+        });
+        
+        this.listenersAttached = true;
     }
     
-    handleDragOver(e) {
+    handleDragOver(e, slotEl = e.currentTarget) {
         e.preventDefault();
-        const slot = e.currentTarget.dataset.slot;
-        const layer = e.currentTarget.dataset.layer;
+        const slot = slotEl.dataset.slot;
+        const layer = slotEl.dataset.layer;
         
         if (slot && layer) {
-            e.currentTarget.classList.add('drag-over');
+            slotEl.classList.add('drag-over');
             this.dragOverSlot = { slot, layer };
         }
     }
     
-    handleDragLeave(e) {
-        e.currentTarget.classList.remove('drag-over');
+    handleDragLeave(e, slotEl = e.currentTarget) {
+        slotEl.classList.remove('drag-over');
     }
     
-    handleDrop(e) {
+    handleDrop(e, slotEl = e.currentTarget) {
         e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
+        slotEl.classList.remove('drag-over');
         
-        const slot = e.currentTarget.dataset.slot;
-        const layer = e.currentTarget.dataset.layer;
+        const slot = slotEl.dataset.slot;
+        const layer = slotEl.dataset.layer;
         const itemId = e.dataTransfer.getData('text/plain');
         
         if (slot && layer && itemId) {
@@ -781,6 +854,40 @@ class EquipmentUI {
             const options = compat.map(t => `${t.slot} (${t.layer})`).join('\n');
             const choice = prompt(`Choose slot/layer:\n${options}`);
             // Simplified - would need proper menu UI
+        }
+    }
+    
+    // Show slot menu for keyboard users
+    showSlotMenu(slotId) {
+        const slotData = this.gameState.equipment[slotId] || {};
+        const layers = Object.keys(slotData).filter(l => slotData[l] && slotData[l].id);
+        
+        if (layers.length === 0) {
+            alert('No items equipped in this slot');
+            return;
+        }
+        
+        // Show menu (simplified - would need proper UI)
+        const options = layers.map(l => {
+            const item = typeof EQUIPMENT_DATABASE !== 'undefined' && EQUIPMENT_DATABASE[slotData[l].id]
+                ? EQUIPMENT_DATABASE[slotData[l].id].name
+                : slotData[l].id;
+            return `${l}: ${item}`;
+        }).join('\n');
+        
+        const choice = prompt(`Unequip item from layer:\n${options}\n\nEnter layer name to unequip:`);
+        if (choice && layers.includes(choice)) {
+            const result = this.controller.unequipItem(slotId, choice);
+            if (result.success) {
+                this.refreshAll();
+                const liveRegion = document.getElementById('equipment-aria-live');
+                if (liveRegion) {
+                    liveRegion.textContent = `Unequipped ${result.item.id}`;
+                    setTimeout(() => liveRegion.textContent = '', 1000);
+                }
+            } else {
+                alert(result.error);
+            }
         }
     }
 }
