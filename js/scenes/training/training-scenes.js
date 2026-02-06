@@ -143,12 +143,12 @@
     training_rural_peasant: {
         title: "Training Begins",
         year: 1337,
-        age: function() { return gameState.age || 18; },
+        age: function() { return window.gameState.age || 18; },
         location: "England",
         artwork: "artwork/blacksmith.jpg",
         artworkCaption: "The training yard - where field hands become soldiers",
         text: function() {
-            const name = gameState.characterName || "Soldier";
+            const name = window.gameState.characterName || "Soldier";
             return `<p>You've joined a lord's retinue. The training yard stretches before you, filled with men drilling, sparring, and learning the ways of war. The sergeant-at-arms, a grizzled veteran with scars across his face, calls the recruits to attention.</p>
                    <p>"You think you know hard work?" he barks. "The fields taught you nothing. War is different. War breaks men. War kills men. And if you're lucky, it makes you into something more. But first, you learn. You drill. You obey. Or you die."</p>
                    <p>Your endurance from the fields serves you well, but you lack the formal training of those born to higher stations. The first days will test everything you think you know.</p>`;

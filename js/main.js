@@ -326,103 +326,104 @@ function resetGame() {
     // Random Encounter System
     // ============================================
     function returnFromRandomEncounter(fallback = 'start') {
-    const rs = (gameState && window.gameState.randomEncounter && window.gameState.randomEncounter.returnScene) ? window.gameState.randomEncounter.returnScene : null;
-    const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
-    if (window.gameState.randomEncounter) {
-        window.gameState.randomEncounter.active = false;
-        window.gameState.randomEncounter.returnScene = null;
+        const rs = (window.gameState && window.gameState.randomEncounter && window.gameState.randomEncounter.returnScene) ? window.gameState.randomEncounter.returnScene : null;
+        const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
+        if (window.gameState.randomEncounter) {
+            window.gameState.randomEncounter.active = false;
+            window.gameState.randomEncounter.returnScene = null;
+        }
+        return target;
     }
-    return target;
-}
-function isCriticalSceneKey(sceneKey) {
-    if (!sceneKey || typeof sceneKey !== 'string') return true;
+    
+    function isCriticalSceneKey(sceneKey) {
+        if (!sceneKey || typeof sceneKey !== 'string') return true;
 
-    const criticalPrefixes = [
-        'character_creation',
-        'first_battle',
-        'tutorial',
-        'campfire',
-        'death',
-        'ending',
-        'restart',
-        'reset'
-    ];
+        const criticalPrefixes = [
+            'character_creation',
+            'first_battle',
+            'tutorial',
+            'campfire',
+            'death',
+            'ending',
+            'restart',
+            'reset'
+        ];
 
-    for (const p of criticalPrefixes) {
-        if (sceneKey.startsWith(p)) return true;
-    }
+        for (const p of criticalPrefixes) {
+            if (sceneKey.startsWith(p)) return true;
+        }
 
-    // Avoid interrupting resolution / combat plumbing.
-    if (sceneKey.endsWith('_resolve')) return true;
+        // Avoid interrupting resolution / combat plumbing.
+        if (sceneKey.endsWith('_resolve')) return true;
 
-    // Allow scenes to opt out explicitly.
-    if (window.scenes[sceneKey] && window.scenes[sceneKey].noRandomEncounter) return true;
+        // Allow scenes to opt out explicitly.
+        if (window.scenes[sceneKey] && window.scenes[sceneKey].noRandomEncounter) return true;
 
-    return false;
-}
-
-function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
-    // Never chain random encounters or interrupt a random return.
-    if ((fromSceneKey || '').startsWith('random_')) return false;
-    if ((nextSceneKey || '').startsWith('random_')) return false;
-
-    // Cooldown
-    if (window.gameState.randomEncounter && window.gameState.randomEncounter.cooldown > 0) return false;
-
-    // Exclusions (important scenes / transitions)
-    if (window.isCriticalSceneKey(fromSceneKey) || window.isCriticalSceneKey(nextSceneKey)) return false;
-
-    return true;
-}
-
-function tickRandomEncounterCooldown(fromSceneKey) {
-    if (!window.gameState.randomEncounter) return;
-    if ((fromSceneKey || '').startsWith('random_')) return;
-    if (window.gameState.randomEncounter.cooldown > 0) {
-        window.gameState.randomEncounter.cooldown -= 1;
-    }
-}
-
-function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
-    // Fix D: Guard - randomEncounter should never return to resolve scene
-    const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
-                                'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
-
-    if (invalidReturnScenes.includes(nextSceneKey)) {
-        console.warn('[QA ROUTING GUARD] Random encounter blocked - would return to:', nextSceneKey);
-        return nextSceneKey; // Don't insert encounter
+        return false;
     }
 
-    if (!window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
-    if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
+    function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+        // Never chain random encounters or interrupt a random return.
+        if ((fromSceneKey || '').startsWith('random_')) return false;
+        if ((nextSceneKey || '').startsWith('random_')) return false;
 
-    const encounterId = RANDOM_ENCOUNTERS[Math.floor(Math.random() * RANDOM_ENCOUNTERS.length)];
+        // Cooldown
+        if (window.gameState.randomEncounter && window.gameState.randomEncounter.cooldown > 0) return false;
 
-    if (!window.gameState.randomEncounter) {
-        window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+        // Exclusions (important scenes / transitions)
+        if (window.isCriticalSceneKey(fromSceneKey) || window.isCriticalSceneKey(nextSceneKey)) return false;
+
+        return true;
     }
 
-    let safeReturnScene = nextSceneKey;
-
-    // Fix D: Double-check return scene is valid (redundant guard)
-    if (invalidReturnScenes.includes(nextSceneKey)) {
-        // Fallback to a safe travel scene
-        safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-        console.warn('[QA] Random encounter returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
+    function tickRandomEncounterCooldown(fromSceneKey) {
+        if (!window.gameState.randomEncounter) return;
+        if ((fromSceneKey || '').startsWith('random_')) return;
+        if (window.gameState.randomEncounter.cooldown > 0) {
+            window.gameState.randomEncounter.cooldown -= 1;
+        }
     }
 
-    // Fix D: Assertion - verify we're not in a loop
-    if (safeReturnScene === fromSceneKey && fromSceneKey && fromSceneKey.startsWith('random_')) {
-        console.error('[QA ASSERTION FAILED] Random encounter would return to random scene! Using fallback.');
-        safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+    function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+        // Fix D: Guard - randomEncounter should never return to resolve scene
+        const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
+                                    'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
+
+        if (invalidReturnScenes.includes(nextSceneKey)) {
+            console.warn('[QA ROUTING GUARD] Random encounter blocked - would return to:', nextSceneKey);
+            return nextSceneKey; // Don't insert encounter
+        }
+
+        if (!window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
+        if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
+
+        const encounterId = RANDOM_ENCOUNTERS[Math.floor(Math.random() * RANDOM_ENCOUNTERS.length)];
+
+        if (!window.gameState.randomEncounter) {
+            window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
+        }
+
+        let safeReturnScene = nextSceneKey;
+
+        // Fix D: Double-check return scene is valid (redundant guard)
+        if (invalidReturnScenes.includes(nextSceneKey)) {
+            // Fallback to a safe travel scene
+            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+            console.warn('[QA] Random encounter returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
+        }
+
+        // Fix D: Assertion - verify we're not in a loop
+        if (safeReturnScene === fromSceneKey && fromSceneKey && fromSceneKey.startsWith('random_')) {
+            console.error('[QA ASSERTION FAILED] Random encounter would return to random scene! Using fallback.');
+            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+        }
+
+        window.gameState.randomEncounter.active = true;
+        window.gameState.randomEncounter.returnScene = safeReturnScene;
+        window.gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
+
+        return encounterId;
     }
-
-    window.gameState.randomEncounter.active = true;
-    window.gameState.randomEncounter.returnScene = safeReturnScene;
-    window.gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
-
-    return encounterId;
-}
 
 function maybeInsertSkirmish(nextSceneKey) {
     // Respect shared cooldown (skirmishes and random encounters share the same bucket)
