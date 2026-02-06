@@ -318,7 +318,7 @@
         year: 1345,
         age: function() { return window.gameState.age; },
         location: "England",
-        artwork: "artwork/map.jpg",
+        artwork: "artwork/march.jpg",
         artworkCaption: "The king's army gathers - final preparations",
         text: `<p>King Edward's army gathers. You check your equipment one last time.</p>
                <p>Preparations intensify. The king's plans are taking shape. A major campaign is being planned, but timing remains uncertain. The biggest campaign of your life awaits—when the orders finally come.</p>`,
@@ -1163,7 +1163,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "England",
-        artwork: "artwork/map.jpg",
+        artwork: "artwork/march.jpg",
         artworkCaption: "The campaign begins - England prepares for invasion",
         text: `<p>Spring arrives, and with it, the call to arms. After months of waiting, King Edward III's plans finally come to fruition. The invasion of France begins now.</p>
                <p>Your lord calls for all available men. This will be a major campaign. The ships gather in the harbor. The army assembles. The time for waiting is over.</p>`,

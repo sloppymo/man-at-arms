@@ -217,7 +217,7 @@
         year: 1337,
         age: function() { return gameState.age || 18; },
         location: "England",
-        artwork: "artwork/map.jpg",
+        artwork: "artwork/training.png",
         artworkCaption: "Learning the patterns of war - formation and discipline",
         text: function() {
             const name = gameState.characterName || "Soldier";
@@ -340,7 +340,7 @@
         year: 1338,
         age: function() { return (gameState.age || 18) + 1; },
         location: "England",
-        artwork: "artwork/map.jpg",
+        artwork: "artwork/training.png",
         artworkCaption: "The assessment - a year of training comes to an end",
         text: function() {
             const name = gameState.characterName || "Soldier";
@@ -420,7 +420,7 @@
         year: 1337,
         age: function() { return gameState.age || 18; },
         location: "England",
-        artwork: "artwork/map.jpg",
+        artwork: "artwork/training.png",
         artworkCaption: "Drills and discipline - learning to move as one",
         text: function() {
             const result = gameState.lastResolution;
