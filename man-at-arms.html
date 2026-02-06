@@ -1003,11 +1003,6 @@
     
     <div id="notification" class="notification hidden"></div>
     
-    <!-- Equipment System Scripts -->
-    <script src="man-at-arms-equipment-system.js"></script>
-    <script src="man-at-arms-equipment-ui.js"></script>
-    <script src="man-at-arms-enemy-profiles.js"></script>
-    
     <!-- Combat Overlay -->
     <div id="minigame-overlay">
         <div id="minigame-content">
@@ -1062,6 +1057,8 @@
             ageRange: null,
             year: 1337,
             location: "England",
+            level: 1, // Character level
+            levelUpPoints: 0, // Unspent stat points from leveling
             currentScene: "character_creation",
             chapter: null, // Current chapter: "chevauchée", "calais", "plague", "poitiers"
             chapterProgress: {
@@ -1390,6 +1387,11 @@
             const oldValue = gameState.stats[key];
             gameState.stats[key] = clampStat(key, oldValue + delta);
             const actualChange = gameState.stats[key] - oldValue;
+            
+            // Check for level up if experience changed
+            if (key === 'experience' && actualChange > 0) {
+                checkLevelUp();
+            }
             
             // Only show notification if not silent and there was a change
             if (!opts.silent && actualChange !== 0) {
@@ -1903,15 +1905,15 @@
             let statKey, dc, bonus;
             if (choiceId === 'press') {
                 statKey = 'strength';
-                dc = 8;
+                dc = 12; // Drastically increased difficulty
                 bonus = mods.reachBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
             } else if (choiceId === 'hold') {
                 statKey = 'wits';
-                dc = 7;
+                dc = 11; // Drastically increased difficulty
                 bonus = mods.armorDefenseBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
             } else if (choiceId === 'drive') {
                 statKey = 'charisma';
-                dc = 6;
+                dc = 10; // Drastically increased difficulty
                 bonus = mods.moraleDeltaBonus - exertion + timing.bonus + mods.variantModifier; // Include timing bonus and variant modifier
             }
             
@@ -1965,6 +1967,28 @@
                 formulaText += ` + Tempo (+${timing.bonus})`;
             }
             
+            // If first check failed, transition to second check scene instead
+            if (!result.success) {
+                // Clear any old first failure data and set new one
+                // Store the mods object (will be recalculated in second chance, but keep for reference)
+                gameState.lastSkirmishFirstFailure = {
+                    statKey: statKey,
+                    dc: dc,
+                    bonus: bonus,
+                    choiceId: choiceId,
+                    mods: mods,
+                    timing: timing,
+                    variantContext: variantContext
+                };
+                // Don't create lastSkirmish yet - wait for second chance result
+                // Clear any existing lastSkirmish to avoid confusion
+                gameState.lastSkirmish = null;
+                return 'skirmish_second_chance';
+            }
+            
+            // Success - clear any old first failure flag and create lastSkirmish data
+            gameState.lastSkirmishFirstFailure = null;
+            
             // Determine variant key for storage
             let variantKey = 'roadside_clash';
             if (variantContext.variantId === 'mud') {
@@ -1998,7 +2022,7 @@
                 returnScene: gameState.randomEncounter?.returnScene || (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null) // Fallback: null is safer than 'start'; getPostSkirmishNextScene() will handle it
             };
             
-            // Transition to resolve scene
+            // Transition to resolve scene (only reached on success)
             return 'skirmish_roadside_resolve';
         }
         
@@ -4956,13 +4980,217 @@
             },
             training_rural_peasant: {
                 title: "Training Begins",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The training yard - where field hands become soldiers",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>You've joined a lord's retinue. The training yard stretches before you, filled with men drilling, sparring, and learning the ways of war. The sergeant-at-arms, a grizzled veteran with scars across his face, calls the recruits to attention.</p>
+                           <p>"You think you know hard work?" he barks. "The fields taught you nothing. War is different. War breaks men. War kills men. And if you're lucky, it makes you into something more. But first, you learn. You drill. You obey. Or you die."</p>
+                           <p>Your endurance from the fields serves you well, but you lack the formal training of those born to higher stations. The first days will test everything you think you know.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Focus on weapon training",
+                        effects: { strength: 1 },
+                        nextScene: "training_weapons"
+                    },
+                    {
+                        text: "Emphasize formation and discipline",
+                        effects: { endurance: 1 },
+                        nextScene: "training_formation"
+                    },
+                    {
+                        text: "Push yourself in physical conditioning",
+                        effects: { endurance: 1, strength: 1 },
+                        nextScene: "training_conditioning"
+                    }
+                ]
+            },
+            training_weapons: {
+                title: "Weapon Training",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The forge glows in the evening - fire and metal",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>The weapon master, a man named Thomas, pairs you with a training partner. Your sword feels heavy and awkward in your hands—nothing like the tools you knew from the fields.</p>
+                           <p>"Most of you think a sword is just a sharp stick," Thomas says, demonstrating a basic guard. "You're wrong. A sword is an extension of your will. Your body. Your life. Learn to use it, or it'll be the last thing you hold."</p>
+                           <p>Hours pass in drills. Thrust. Parry. Cut. Your arms ache. Your hands blister. But slowly, the movements become more natural. The weight becomes familiar.</p>
+                           <p>Your training partner, a man named Will, grins through sweat-stained teeth. "Not bad for a field hand. You've got strength. Just need to learn how to use it."</p>`;
+                },
+                choices: [
+                    {
+                        text: "Practice sword techniques late into the evening",
+                        effects: { stress: 1 },
+                        nextScene: "training_weapons_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 10
+                    },
+                    {
+                        text: "Learn spear work for formation fighting",
+                        effects: { stress: 1 },
+                        nextScene: "training_weapons_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Focus on defensive techniques and shield work",
+                        effects: { stress: 1 },
+                        nextScene: "training_weapons_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "endurance",
+                        resolutionDifficulty: 10
+                    }
+                ]
+            },
+            training_formation: {
+                title: "Formation and Discipline",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/map.jpg",
+                artworkCaption: "Learning the patterns of war - formation and discipline",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>The sergeant drills you in formation. "A single man is nothing," he shouts. "A formation is everything. Hold the line. Trust your comrades. Break, and you all die."</p>
+                           <p>You learn to move as one. To hold your position. To trust the man beside you. The discipline is harsh—any mistake earns a beating or extra drills. But you understand. In the fields, you worked alone. Here, you're part of something larger.</p>
+                           <p>Your endurance serves you well. While others falter, you hold. You keep formation. You learn the rhythm of battle—advance, hold, retreat, reform. The patterns become second nature.</p>
+                           <p>After weeks of drilling, the sergeant nods in approval. "You've got discipline. That's rare. Most men think they're heroes. You know you're a soldier. That might keep you alive."</p>`;
+                },
+                choices: [
+                    {
+                        text: "Volunteer to help train newer recruits",
+                        effects: { stress: 1 },
+                        nextScene: "training_formation_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "charisma",
+                        resolutionDifficulty: 10
+                    },
+                    {
+                        text: "Practice advanced formation maneuvers",
+                        effects: { stress: 1 },
+                        nextScene: "training_formation_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Focus on your individual combat skills",
+                        effects: { stress: 1 },
+                        nextScene: "training_formation_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 10
+                    }
+                ]
+            },
+            training_conditioning: {
+                title: "Physical Conditioning",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/march.jpg",
+                artworkCaption: "The long days of training - building strength and endurance",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>You push yourself harder than the others. Running. Lifting. Sparring until you can barely stand. The fields taught you endurance, but this is different. This is focused. This is purposeful.</p>
+                           <p>Your muscles ache. Your body screams. But you keep going. Because you know what hard work means. Because you've spent your life doing it. The training yard becomes your second home. The weights, your companions.</p>
+                           <p>Weeks pass. Your strength grows. Your endurance improves. You can march longer. Fight harder. Last when others fall. The sergeant notices. "You've got the body for this. Now you need the mind. The discipline. The will."</p>
+                           <p>You're becoming something more than a field hand. Something more than a recruit. You're becoming a soldier.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Challenge stronger recruits to sparring matches",
+                        effects: { stress: 1 },
+                        nextScene: "training_conditioning_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "strength",
+                        resolutionDifficulty: 10
+                    },
+                    {
+                        text: "Help weaker recruits with their training",
+                        effects: { stress: 1 },
+                        nextScene: "training_conditioning_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "endurance",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Focus on perfecting your technique",
+                        effects: { stress: 1 },
+                        nextScene: "training_conditioning_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "agility",
+                        resolutionDifficulty: 10
+                    }
+                ]
+            },
+            training_comrades: {
+                title: "Brothers in Arms",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evenings around the fire - bonds forged in training",
+                text: function() {
+                    const name = gameState.characterName || "Soldier";
+                    return `<p>Months pass. You've formed bonds with your fellow recruits. Will, the quick-witted man from the weapon drills. John, a former manor retainer who knows the ways of service. And others—men from all walks of life, united by the call to arms.</p>
+                           <p>Evenings are spent around the fire, sharing stories, mending gear, and learning from each other. You discover that your field experience gives you insights others lack. You understand weather. Terrain. The importance of proper rest and food.</p>
+                           <p>"You're not like the others," Will says one night. "You don't talk about glory. You talk about survival. That's smart. That's what keeps men alive."</p>
+                           <p>Your comrades respect your endurance. Your practical knowledge. Your willingness to help. You're becoming part of something—a unit. A brotherhood. Something that matters.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Share your knowledge of fieldcraft and survival",
+                        effects: { stress: 1 },
+                        nextScene: "training_comrades_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 9
+                    },
+                    {
+                        text: "Learn tactics and strategy from experienced soldiers",
+                        effects: { stress: 1 },
+                        nextScene: "training_comrades_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "wits",
+                        resolutionDifficulty: 10
+                    },
+                    {
+                        text: "Focus on building trust and camaraderie",
+                        effects: { stress: 1 },
+                        nextScene: "training_comrades_resolve",
+                        requiresResolution: true,
+                        resolutionStat: "charisma",
+                        resolutionDifficulty: 9
+                    }
+                ]
+            },
+            training_final_assessment: {
+                title: "Final Assessment",
                 year: 1338,
                 age: function() { return (gameState.age || 18) + 1; },
                 location: "England",
+                artwork: "artwork/map.jpg",
+                artworkCaption: "The assessment - a year of training comes to an end",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
-                    return `<p>You've joined a lord's retinue. The training is harsh, but you're used to hard work from the fields. Your endurance serves you well, though you lack the formal training of those born to higher stations.</p>
-                           <p>After months of training, your first campaign approaches. The French are raiding the coast, and your lord prepares to respond.</p>`;
+                    return `<p>A year has passed. The training is complete. The sergeant calls you before the assembled men.</p>
+                           <p>"You came here a field hand," he says. "You leave here a soldier. Not a great one. Not yet. But a soldier. You've learned discipline. Endurance. The basics of war. The rest, you'll learn in battle. Or you won't. That's up to you."</p>
+                           <p>Your lord's banner flies above the training yard. The call has come. The French are raiding the coast, burning villages, taking what they want. Your lord prepares to respond. To fight. To defend what's yours.</p>
+                           <p>You've trained. You've learned. You've become something more than you were. But training is one thing. Battle is another. The real test approaches. The test that matters. The test that determines who lives and who dies.</p>
+                           <p>Your first campaign begins now.</p>`;
+                },
+                onEnter: function() {
+                    applyStatChange('experience', 15);
+                    gameState.career.trainingComplete = true;
                 },
                 choices: [
                     {
@@ -4974,6 +5202,231 @@
                         text: "Stay with the main force",
                         effects: { endurance: 1 },
                         nextScene: "first_battle_cautious"
+                    }
+                ]
+            },
+            training_weapons_resolve: {
+                title: "Weapon Training",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The training yard - learning the weight of steel",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The weapon training continues. Your arms ache. Your hands blister. But you keep going. Because you have to. Because there's no other choice.</p>`;
+                    
+                    const difficulty = result.baseDifficulty || 10;
+                    const neededRoll = difficulty - result.effectiveStat;
+                    const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+                    
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><em>Chance to succeed: ${Math.round(successChance)}%</em>
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+                    
+                    if (result.success) {
+                        return `${rollDisplay}<p>You push through the exhaustion. The pain. The doubt. Your dedication pays off. The weapon master notices your improvement. "You're getting it," Thomas says. "Not many do. Most give up. You didn't. That matters."</p>
+                               <p>Your technique improves. Your confidence grows. You're becoming more than a field hand with a sword. You're becoming a soldier who knows how to fight.</p>`;
+                    } else {
+                        return `${rollDisplay}<p>The training is brutal. Exhausting. You push yourself too hard. Your body rebels. Your technique suffers. The weapon master shakes his head. "You're trying too hard. Too fast. Slow down. Learn the basics. Master them. Then move on."</p>
+                               <p>You've learned a hard lesson. Training isn't about pushing until you break. It's about steady progress. About building foundations. You'll need to work harder. Smarter. If you want to survive what's coming.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        applyStatChange('strength', 1);
+                        applyStatChange('agility', 1);
+                        applyStatChange('experience', 5);
+                    } else if (result) {
+                        applyStatChange('stress', 1);
+                        applyStatChange('experience', 2);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue training",
+                        effects: {},
+                        nextScene: "training_comrades"
+                    }
+                ]
+            },
+            training_formation_resolve: {
+                title: "Formation and Discipline",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/map.jpg",
+                artworkCaption: "Drills and discipline - learning to move as one",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>The formation drills continue. You learn to move as one. To hold your position. To trust the man beside you.</p>`;
+                    
+                    const difficulty = result.baseDifficulty || 9;
+                    const neededRoll = difficulty - result.effectiveStat;
+                    const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+                    
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><em>Chance to succeed: ${Math.round(successChance)}%</em>
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+                    
+                    if (result.success) {
+                        return `${rollDisplay}<p>You excel in the drills. Your discipline shows. Your understanding deepens. The sergeant takes notice. "You've got the mind for this," he says. "Most men fight for themselves. You fight for the unit. That's what makes a soldier. That's what keeps men alive."</p>
+                               <p>Your reputation grows among the recruits. They see your dedication. Your skill. Your willingness to help. You're becoming a leader. Not by birth. Not by name. But by action. By example.</p>`;
+                    } else {
+                        return `${rollDisplay}<p>The drills are harder than you expected. The formations are complex. The discipline is harsh. You struggle. Make mistakes. The sergeant's patience wears thin. "You're thinking too much. Or not enough. I can't tell which. But you need to figure it out. Fast."</p>
+                               <p>You've learned that discipline isn't just about following orders. It's about understanding. About becoming part of something larger. You'll need to work harder. Focus more. If you want to be ready for what's coming.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        if (result.resolutionStat === 'charisma') {
+                            applyStatChange('charisma', 1);
+                            applyStatChange('reputation', 1);
+                        } else if (result.resolutionStat === 'wits') {
+                            applyStatChange('wits', 1);
+                            applyStatChange('endurance', 1);
+                        } else {
+                            applyStatChange('strength', 1);
+                            applyStatChange('agility', 1);
+                        }
+                        applyStatChange('experience', 5);
+                    } else if (result) {
+                        applyStatChange('stress', 1);
+                        applyStatChange('experience', 2);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue training",
+                        effects: {},
+                        nextScene: "training_comrades"
+                    }
+                ]
+            },
+            training_conditioning_resolve: {
+                title: "Physical Conditioning",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                artwork: "artwork/march.jpg",
+                artworkCaption: "Pushing past limits - building strength and endurance",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You push yourself harder. Running. Lifting. Sparring until you can barely stand.</p>`;
+                    
+                    const difficulty = result.baseDifficulty || 10;
+                    const neededRoll = difficulty - result.effectiveStat;
+                    const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+                    
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><em>Chance to succeed: ${Math.round(successChance)}%</em>
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+                    
+                    if (result.success) {
+                        return `${rollDisplay}<p>You push past your limits. Your body screams. But you keep going. And something changes. You break through. Your strength increases. Your endurance improves. You can do more. Last longer. Fight harder.</p>
+                               <p>The sergeant watches with approval. "You've got the body for this. The will. Most men quit when it gets hard. You didn't. That's what separates soldiers from corpses."</p>
+                               <p>You're becoming stronger. Harder. More capable. The training is working. You're becoming what you need to be.</p>`;
+                    } else {
+                        return `${rollDisplay}<p>You push too hard. Too fast. Your body breaks before your will does. You overextend. Pull a muscle. Strain something. The pain is sharp. Immediate. Real.</p>
+                               <p>The sergeant shakes his head. "You've got heart. But heart without sense gets men killed. Learn your limits. Respect them. Then push them. Slowly. Steadily. That's how you get stronger. Not by breaking yourself."</p>
+                               <p>You've learned a painful lesson. Training is about building. Not breaking. You'll need to be smarter. More careful. If you want to be ready.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        if (result.resolutionStat === 'strength') {
+                            applyStatChange('strength', 1);
+                            applyStatChange('reputation', 1);
+                        } else if (result.resolutionStat === 'endurance') {
+                            applyStatChange('charisma', 1);
+                            applyStatChange('endurance', 1);
+                        } else {
+                            applyStatChange('agility', 1);
+                            applyStatChange('wits', 1);
+                        }
+                        applyStatChange('experience', 5);
+                    } else if (result) {
+                        addCondition('Strained', 'negative', 1);
+                        applyStatChange('stress', 1);
+                        applyStatChange('experience', 2);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue training",
+                        effects: {},
+                        nextScene: "training_comrades"
+                    }
+                ]
+            },
+            training_comrades_resolve: {
+                title: "Brothers in Arms",
+                year: 1337,
+                age: function() { return gameState.age || 18; },
+                location: "England",
+                text: function() {
+                    const result = gameState.lastResolution;
+                    if (!result) return `<p>You spend time with your comrades. Sharing stories. Learning from each other.</p>`;
+                    
+                    const difficulty = result.baseDifficulty || 9;
+                    const neededRoll = difficulty - result.effectiveStat;
+                    const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+                    
+                    const rollDisplay = `<div class="dice-roll">
+                        <strong>Roll:</strong> 1d10 + ${result.effectiveStat} = ${result.roll} (vs ${result.difficulty})
+                        <br><em>Chance to succeed: ${Math.round(successChance)}%</em>
+                        <br><strong>${result.success ? 'SUCCESS' : 'FAILURE'}</strong>
+                    </div>`;
+                    
+                    if (result.success) {
+                        if (result.resolutionStat === 'wits') {
+                            return `${rollDisplay}<p>Your knowledge proves valuable. Your insights help your comrades. They listen. Learn. Remember. You've earned their respect. Their trust. Their friendship.</p>
+                                   <p>"You know things," Will says. "Things that matter. Things that keep men alive. That's worth more than strength. More than skill. That's worth everything."</p>
+                                   <p>You've become more than a recruit. You've become a valued member of the unit. Someone others look to. Someone they trust. That matters. That will help when the real fighting begins.</p>`;
+                        } else {
+                            return `${rollDisplay}<p>You build bonds. Real bonds. The kind that matter. The kind that last. Your comrades trust you. Respect you. They know you'll have their backs. And you know they'll have yours.</p>
+                                   <p>"You're one of us now," John says. "Not just a recruit. Not just a soldier. One of us. That means something. That matters."</p>
+                                   <p>You've found your place. Your people. Your brothers. That's worth more than training. More than skill. That's what keeps men alive. What makes them fight. What makes them win.</p>`;
+                        }
+                    } else {
+                        return `${rollDisplay}<p>You try to connect. To share. To learn. But something doesn't click. You're still an outsider. Still separate. Still alone in a crowd of men.</p>
+                               <p>"You're trying too hard," Will says. "Or not hard enough. I can't tell. But you need to figure it out. We're going to war. We need to trust each other. To know each other. To be a unit. Not just individuals."</p>
+                               <p>You've learned that camaraderie isn't forced. It's earned. Built. Over time. Through action. Through trust. You'll need to work on that. If you want to survive. If you want to belong.</p>`;
+                    }
+                },
+                onEnter: function() {
+                    const result = gameState.lastResolution;
+                    if (result && result.success) {
+                        if (result.resolutionStat === 'wits') {
+                            applyStatChange('wits', 1);
+                            if (result.difficulty === 10) {
+                                applyStatChange('reputation', 1);
+                            }
+                            applyStatChange('charisma', 1);
+                        } else {
+                            applyStatChange('charisma', 1);
+                            applyStatChange('morale', 1);
+                        }
+                        applyStatChange('experience', 5);
+                    } else if (result) {
+                        applyStatChange('stress', 1);
+                        applyStatChange('experience', 2);
+                    }
+                },
+                choices: [
+                    {
+                        text: "Continue to final assessment",
+                        effects: {},
+                        nextScene: "training_final_assessment"
                     }
                 ]
             },
@@ -5171,6 +5624,8 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The first battle ends - blood and survival",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The battle rages around you. The sound is terrible. The sight is worse. Men die. Scream. Fall everywhere. But you fight. Keep fighting. Keep going. Because you have to. Because there's no other choice.</p>
@@ -5222,6 +5677,8 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-3.jpg",
+                artworkCaption: "The first battle - staying with the main force",
                 text: `<p>You fight in formation. Stay close to your comrades. To your shield. To your safety. Or what passes for it. But you hold. Keep formation. Keep discipline. Keep going. Because that's what you do. That's what you're trained to do.</p>
                        <p>The battle is fierce. Terrible. Deadly. But you emerge unscathed. For now. That's something. That's enough. Your caution served you well. Your discipline. Your care. You've learned the value of discipline and formation. Of staying together.</p>
                        <p>Your first battle. Your first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you. But you survived. That's something. That's enough. Sometimes survival is enough.</p>`,
@@ -5243,6 +5700,8 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-6.jpg",
+                artworkCaption: "A tactical mind - seeing the field differently",
                 text: `<p>Your suggestion works. To flank the French position. Attack from the side. From behind. Where they're not expecting it. Your lord takes notice of your thinking. Of your strategy. Not just another sword arm. Someone who sees the field. Who understands how battles are won.</p>
                        <p>You've earned respect through intelligence. Through strategy. Not just force. Not just strength. But thinking and planning. Seeing what others miss. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
                        <p>Your first battle. Your first blood. It changes you. Breaks you. Makes you into what you'll become. What war makes you. But you survived through thinking. Through strategy. Through everything that makes you different. Makes you more than just a soldier. More than just a killer.</p>`,
@@ -5266,6 +5725,8 @@
                 year: 1338,
                 age: 19,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-4.jpg",
+                artworkCaption: "Leading a unit in your first battle",
                 text: `<p>You lead them into battle. Your unit. Your men. Your responsibility. The French line ahead. Your men look to you. For orders. For courage. For something to follow.</p>
                        <p>The battle begins. Steel clashes. Men shout. The chaos of war surrounds you. Can you lead them through this? Can you keep them together? Can you make the right choices when everything is happening at once?</p>`,
                 choices: [
@@ -5349,6 +5810,8 @@
                 year: 1340,
                 age: 21,
                 location: "Northern France",
+                artwork: "artwork/drunkfire.jpg",
+                artworkCaption: "Winter in the camp - a moment of rest",
                 text: function() {
                     const pay = Math.floor(5 + gameState.stats.reputation / 5);
                     return `<p>The war has quieted for the winter. You're billeted in a small village. Your pay arrives: ${pay} silver coins.</p>
@@ -5388,6 +5851,9 @@
                 title: "Better Gear",
                 year: 1340,
                 age: 21,
+                location: "Northern France",
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The forge glows - hammer on steel, like a heartbeat",
                 text: `<p>The blacksmith's forge glows. Hot. Bright. The sound of hammer on steel rings. Steady. Rhythmic. Like a heartbeat. Like war.</p>
                        <p>You invest. Coins on the table. Metal in your hands. A sturdier sword. Reinforced leather. Better gear. Better protection. Better chance of survival. Of victory. Of living through the next fight. The next battle.</p>
                        <p>Your gear quality improves. The weight feels different. The balance. The confidence. This will serve you well. In future battles. In future dangers. In everything that comes.</p>`,
@@ -5439,6 +5905,8 @@
                 year: 1341,
                 age: 22,
                 location: "Northern France",
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "The years blur - seasons into months, months into days",
                 text: function() {
                     let base = `<p>Winter quarters. Spring campaign. Summer raids. The rhythm becomes familiar. Predictable almost. You march. You fight. You survive. The years blur into seasons. Seasons into months. Months into days.</p>
                        <p>You've learned the patterns. When to push forward. When to hold back. When to keep your head down. Your lord notices. Your comrades trust you. Experience is the only teacher that matters.</p>
@@ -5649,6 +6117,8 @@
                 year: 1345,
                 age: 26,
                 location: "England",
+                artwork: "artwork/map.jpg",
+                artworkCaption: "The king's army gathers - final preparations",
                 text: `<p>King Edward's army gathers. You check your equipment one last time.</p>
                        <p>Preparations intensify. The king's plans are taking shape. A major campaign is being planned, but timing remains uncertain. The biggest campaign of your life awaits—when the orders finally come.</p>`,
                 choices: [
@@ -5664,6 +6134,8 @@
                 year: 1345,
                 age: 26,
                 location: "England",
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Tomorrow never comes - waiting for orders",
                 text: `<p>Tomorrow never comes.</p>
                        <p>Orders change. Plans shift. The king's attention turns elsewhere. A diplomatic mission. A border dispute. Something always comes up. Something that matters more than your unit. More than your plans.</p>
                        <p>You wait. Train. Drill. Check your gear again. And again. Because you know. When it comes, it will come fast. No warning. No time to prepare. Just orders. Just movement. Just war.</p>
@@ -5682,6 +6154,8 @@
                 year: 1340,
                 age: 21,
                 location: "Northern France",
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The blacksmith's daughter - a winter's cruel joke",
                 text: `<p>You approach Marie. Speak to her. Tell her how you feel. What you want. What you hope for. She listens. Smiles. Nods. But there's something in her eyes. Something you don't see. Not yet.</p>
                        <p>Her father watches. The blacksmith. Big man. Hard hands. He laughs. Not at you. With you. Or so you think. He approves. Offers his daughter's hand. You're happy. Proud. Foolish.</p>
                        <p>Then you hear it. The laughter. Your comrades. Behind you. Around you. Everywhere. They're laughing. At you. At the joke. At everything you believed. Everything you hoped for.</p>
@@ -5716,6 +6190,7 @@
                 year: 1340,
                 age: 22,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-2.jpg",
                 artworkCaption: "French archers emerge from the trees",
                 text: `<p>The forest goes still the wrong way. No birds. No chatter. Just boots on leaf-mold and the small clink of mail. Men keep walking anyway. Because marching is what you do until it isn't.</p>
                        <p>An arrow hits the man beside you. He drops like his knees were cut out. Someone shouts. Then there's more arrows. French archers in the trees. Close. Higher than you. Hard to see until they move.</p>
@@ -5755,6 +6230,8 @@
                 year: 1340,
                 age: 22,
                 location: "Northern France",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The forest settles - men breathe hard, someone coughs",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The forest settles back down like it didn't do anything. Men breathe hard. Someone coughs and won't stop.</p>`;
@@ -5808,6 +6285,7 @@
                 year: 1345,
                 age: 26,
                 location: "Gascony",
+                artwork: "artwork/seige.jpg",
                 artworkCaption: "French forces assault the castle walls",
                 text: `<p>The siege has gone on long enough that everyone's sick of the sound of stone. The French throw rocks. You throw rocks back. Men die in bits you don't want to look at too hard.</p>
                        <p>Up on the ramparts the air smells of piss, smoke, and old sweat. The captain points where he wants bodies. "Gate. Wall. Anywhere they touch. Hold it."</p>
@@ -5847,6 +6325,8 @@
                 year: 1345,
                 age: 26,
                 location: "Gascony",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The wall holds - bodies piled where the ladder was",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The assault keeps coming in waves. Arms ache. Throats go raw. The wall shakes and holds.</p>`;
@@ -5903,6 +6383,7 @@
                 year: 1342,
                 age: 23,
                 location: "Aquitaine",
+                artwork: "artwork/battle-scene-1.jpg",
                 artworkCaption: "French cavalry charges across the field",
                 text: `<p>You're marching in a long column when the sound changes. Not boots. Not carts. Hooves. Fast. Many of them. It comes up from behind a low rise like a storm you can't step aside from.</p>
                        <p>French cavalry—helmets bright, lances down. The men near you start shouting at once. Some start running. That makes it worse.</p>
@@ -5942,6 +6423,8 @@
                 year: 1342,
                 age: 23,
                 location: "Aquitaine",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The dust settles - men breathe and count the cost",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The dust hangs in the air. Men cough. Someone is crying and trying to hide it.</p>`;
@@ -5994,6 +6477,7 @@
                 year: 1347,
                 age: 28,
                 location: "Normandy",
+                artwork: "artwork/campfire.jpg",
                 artworkCaption: "Shadows move in the darkness",
                 text: `<p>Night in camp is never quiet. Men cough. Horses shift. Someone argues in a whisper. The fire burns low because no one wants to be a beacon.</p>
                        <p>You're on watch when you see movement where there shouldn't be any. Not a man going to piss. Not a dog. Shapes slipping between tents.</p>
@@ -6033,6 +6517,8 @@
                 year: 1347,
                 age: 28,
                 location: "Normandy",
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Dawn comes slow and gray - the camp still stands",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The night drags on. Men don't sleep. The dark keeps its teeth out for now.</p>`;
@@ -6089,6 +6575,7 @@
                 year: 1348,
                 age: 29,
                 location: "Calais",
+                artwork: "artwork/battle-scene-3.jpg",
                 artworkCaption: "Combat in the narrow streets",
                 text: `<p>Calais is tight stone and narrow lanes. The air is bad—smoke, rot, old fish. Everything echoes. A shout becomes ten shouts. A footstep becomes a warning.</p>
                        <p>Your unit pushes into a street and the street pushes back. A bolt from a window. A man drops. A door bursts open and there's a Frenchman in it, just as surprised as you are.</p>
@@ -6128,6 +6615,8 @@
                 year: 1348,
                 age: 29,
                 location: "Calais",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The street is yours - silence after the noise",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The street is still contested. Men press forward by inches and fear.</p>`;
@@ -6181,6 +6670,7 @@
                 year: 1339,
                 age: 20,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-1.jpg",
                 artworkCaption: "Arrows fly across the field",
                 text: `<p>The French hold a ridge and they won't stop shooting. All day it's been the same: a man steps out, a man drops. Your side curses the wind and keeps moving corpses off the line.</p>
                        <p>You're ordered forward with the archers. Not to be brave. To be useful. You string an arrow. Your fingers are stiff. Your mouth is dry.</p>
@@ -6220,6 +6710,8 @@
                 year: 1339,
                 age: 20,
                 location: "Northern France",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "The ridge is quieter - less dying",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>Arrows keep trading places in the air. Men keep falling. No one calls it fair.</p>`;
@@ -6275,6 +6767,7 @@
                 year: 1344,
                 age: 25,
                 location: "Gascony",
+                artwork: "artwork/bridgerain.jpg",
                 artworkCaption: "Men struggle across the river under fire",
                 text: `<p>The river is wide, cold, and fast. The far bank is lined with French archers. You can see the draw of their bows even before you hear the strings.</p>
                        <p>Men step in and the water grabs them. Packs drag. Boots slip in the mud. An arrow hits a man midstream and he goes under like he's been pulled.</p>
@@ -6314,6 +6807,8 @@
                 year: 1344,
                 age: 25,
                 location: "Gascony",
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "The far bank - wet and angry and alive",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The river keeps taking what it can. Men keep trying anyway.</p>`;
@@ -6367,6 +6862,7 @@
                 year: 1350,
                 age: 31,
                 location: "Northern France",
+                artwork: "artwork/battle-scene-2.jpg",
                 artworkCaption: "Outnumbered and surrounded",
                 text: `<p>The day goes wrong and then keeps going wrong. Your unit gets cut off. The captain goes down. The line breaks. You end up with a handful of men and no clean way out.</p>
                        <p>The French are everywhere. Not in a grand way. In a practical way. You turn your head and there's more of them. You step back and there's more of them. The ground feels smaller.</p>
@@ -6407,6 +6903,8 @@
                 year: 1350,
                 age: 31,
                 location: "Northern France",
+                artwork: "artwork/battle-aftermath.jpg",
+                artworkCaption: "You survive the moment - but at what cost",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The French close in. Men tighten grips. Breath gets loud inside helmets.</p>`;
@@ -6464,6 +6962,8 @@
                 year: 1346,
                 age: 27,
                 location: "England",
+                artwork: "artwork/map.jpg",
+                artworkCaption: "The campaign begins - England prepares for invasion",
                 text: `<p>Spring arrives, and with it, the call to arms. After months of waiting, King Edward III's plans finally come to fruition. The invasion of France begins now.</p>
                        <p>Your lord calls for all available men. This will be a major campaign. The ships gather in the harbor. The army assembles. The time for waiting is over.</p>`,
                 choices: [
@@ -6480,6 +6980,8 @@
                 age: 27,
                 location: "Portsmouth, England",
                 noCampfire: true, // Prevent campfire insertion during contract signing sequence
+                artwork: "artwork/signup.jpg",
+                artworkCaption: "Signing the indenture - the business of war",
                 text: `<p><strong>June 1346 — Portsmouth</strong></p>
                        <p>A clerk reads the contract terms aloud while your captain watches faces for hesitation. You're not swearing fealty for life—you're signing for a term, a wage, and a share of what can be lawfully taken. The ink smells like iron. Someone nearby is already drunk enough to mis-hear his own name.</p>`,
                 choices: [
@@ -6514,6 +7016,8 @@
                 year: 1346,
                 age: 27,
                 location: "Portsmouth, England",
+                artwork: "artwork/signup.jpg",
+                artworkCaption: "Negotiating terms - the business of war",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You approach the clerk...</p>`;
@@ -6547,6 +7051,8 @@
                 year: 1346,
                 age: 27,
                 location: "Portsmouth, England",
+                artwork: "artwork/signup.jpg",
+                artworkCaption: "Learning the economics of war - prisoners and ransoms",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You consider the question...</p>`;
@@ -6578,6 +7084,8 @@
                 year: 1346,
                 age: 27,
                 location: "Portsmouth, England",
+                artwork: "artwork/signup.jpg",
+                artworkCaption: "The quill and the contract - commitment to war",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You take the quill...</p>`;
@@ -6611,6 +7119,8 @@
                 age: 27,
                 location: "Portsmouth, England",
                 noCampfire: true, // Prevent campfire insertion here
+                artwork: "artwork/dock.jpg",
+                artworkCaption: "The docks of Portsmouth - preparing for war",
                 text: `<p><strong>Mid-June 1346 — Portsmouth</strong></p>
                        <p>After signing the contract, you step out of the clerk's tent into the open air. The docks are a chaos of activity, but you're directed away from the harbor, up the hillside to the muster field.</p>
                        <p>Tents stretch across the hillside. Men from a dozen lords. Archers. Men-at-arms. Sergeants. All waiting. All preparing. The transition from the quiet formality of contract signing to the sprawling military camp is jarring, but familiar. You've done this before. Just never on this scale.</p>
@@ -6630,6 +7140,8 @@
                 year: 1346,
                 age: 27,
                 location: "Southern England",
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "Empty wagons and hungry men - the supply train",
                 text: `<p><strong>Late June 1346 — Southern England</strong></p>
                        <p>Wagons arrive with hard bread and salted meat—then stop arriving. A royal warrant appears. "Purveyance," they call it: taking supplies at set prices (or less), and letting villagers complain to someone who isn't here. Your unit is told to "assist."</p>`,
                 choices: [
@@ -6664,6 +7176,8 @@
                 year: 1346,
                 age: 27,
                 location: "Southern England",
+                artwork: "artwork/market.jpg",
+                artworkCaption: "Fair prices and proper receipts - small acts of kindness",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The villagers watch you. Hands on tools. Faces hard. They've seen soldiers before. They know what to expect. Taking. Demanding. Threatening.</p>
@@ -6700,6 +7214,8 @@
                 year: 1346,
                 age: 27,
                 location: "Southern England",
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "Taking supplies - the harsh reality of war",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You move quickly. No time for negotiation. No time for fairness. The unit needs food. The unit needs supplies. That's what matters. That's all that matters.</p>
@@ -6734,6 +7250,8 @@
                 year: 1346,
                 age: 27,
                 location: "Southern England",
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "The weight of conscience - refusing the order",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The order comes. Take what's needed. Pay what you can. Or don't pay. The warrant covers it. The law allows it. But your conscience doesn't.</p>
@@ -6803,6 +7321,8 @@
                 year: 1346,
                 age: 27,
                 location: "English Channel",
+                artwork: "artwork/BattleofSluys.jpeg",
+                artworkCaption: "Tending the horses through the night - the crossing continues",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The horses scream. Panic in their eyes. The deck rolls. They stumble. Fall. Get up. Fall again. They don't understand. Can't understand. This isn't their world. This isn't their war.</p>
@@ -6838,6 +7358,8 @@
                 year: 1346,
                 age: 27,
                 location: "English Channel",
+                artwork: "artwork/Bataille_de_la_Rochelle.jpg",
+                artworkCaption: "Securing gear against saltwater - the crossing is harsh",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>Saltwater everywhere. Spray. Mist. Waves crashing over the side. Your gear is exposed. Vulnerable. Your bow. Your strings. Your arrows. Everything that keeps you alive. Everything that makes you useful.</p>
@@ -6873,6 +7395,8 @@
                 year: 1346,
                 age: 27,
                 location: "English Channel",
+                artwork: "artwork/naval-battle-1.jpg",
+                artworkCaption: "Helping the sick and keeping order on the crossing",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>Men retch. Over the side. On the deck. Everywhere. The smell is terrible. The sound is worse. Groans. Curses. Prayers. The ship rolls. They roll with it. Helpless. Hopeless. Just trying to survive.</p>
@@ -6907,7 +7431,7 @@
                 year: 1346,
                 age: 27,
                 location: "Saint-Vaast-la-Hougue, Normandy",
-                artwork: "artwork/naval-battle-2.png", // Naval battle with ships and coastal city
+                artwork: "artwork/naval-battle-2.jpg", // Naval battle with ships and coastal city
                 artworkCaption: "Landing at Saint-Vaast-la-Hougue",
                 text: `<p><strong>12 July 1346 — Saint-Vaast-la-Hougue / Cotentin</strong></p>
                        <p>The shoreline looks quiet until you notice how many doors are barred. Men spill out and form ranks. The order is simple: move inland, take what can be taken, and keep moving.</p>`,
@@ -6980,7 +7504,7 @@
                 year: 1346,
                 age: 27,
                 location: "Normandy",
-                artwork: "artwork/naval-battle-3.png", // Another naval battle scene
+                artwork: "artwork/naval-battle-3.jpg", // Another naval battle scene
                 artworkCaption: "The first raid on French soil",
                 text: function() {
                     const result = gameState.lastResolution;
@@ -7069,6 +7593,8 @@
                 year: 1346,
                 age: 27,
                 location: "Normandy",
+                artwork: "artwork/burninglooting.jpg",
+                artworkCaption: "The burn line - making the countryside bleed",
                 text: `<p><strong>Mid-July 1346 — Normandy villages</strong></p>
                        <p>You smell smoke before you see it. The raid is not "battle," it's pressure: make the countryside bleed wealth and confidence, force the enemy to respond, and keep the army fed while doing it.</p>
                        <p>As you move through the village, you pass a small stone church. Its cross stands against the smoke-filled sky. Some of your men eye it with interest—churches hold silver, gold, offerings. Easy plunder. But something makes you pause. The building has stood here for generations. Sacred ground. Or so they say.</p>`,
@@ -7104,6 +7630,8 @@
                 year: 1346,
                 age: 27,
                 location: "Normandy",
+                artwork: "artwork/burninglooting2.jpg",
+                artworkCaption: "Burning barns to deny supplies",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>The barns stand ahead. Full of grain. Full of hay. Full of everything the enemy needs. Everything the villagers need. Everything that keeps people alive. Keeps them fed. Keeps them going.</p>
@@ -7173,6 +7701,8 @@
                 year: 1346,
                 age: 27,
                 location: "Normandy",
+                artwork: "artwork/monk.jpg",
+                artworkCaption: "The ancient church stands against the smoke-filled sky",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You approach the church. The decision weighs on you. This is not a tactical choice. Not about supplies or hostages or military advantage. This is something else. Something deeper. A question of what you're willing to destroy. What you're willing to spare.</p>
@@ -7634,6 +8164,8 @@
                 year: 1346,
                 age: 27,
                 location: "Blanchetaque, Somme River",
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "Crossing the Somme at Blanchetaque - the tide waits for no man",
                 text: `<p><strong>24 August 1346 — Somme crossing at Blanchetaque</strong></p>
                        <p>The ford is wide, the mud grabs ankles, and the tide is a clock you can't argue with. Crossbow bolts skip off the water like stones. Men try to keep powder-dry things dry in a world made of river.</p>`,
                 choices: [
@@ -7861,6 +8393,8 @@
                 year: 1346,
                 age: 27,
                 location: "Crécy, Picardy",
+                artwork: "artwork/looting.jpg",
+                artworkCaption: "Stripping the dead - the business of war",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You see him. A fallen noble. Rich armor. Fine clothes. Worth something. Worth everything. Worth a fortune. Worth your future. If you can take it. If you can keep it. If you can make it yours. Before someone else does. Before it's too late. Before the moment passes.</p>
@@ -7993,6 +8527,8 @@
                 year: 1346,
                 age: 27,
                 location: "Crécy, Picardy",
+                artwork: "artwork/afterbattle.jpg",
+                artworkCaption: "Night on the field - tending the wounded",
                 text: function() {
                     const result = gameState.lastResolution;
                     if (!result) return `<p>You move among the wounded...</p>`;
@@ -8128,6 +8664,8 @@
                 year: 1346,
                 age: 27,
                 location: "Northern France",
+                artwork: "artwork/march.jpg",
+                artworkCaption: "The long march - eight days to Calais",
                 text: `<p><strong>Late August–Early September 1346 — Northern France</strong></p>
                        <p>The field at Crécy grows quiet. The dead are buried or left to the crows. The wounded are tended or abandoned. The living gather what they can and prepare to move.</p>
                        <p>King Edward's decision comes down: we march north. To Calais. The port town that controls the Channel. Capture it, and England has a permanent foothold in France. A gateway. A base. A prize worth the risk.</p>
@@ -8148,6 +8686,8 @@
                 year: 1346,
                 age: 27,
                 location: "Calais, France",
+                artwork: "artwork/seige.jpg",
+                artworkCaption: "The siege camp outside Calais - endless work and waiting",
                 text: `<p><strong>4 September 1346 — Calais</strong></p>
                        <p>The work is endless: ditches, stakes, palisades, watch rotations, and the slow mathematics of starvation. A whole little city of tents grows outside the walls. The first weeks feel almost orderly—until the latrines overflow and the water tastes wrong.</p>`,
                 choices: [
@@ -8914,6 +9454,28 @@
                     return `<p>Your horse spooks. You're thrown. Both legs break.</p>
                             <p>The campaign is over. You're left behind. ${name} will never walk again.</p>
                             <p style="color: #d4af37; font-style: italic; margin-top: 20px;">At least you're alive.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Start a New Game",
+                        effects: {},
+                        nextScene: "restart"
+                    }
+                ]
+            },
+            death_combat: {
+                title: "Killed in Action",
+                year: function() { return gameState.year; },
+                age: function() { return gameState.age || 18; },
+                location: function() { return gameState.location || "The Road"; },
+                artwork: "artwork/Assassinat_louis_orleans.jpg",
+                artworkCaption: "Death comes in many forms",
+                text: function() {
+                    const name = escapeHTML(gameState.characterName || "Soldier");
+                    return `<p>You fail. Again. The enemy's blade finds you. Your guard drops. Your strength fails. Your last chance. Gone.</p>
+                            <p>The steel cuts deep. Too deep. You fall. The ground rises to meet you. The world fades. The sounds of battle. The screams. The clash of steel. All of it. Fading. Gone.</p>
+                            <p>${name} dies on the road. In the mud. In the blood. Your blood. The enemy moves on. The column moves on. You don't.</p>
+                            <p style="color: #d4af37; font-style: italic; margin-top: 20px;">This is how soldiers die. Fast. Brutal. Final.</p>`;
                 },
                 choices: [
                     {
@@ -9840,6 +10402,119 @@
                 ]
             },
 
+            skirmish_second_chance: {
+                title: "A Second Chance",
+                text: function() {
+                    const firstFailure = gameState.lastSkirmishFirstFailure;
+                    if (!firstFailure) {
+                        return `<p>Something went wrong. The system lost track of your failure.</p>`;
+                    }
+                    
+                    return `<p>The enemy presses hard. Your first attempt failed. They're on you. Close. Too close. Your gear strains. Your body aches. But you're not done yet. Not yet.</p>
+                           <p>You have one more chance. One more moment. One more desperate attempt to turn this around. Fail now, and it's over. You'll be cut down. Killed. Dead. But succeed, and you'll survive. Wounded. Hurt. But alive.</p>
+                           <p>This is it. Your last chance. Make it count.</p>`;
+                },
+                choices: [
+                    {
+                        text: "Fight for your life - Second chance check",
+                        effects: {},
+                        nextScene: async function() {
+                            const firstFailure = gameState.lastSkirmishFirstFailure;
+                            if (!firstFailure) {
+                                return 'skirmish_roadside_resolve';
+                            }
+                            
+                            // Run Tempo Strike again for the second chance
+                            const timing = await startTempoStrike({
+                                title: 'Tempo Strike - Second Chance',
+                                subtitle: 'Your last chance. Stop the marker in the orange zone.'
+                            });
+                            
+                            // Recalculate with current state (mods may have changed)
+                            const mods = computeSkirmishModifiers(firstFailure.choiceId);
+                            const exertion = gameState.exertion || 0;
+                            
+                            // Recalculate bonus (may have changed due to first failure effects)
+                            let bonus;
+                            if (firstFailure.choiceId === 'press') {
+                                bonus = mods.reachBonus - exertion + timing.bonus + mods.variantModifier;
+                            } else if (firstFailure.choiceId === 'hold') {
+                                bonus = mods.armorDefenseBonus - exertion + timing.bonus + mods.variantModifier;
+                            } else {
+                                bonus = mods.moraleDeltaBonus - exertion + timing.bonus + mods.variantModifier;
+                            }
+                            
+                            // Second check with same difficulty
+                            const result = resolveAction(firstFailure.statKey, firstFailure.dc, bonus);
+                            
+                            if (result.success) {
+                                // Second check succeeded - injured but alive
+                                addCondition('Wounded', 'negative', 3);
+                                applyStatChange('endurance', -2);
+                                applyStatChange('stress', 2);
+                                gameState.career.wounds++;
+                                
+                                // Create a success result for display
+                                const d10 = result.roll - (result.effectiveStat + bonus);
+                                const modifierSum = result.effectiveStat + bonus;
+                                const neededRoll = result.difficulty - (result.effectiveStat + bonus);
+                                const successChance = Math.max(0, Math.min(100, ((10 - neededRoll + 1) / 10) * 100));
+                                
+                                let formulaText = buildFormulaText(firstFailure.choiceId, mods, exertion, result.effectiveStat);
+                                if (timing.bonus > 0) {
+                                    formulaText += ` + Tempo (+${timing.bonus})`;
+                                }
+                                
+                                // Determine variant key for storage
+                                let variantKey = 'roadside_clash';
+                                const variantId = firstFailure.variantContext?.variantId || 'roadside';
+                                if (variantId === 'mud') {
+                                    variantKey = 'mud_ruts';
+                                } else if (variantId === 'lane') {
+                                    variantKey = 'narrow_lane';
+                                }
+                                
+                                gameState.lastSkirmish = {
+                                    key: variantKey,
+                                    variantId: variantId,
+                                    choiceId: firstFailure.choiceId,
+                                    statKey: firstFailure.statKey,
+                                    dc: result.difficulty,
+                                    baseDc: firstFailure.dc,
+                                    formulaText: formulaText,
+                                    chancePct: Math.round(successChance),
+                                    d10: d10,
+                                    modifierSum: modifierSum,
+                                    total: result.roll,
+                                    margin: result.margin,
+                                    success: true,
+                                    partial: false,
+                                    mods: mods,
+                                    deltas: { stress: 2, endurance: -2 },
+                                    costs: ['Wounded (3 turns)', 'Endurance -2', 'Stress +2'],
+                                    gearCallouts: [],
+                                    insideReach: false,
+                                    timing: { bonus: timing.bonus, label: timing.label },
+                                    returnScene: gameState.randomEncounter?.returnScene || 
+                                                (typeof scenes !== 'undefined' && scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null),
+                                    secondChance: true,
+                                    survived: true
+                                };
+                                
+                                // Clear the first failure flag
+                                gameState.lastSkirmishFirstFailure = null;
+                                
+                                return 'skirmish_roadside_resolve';
+                            } else {
+                                // Second check failed - death
+                                gameState.lastSkirmishFirstFailure = null;
+                                return 'death_combat';
+                            }
+                        }
+                    }
+                ]
+            },
+            
             skirmish_roadside_resolve: {
                 title: "After the Clash",
                 text: function() {
@@ -9872,9 +10547,11 @@
                         ? `<div class="gear-callouts">${skirmish.gearCallouts.map(c => `<p><em>${c}</em></p>`).join('')}</div>`
                         : '';
                     
-                    // Outcome prose (varies by margin/choice)
+                    // Outcome prose (varies by margin/choice and second chance)
                     let outcomeText = '';
-                    if (skirmish.success) {
+                    if (skirmish.secondChance && skirmish.survived) {
+                        outcomeText = `<p>You barely survive. Wounded. Bleeding. But alive. The enemy falls back. You've won. But at a cost. A heavy cost. Your body screams. Your wounds burn. But you're still standing. Still breathing. Still alive. That's something. That's everything.</p>`;
+                    } else if (skirmish.success) {
                         if (skirmish.margin <= 1) {
                             outcomeText = `<p>You drive them back, but it's close. Too close. Your gear takes the strain. Your lungs burn.</p>`;
                         } else if (skirmish.margin <= 4) {
@@ -9883,6 +10560,7 @@
                             outcomeText = `<p>Clean work. They scatter. The column moves on. Still, the march takes its toll.</p>`;
                         }
                     } else {
+                        // This shouldn't happen now - failures go to second chance
                         outcomeText = `<p>They push hard. You give ground. Your gear strains. Your morale dips. The cost shows.</p>`;
                     }
                     
@@ -9960,6 +10638,7 @@
                             // If nextScene somehow points back here, keep lastSkirmish so the UI doesn't blank out.
                             if (nextScene !== 'skirmish_roadside_resolve') {
                                 gameState.lastSkirmish = null;
+                                gameState.lastSkirmishFirstFailure = null; // Clear first failure flag
                             }
                             
                             return nextScene;
@@ -10051,6 +10730,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.jpg",
+                artworkCaption: "The long march through difficult terrain",
                 text: function() {
                     return `<p>Water. Everywhere water. The ground had turned to marsh two miles back. Now you waded through it. Knee-deep in places. The water was brown. Thick with sediment. It smelled of rot. Of things long dead. Insects swarmed. Biting. Relentless. You swatted at them but more came.</p>
                            
@@ -10092,6 +10773,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/march.jpg",
+                artworkCaption: "The column moves through darkness - only the sound of boots",
                 text: function() {
                     return `<p>Darkness. The column moved through it like a blind thing. Feeling its way. The moon was new. No light except the stars. Cold and distant. They gave just enough to see the man ahead. His shape. Nothing more. You followed that shape. Trusted it knew where to go.</p>
                            
@@ -10127,6 +10810,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/supplyshortage.jpg",
+                artworkCaption: "Empty wagons and hungry men - the supply train hasn't arrived",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The wagons came up empty. No bread. No ale. No salted meat. The quartermaster stood before angry men. His hands spread. Nothing, he said. The supply train hasn't arrived. We wait or we forage. Those were the options. Neither good.</p>
@@ -10174,6 +10859,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/bridgerain.jpg",
+                artworkCaption: "The swollen river - a dangerous crossing",
                 text: function() {
                     return `<p>The river ran fast. Brown water churning. It had rained for three days. Upstream somewhere. Now the river was high. Angry. The ford that should have been passable was gone. Drowned beneath six feet of rushing water. The column halted at the bank. Men looked at the water. At each other. No one wanted to be first.</p>
                            
@@ -10220,6 +10907,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/standoff.jpg",
+                artworkCaption: "Movement in the treeline - French scouts watching",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>Movement. There. In the treeline. Brief. Gone. But you saw it. Or thought you did. You stopped. Stared at the trees. The shadows between them. Nothing. Maybe you imagined it. The mind playing tricks. Too many days of marching. Too little sleep. But then you saw it again. Definitely something.</p>
@@ -10267,6 +10956,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/burninglooting.jpg",
+                artworkCaption: "The blackened land - what war leaves behind",
                 text: function() {
                     return `<p>Nothing grew here anymore. The fields were ash. Black stubble where wheat should have been. The trees were burned. Skeletal. Their branches reaching up like prayers to an uncaring sky. This was chevauchée. The English way of war. Destroy everything. Leave nothing for the enemy. Leave nothing for anyone.</p>
                            
@@ -10549,6 +11240,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/march.jpg",
+                artworkCaption: "The frost road - cold that settles into bones",
                 text: function() {
                     const eq = gameState.equipment || {};
                     const hasCloak = eq.cloak || (gameState.inventory && gameState.inventory.some && gameState.inventory.some(function(i) { return i && (i.id === 'cloak' || i.name === 'cloak'); }));
@@ -10619,6 +11312,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Evening around the fire - dice and ale and forgetting",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     const wealth = gameState.stats.wealth || 0;
@@ -10675,6 +11370,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The whetstone and the blade - maintaining the tools of war",
                 text: function() {
                     return `<p>Your sword was dull. Nicked. The edge that had been sharp three battles ago was now blunt. Useless against mail. Maybe useless against leather. You needed to fix it. Needed to sharpen it. Your life depended on your blade. A dull sword was a death sentence.</p>
                            
@@ -10715,6 +11412,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "The third watch - darkness and vigilance",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The third watch. The worst watch. The hours before dawn. When the world was darkest. When men were most vulnerable. When sleep pulled at you like a physical weight. But you had to stay awake. Had to stay alert. The camp depended on it. Lives depended on it.</p>
@@ -10886,6 +11585,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: "Normandy",
+                artwork: "artwork/standoff.jpg",
+                artworkCaption: "The old man approaches - hands raised in supplication",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The old man approached slowly. Steps hesitant. As if each one might be his last. He was thin. Gaunt almost. Clothes hung loose. A frame that spoke of hunger. Of hard work. His tunic was patched. Multiple places. Fabric worn thin. Boots were scraps of leather. Bound with twine. Hands were raised. Supplication. The universal gesture of someone who has nothing left but hope. Face was lined. Marks of age. Of worry.</p>
@@ -10940,6 +11641,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/roadsideshrine.jpg",
+                artworkCaption: "The wayside cross at the crossroads - a place of last resort",
                 text: function() {
                     return `<p>The shrine stood at a crossroads. Stone cross. Weathered by centuries. At its base offerings. Flowers. Wilted. Candles. Burned down to stubs. Small coins. Wooden figures. The devotions of travelers. Of locals. Of people seeking protection. Seeking mercy. Seeking something from God or the saints or whatever power might listen.</p>
                            
@@ -10980,6 +11683,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/market.jpg",
+                artworkCaption: "The merchant's cart at the camp's edge",
                 text: function() {
                     const wealth = gameState.stats.wealth || 0;
                     return `<p>The merchant appeared at the camp's edge. Cart pulled by a tired mule. He was rotund. Well-fed. Unusual in these times of hunger. His clothes were good quality. Wool. Dyed. This was a man who profited from war. Who knew how to survive. How to make coin from misery.</p>
@@ -11068,6 +11773,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/monk.jpg",
+                artworkCaption: "A small stone church in the French countryside",
                 text: function() {
                     return `<p>The church was small. Stone. Ancient. It had stood here since before the Normans. Before William. Before England and France were separate things. The walls were thick. Windows narrow. Built to last. Built to endure. Wars. Plague. The passage of time. It had seen it all. Survived it all.</p>
                            
@@ -11148,6 +11855,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/standoff.jpg",
+                artworkCaption: "A dangerous standoff with routiers - pay or fight",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>They stepped from the trees. A dozen men. Maybe more. Armed. Armored after a fashion. Piecemeal gear. Scavenged. Stolen. Taken from the dead. These were routiers. Mercenaries. Free Company men. Between contracts. Which made them bandits. Desperados. More dangerous than any French army because they had nothing to lose.</p>
@@ -11242,6 +11951,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/campfire.jpg",
+                artworkCaption: "Tales by firelight - stories of battles past",
                 text: function() {
                     return `<p>The fire burned low. Embers glowing. Men sat around it. Quiet. Reflective. The kind of quiet that comes after a long day. After exhaustion has set in. But before sleep takes you. Someone started talking. Old Robert. A veteran. Been soldiering since before most of you were born.</p>
                            
@@ -11317,6 +12028,8 @@
                 year: 1346,
                 age: function() { return gameState.age; },
                 location: "Crécy-en-Ponthieu",
+                artwork: "artwork/battle-scene-2.jpg",
+                artworkCaption: "The English position at Crécy - waiting for the French",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The order came at dawn. Form up. The French were coming. Everyone knew it. You'd been waiting for this. Days of marching. Maneuvering. Now it would end. Here. On this ridge. Either in victory or death. Those were the only options.</p>
@@ -11406,6 +12119,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/unnamed.jpg",
+                artworkCaption: "The desperate farmer - alone and defenseless",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The farmer stood in his field. Old. Bent. His hands shaking. He'd seen you coming. The whole column. Hundreds of men. Moving through his land. Through his crops. Trampling everything. Destroying what he'd spent a year growing.</p>
@@ -11448,6 +12163,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/unnamed.jpg",
+                artworkCaption: "The undefended village - easy plunder",
                 text: function() {
                     return `<p>The village was empty. Or nearly. The inhabitants had fled. Seeing the column approach. Knowing what soldiers did to undefended villages. They'd taken what they could carry. Left the rest. Their homes. Their possessions. Their lives. All abandoned. All yours for the taking.</p>
                            
@@ -11539,6 +12256,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/monk.jpg",
+                artworkCaption: "The abandoned church - dark and empty",
                 text: function() {
                     return `<p>The church stood empty. The priest had fled. Or been killed. The doors were open. Inviting. Or warning. You couldn't tell. Inside was dark. Cool. The smell of incense and age. Of something sacred. Or something that had been sacred. Before the war. Before men like you came.</p>
                            
@@ -11668,6 +12387,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/Vigiles_du_roi_Charles_VII_32.jpg",
+                artworkCaption: "A noble's inspection - the business of war",
                 text: function() {
                     const name = gameState.characterName || "Soldier";
                     return `<p>The knight rode through camp. Sir Edmund. One of the commanders. Full plate. War horse. Everything polished. Gleaming. He looked like something from a tapestry. Like something that wasn't quite real. Too perfect. Too clean. Nothing like the mud-stained soldiers he commanded.</p>
@@ -11751,6 +12472,8 @@
                 year: function() { return gameState.year; },
                 age: function() { return gameState.age; },
                 location: function() { return gameState.location; },
+                artwork: "artwork/blacksmith.jpg",
+                artworkCaption: "The forge glows in the evening - fire and metal",
                 text: function() {
                     const wealth = gameState.stats.wealth || 0;
                     return `<p>The blacksmith's forge glowed in the evening. Fire and metal. The sound of hammer on anvil. Ringing. Constant. The rhythm of war. Of preparation. Of survival. The blacksmith was a big man. Arms like tree trunks. Face scarred by sparks. He'd been with the army for years. Knew what soldiers needed. Knew what they'd pay for.</p>
@@ -14890,6 +15613,22 @@
             // Apply condition effects for display
             const conditionEffects = getConditionEffects();
             
+            // Initialize level if not set
+            if (!gameState.level) {
+                gameState.level = calculateLevel();
+            }
+            
+            // Check for level up
+            checkLevelUp();
+            
+            const level = gameState.level || 1;
+            const levelUpPoints = gameState.levelUpPoints || 0;
+            const xp = gameState.stats.experience || 0;
+            const xpForNext = getExperienceForNextLevel();
+            const xpForCurrent = Math.pow(level - 1, 2) * 10; // XP needed for current level
+            const xpNeeded = xpForNext - xpForCurrent; // XP needed to go from current to next
+            const xpProgress = xpNeeded > 0 ? Math.max(0, Math.min(100, ((xp - xpForCurrent) / xpNeeded) * 100)) : 100;
+            
             const statItems = [
                 { key: 'strength', label: '⚔️ Strength', max: 10 },
                 { key: 'agility', label: '🏃 Agility', max: 10 },
@@ -14905,7 +15644,30 @@
                 { key: 'patronFavor', label: '👑 Patron Favor', max: 20, isSpecial: true }
             ];
             
-            statsContainer.innerHTML = statItems.map(stat => {
+            // Add level display at the top
+            let levelDisplay = `
+                <div class="stat-item" style="border-bottom: 2px solid #d4af37; padding-bottom: 10px; margin-bottom: 10px;">
+                    <div class="stat-label" style="font-size: 1.2em; font-weight: bold;">⚔️ Level ${level}</div>
+                    <div style="margin-top: 5px; font-size: 0.9em; color: #d4af37;">
+                        ${xp}/${xpForNext} XP to next level
+                        <div class="stat-bar" style="margin-top: 5px;">
+                            <div class="stat-fill" style="width: ${Math.max(0, Math.min(100, xpProgress))}%"></div>
+                        </div>
+                    </div>
+            `;
+            
+            if (levelUpPoints > 0) {
+                levelDisplay += `
+                    <div style="margin-top: 8px; padding: 8px; background: rgba(212, 175, 55, 0.2); border: 1px solid #d4af37; border-radius: 5px;">
+                        <strong style="color: #f4d03f;">${levelUpPoints} unspent stat point${levelUpPoints > 1 ? 's' : ''}!</strong>
+                        <button onclick="showLevelUpMenu()" style="margin-top: 5px; padding: 5px 10px; background: #d4af37; color: #1a0f08; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">Spend Points</button>
+                    </div>
+                `;
+            }
+            
+            levelDisplay += `</div>`;
+            
+            statsContainer.innerHTML = levelDisplay + statItems.map(stat => {
                 let value = stats[stat.key] || 0;
                 // Apply condition effects (but not equipment - that's situational)
                 if (conditionEffects[stat.key]) {
@@ -15047,7 +15809,61 @@
             }).join('');
         }
         
-        // Calculate rank based on experience
+        // Calculate level based on experience
+        // Level formula: Level = floor(sqrt(experience / 10)) + 1
+        // This gives: Level 1 at 0 XP, Level 2 at 10 XP, Level 3 at 40 XP, Level 4 at 90 XP, etc.
+        function calculateLevel() {
+            const xp = gameState.stats.experience || 0;
+            return Math.floor(Math.sqrt(xp / 10)) + 1;
+        }
+        
+        // Calculate experience needed for next level
+        function getExperienceForNextLevel() {
+            const currentLevel = gameState.level || 1;
+            const nextLevel = currentLevel + 1;
+            // Reverse the formula: XP = (level - 1)^2 * 10
+            return Math.pow(nextLevel - 1, 2) * 10;
+        }
+        
+        // Check for level up and grant bonuses
+        function checkLevelUp() {
+            const newLevel = calculateLevel();
+            const oldLevel = gameState.level || 1;
+            
+            if (newLevel > oldLevel) {
+                const levelsGained = newLevel - oldLevel;
+                gameState.level = newLevel;
+                
+                // Grant stat points for each level gained
+                // Level 2-5: 1 point per level
+                // Level 6-10: 2 points per level
+                // Level 11+: 3 points per level
+                let pointsGained = 0;
+                for (let i = oldLevel + 1; i <= newLevel; i++) {
+                    if (i <= 5) {
+                        pointsGained += 1;
+                    } else if (i <= 10) {
+                        pointsGained += 2;
+                    } else {
+                        pointsGained += 3;
+                    }
+                }
+                
+                gameState.levelUpPoints = (gameState.levelUpPoints || 0) + pointsGained;
+                
+                // Show level up notification
+                const levelText = levelsGained > 1 ? `Level ${oldLevel} → Level ${newLevel}` : `Level ${newLevel}`;
+                showNotification(
+                    `🎉 Level Up!`,
+                    `You have reached ${levelText}! You have gained ${pointsGained} stat point${pointsGained > 1 ? 's' : ''} to distribute. Visit your stats panel to allocate them.`
+                );
+                
+                // Update stats display to show new level and available points
+                updateStats();
+            }
+        }
+        
+        // Calculate rank based on experience (kept for compatibility)
         function calculateRank() {
             const xp = gameState.stats.experience || 0;
             if (xp >= 500) return "Knight";
@@ -18359,6 +19175,16 @@
             base.relationships = { ...base.relationships, ...(loaded.relationships || {}) };
             base.career = { ...base.career, ...(loaded.career || {}) };
             
+            // Initialize level system if not present
+            if (typeof base.level !== 'number') {
+                base.level = calculateLevel();
+            }
+            if (typeof base.levelUpPoints !== 'number') {
+                base.levelUpPoints = 0;
+            }
+            // Recalculate level from experience to ensure consistency
+            base.level = calculateLevel();
+            
             // Equipment (handle both old and new format)
             if (loaded.equipment) {
                 // New layered format
@@ -18617,6 +19443,162 @@
         }
         
         // Show full stats
+        // Show level up menu to spend stat points
+        function showLevelUpMenu() {
+            const points = gameState.levelUpPoints || 0;
+            if (points <= 0) {
+                showNotification("No Points", "You have no unspent stat points.");
+                return;
+            }
+            
+            const statOptions = [
+                { key: 'strength', label: '⚔️ Strength', current: gameState.stats.strength || 0 },
+                { key: 'agility', label: '🏃 Agility', current: gameState.stats.agility || 0 },
+                { key: 'endurance', label: '❤️ Endurance', current: gameState.stats.endurance || 0 },
+                { key: 'charisma', label: '💬 Charisma', current: gameState.stats.charisma || 0 },
+                { key: 'wits', label: '🧠 Wits', current: gameState.stats.wits || 0 },
+                { key: 'luck', label: '🍀 Luck', current: gameState.stats.luck || 0 }
+            ];
+            
+            const modal = document.createElement('div');
+            modal.className = 'stats-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            let selectedStat = null;
+            let pointsToSpend = 1;
+            
+            function updateModal() {
+                const remaining = points - (pointsToSpend - 1);
+                modal.innerHTML = `
+                    <div style="
+                        background: #1a0f08;
+                        border: 3px solid #d4af37;
+                        border-radius: 10px;
+                        padding: 30px;
+                        max-width: 500px;
+                        color: #d4af37;
+                        font-family: 'Crimson Text', serif;
+                    ">
+                        <h2 style="color: #f4d03f; margin-bottom: 20px; text-align: center;">📈 Level Up - Spend Stat Points</h2>
+                        <p style="text-align: center; margin-bottom: 20px; font-size: 1.1em;">
+                            You have <strong style="color: #f4d03f;">${remaining}</strong> point${remaining !== 1 ? 's' : ''} remaining
+                        </p>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 10px; font-weight: bold;">Points to spend:</label>
+                            <div style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+                                <button id="decrease-btn" style="padding: 5px 15px; background: #d4af37; color: #1a0f08; border: none; border-radius: 3px; cursor: pointer; font-size: 1.2em; font-weight: bold;">-</button>
+                                <span id="points-display" style="font-size: 1.5em; min-width: 50px; text-align: center; display: inline-block;">${pointsToSpend}</span>
+                                <button id="increase-btn" style="padding: 5px 15px; background: #d4af37; color: #1a0f08; border: none; border-radius: 3px; cursor: pointer; font-size: 1.2em; font-weight: bold;">+</button>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 10px; font-weight: bold;">Select stat to improve:</label>
+                            ${statOptions.map((stat, idx) => {
+                                const canIncrease = stat.current < 10;
+                                const isSelected = selectedStat === stat.key;
+                                return `
+                                    <div id="stat-option-${idx}" style="
+                                        padding: 10px;
+                                        margin: 5px 0;
+                                        background: ${isSelected ? 'rgba(212, 175, 55, 0.3)' : 'rgba(212, 175, 55, 0.1)'};
+                                        border: 2px solid ${isSelected ? '#f4d03f' : '#d4af37'};
+                                        border-radius: 5px;
+                                        cursor: ${canIncrease ? 'pointer' : 'not-allowed'};
+                                        opacity: ${canIncrease ? '1' : '0.5'};
+                                    ">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span>${stat.label}</span>
+                                            <span>${stat.current}/10 ${isSelected ? '✓' : ''}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="apply-btn" style="
+                                padding: 10px 20px;
+                                background: ${selectedStat ? '#d4af37' : '#666'};
+                                color: ${selectedStat ? '#1a0f08' : '#fff'};
+                                border: none;
+                                border-radius: 5px;
+                                cursor: ${selectedStat ? 'pointer' : 'not-allowed'};
+                                font-weight: bold;
+                                font-size: 1.1em;
+                                opacity: ${selectedStat ? '1' : '0.5'};
+                            ">
+                                Apply
+                            </button>
+                            <button id="cancel-btn" style="
+                                padding: 10px 20px;
+                                background: #666;
+                                color: #fff;
+                                border: none;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-weight: bold;
+                            ">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Attach event listeners
+                document.getElementById('decrease-btn').onclick = () => {
+                    pointsToSpend = Math.max(1, pointsToSpend - 1);
+                    updateModal();
+                };
+                
+                document.getElementById('increase-btn').onclick = () => {
+                    pointsToSpend = Math.min(remaining + 1, pointsToSpend + 1);
+                    updateModal();
+                };
+                
+                statOptions.forEach((stat, idx) => {
+                    const elem = document.getElementById(`stat-option-${idx}`);
+                    if (elem && stat.current < 10) {
+                        elem.onclick = () => {
+                            selectedStat = stat.key;
+                            updateModal();
+                        };
+                    }
+                });
+                
+                document.getElementById('apply-btn').onclick = () => {
+                    if (selectedStat && pointsToSpend > 0) {
+                        const current = gameState.stats[selectedStat] || 0;
+                        const maxIncrease = Math.min(pointsToSpend, 10 - current);
+                        if (maxIncrease > 0) {
+                            applyStatChange(selectedStat, maxIncrease);
+                            gameState.levelUpPoints = (gameState.levelUpPoints || 0) - maxIncrease;
+                            updateStats();
+                            document.body.removeChild(modal);
+                            const statLabel = statOptions.find(s => s.key === selectedStat).label;
+                            showNotification('Stat Increased', `${statLabel} increased by ${maxIncrease}!`);
+                        }
+                    }
+                };
+                
+                document.getElementById('cancel-btn').onclick = () => {
+                    document.body.removeChild(modal);
+                };
+            }
+            
+            updateModal();
+            document.body.appendChild(modal);
+        }
+        
         function showStats() {
             try {
                 const statLabels = {
