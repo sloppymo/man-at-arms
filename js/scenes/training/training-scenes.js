@@ -11,6 +11,8 @@
         year: 1337,
         age: function() { return gameState.age || 18; },
         location: "England",
+        artwork: "artwork/opening-tapestry.jpg",
+        artworkCaption: "The year 1337 - the war begins",
         text: function() {
             const name = gameState.characterName || "Soldier";
             const region = gameState.culture || "";

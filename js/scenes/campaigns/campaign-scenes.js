@@ -158,6 +158,8 @@
         year: 1342,
         age: function() { return window.gameState.age; },
         location: "Northern France",
+        artwork: "artwork/campfire.jpg",
+        artworkCaption: "The weight of command - five faces looking to you",
         text: `<p>The captain calls you forward. Five men. That's what you get. Five faces looking to you for orders. For decisions. For leadership you're not sure you have.</p>
                <p>But you've earned this. Through service. Through survival. Through doing what needed doing when others wouldn't. The pay is better. Not much. But better. The responsibility is heavier. Much heavier.</p>
                <p>You look at your men. They look back. Waiting. Trusting. Or pretending to. Either way, they're yours now. Their lives. Their deaths. That weight settles on you. You carry it. Because you have to.</p>`,
@@ -202,6 +204,8 @@
         year: 1343,
         age: function() { return window.gameState.age; },
         location: "Northern France",
+        artwork: "artwork/skirmish.png",
+        artworkCaption: "Raids and skirmishes - the routine of war",
         noCampfire: true, // Prevent campfire insertion before location transition
         text: `<p>Raids. Skirmishes. Patrols. The French come. You respond. They retreat. You advance. It's become routine. Almost comfortable. Almost.</p>
                <p>But routine doesn't mean safe. You've seen men die from arrows. From disease. From a horse that stumbled. From a blade that found a gap. From nothing at all. Just bad luck. Just being in the wrong place at the wrong time.</p>
@@ -240,6 +244,8 @@
         year: 1344,
         age: function() { return window.gameState.age; },
         location: "At Sea / England",
+        artwork: "artwork/naval-battle-2.png",
+        artworkCaption: "The crossing - rough seas and white cliffs ahead",
         noCampfire: true,
         text: function() {
             const region = gameState.culture || 'England';
@@ -1941,6 +1947,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Caen, Normandy",
+        artwork: "artwork/battle-scene-1.jpg",
+        artworkCaption: "Caen - the bridge chokes with bodies",
         text: `<p><strong>26 July 1346 — Caen</strong></p>
                <p>Orders exist. Then the first men sprint, and the town becomes a magnet for hunger, bravado, and unpaid grudges. Bridges choke with bodies. Someone shouts that the castle is still holding. Someone else shouts about silver in the new town.</p>`,
         choices: [
@@ -1975,6 +1983,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Caen, Normandy",
+        artwork: "artwork/battle-scene-3.png",
+        artworkCaption: "Holding formation - discipline under fire",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>The bridge chokes with bodies. Men pushing. Shoving. Fighting. Dying. The crush is terrible. The noise is worse. Steel on steel. Screams. Curses. Prayers. Everything mixed. Everything loud.</p>
@@ -2012,6 +2022,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Caen, Normandy",
+        artwork: "artwork/looting.jpg",
+        artworkCaption: "The town opens - silver and cloth for the taking",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>The town opens. Houses. Shops. Wealth. Everything you've been promised. Everything you've been fighting for. Everything that makes this worth it. Worth the risk. Worth the death. Worth the blood.</p>
@@ -2053,6 +2065,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Caen, Normandy",
+        artwork: "artwork/battle-scene-1.jpg",
+        artworkCaption: "A noble in the chaos - worth a fortune if you can take him",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>You see him in the chaos. A noble. Fine armor. Rich clothes. Worth something. Worth everything. Worth a fortune. Worth your future. Worth your life. If you can take him. If you can keep him. If you can make him pay.</p>
@@ -2226,6 +2240,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Northern France",
+        artwork: "artwork/supplyshortage.jpg",
+        artworkCaption: "The land stripped bare - grain gone, wells fouled",
         text: `<p><strong>Early–Mid August 1346 — Northward march</strong></p>
                <p>The French have stripped the land ahead: grain hauled off, wells fouled, bridges watched or broken. The army gets ragged. Men eat things they won't name. Someone suggests slaughtering baggage horses. Someone else suggests hanging thieves. Both are called "discipline."</p>`,
         choices: [
@@ -2260,6 +2276,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Northern France",
+        artwork: "artwork/supplyshortage.jpg",
+        artworkCaption: "The villagers watch - fearful and resigned",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>The villagers watch you. Fearful. Resigned. They've seen soldiers before. They know what to expect. Taking. Demanding. Threatening. That's how it works.</p>
@@ -2401,6 +2419,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Blanchetaque, Somme River",
+        artwork: "artwork/bridgerain.png",
+        artworkCaption: "Wading first - the water cold, the mud grabbing",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>The water is cold. Deep. Dangerous. The mud grabs. Pulls. Holds. The tide is coming. Rising. Threatening. Crossbow bolts skip off the water. Off the mud. Death is everywhere. Waiting. Watching.</p>
@@ -2441,6 +2461,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Blanchetaque, Somme River",
+        artwork: "artwork/bridgerain.png",
+        artworkCaption: "Holding formation - shield raised, covering the crossing",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>You take position. Shield raised. Eyes forward. Watching. Waiting. Ready. Others cross behind you. Trusting you. Depending on you. To hold. To cover. To protect. To keep them alive.</p>
@@ -2475,6 +2497,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Blanchetaque, Somme River",
+        artwork: "artwork/bridgerain.png",
+        artworkCaption: "A man struggles in the water - the choice to help or leave",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>You see him. Struggling. In the water. In the mud. In the danger. Drowning. Dying. Fighting for air. For life. Just trying to survive. Like you. Like everyone.</p>
@@ -2546,6 +2570,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Crécy, Picardy",
+        artwork: "artwork/battle-scene-3.png",
+        artworkCaption: "Holding the line at Crécy - discipline under fire",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>You take your position. In the line. In the formation. The French come. Thousands. Too many. More than you can count. More than you can imagine. But you hold. You stand. You do your job. Because that's what you do. That's what you're trained to do.</p>
@@ -2646,6 +2672,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Crécy, Picardy",
+        artwork: "artwork/battle-aftermath.jpg",
+        artworkCaption: "Pulling wounded back under fire - heroism in the chaos",
         text: function() {
             const result = window.gameState.lastResolution;
             if (!result) return `<p>You see them. Wounded men. Bleeding. Dying. Calling. For help. For mercy. For someone. For you. Maybe. If you're willing. If you're able. If you're brave enough. Or stupid enough. Or human enough. To risk yourself. To save them. To do what's right. Even when it's wrong. Even when it's dangerous. Even when it costs you.</p>
@@ -2694,6 +2722,8 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Crécy, Picardy",
+        artwork: "artwork/battle-aftermath.jpg",
+        artworkCaption: "Night on the field - metal unbuckled in the dark",
         text: `<p><strong>Night of 26 August 1346 — Outside Crécy</strong></p>
                <p>The field isn't quiet; it's busy in a different way. You can hear metal being unbuckled in the dark. Some men look for friends. Some look for profit. Some look for a way to sleep without dreaming.</p>`,
         choices: [
@@ -3060,6 +3090,8 @@
         year: 1347,
         age: function() { return window.gameState.age; },
         location: "Calais, France",
+        artwork: "artwork/campfire.jpg",
+        artworkCaption: "Winter in the siege camp - bad water and despair",
         text: `<p><strong>Winter 1346–47 — Calais lines / Neuville area</strong></p>
                <p>Men call it "bad water" until it isn't a joke. The camp shrinks. Rotations get longer. A cook is found watering the stew. A man hangs himself from a wagon frame before dawn and no one claims to have heard anything.</p>`,
         choices: [
@@ -3334,6 +3366,8 @@
         year: 1347,
         age: function() { return window.gameState.age; },
         location: "Calais, France",
+        artwork: "artwork/seige.jpg",
+        artworkCaption: "Calais has fallen - the gates opened, the keys surrendered",
         text: `<p>Calais has fallen. After months of siege. After starvation. After everything. The gates opened. The keys surrendered. The town is yours. England's. The king's. Yours. For now.</p>
                <p>The siege was long. Hard. Brutal. Men died. Of disease. Of hunger. Of wounds. But you survived. You're alive. For now. That's something. That's all you have. Sometimes that's all you get.</p>
                <p>The war continues. Always continues. Never ends. You've learned. That sieges are won. Not just by courage. But by patience. By endurance. By outlasting. By surviving. One day at a time. One week at a time. Until it ends. However it ends.</p>
