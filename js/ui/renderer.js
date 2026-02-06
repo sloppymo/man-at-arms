@@ -36,6 +36,75 @@ function updateDisplay() {
 }
 function updateStory() {
     console.log("=== UPDATE STORY START ===");
+    
+    // Wait for Ink initialization if available
+    if (window.inkReady && window.inkStory) {
+        window.inkReady.then(() => {
+            renderStoryContent();
+        }).catch(error => {
+            console.error("Ink initialization failed:", error);
+            renderLegacyContent();
+        });
+    } else {
+        renderStoryContent();
+    }
+}
+
+function renderStoryContent() {
+    // Check if we should use Ink rendering
+    if (window.inkStory && isInkScene(window.gameState.currentScene)) {
+        renderInkContent();
+    } else {
+        renderLegacyContent();
+    }
+}
+
+function isInkScene(sceneId) {
+    // Define which scenes use Ink rendering
+    const inkScenes = ['start', 'training_brawny', 'character_creation'];
+    return inkScenes.includes(sceneId);
+}
+
+async function renderInkContent() {
+    try {
+        console.log("Rendering Ink content for scene:", window.gameState.currentScene);
+        
+        if (!window.inkStory) {
+            throw new Error("Ink story not initialized");
+        }
+        
+        let fullText = "";
+        let tags = [];
+        
+        // Collect all content until choices
+        while (window.inkStory.canContinue) {
+            const content = window.inkStory.Continue();
+            fullText += sanitizeInkOutput(content);
+            tags = tags.concat(window.inkStory.currentTags);
+        }
+        
+        // Process tags for artwork/metadata
+        processInkTags(tags);
+        
+        // Apply typewriter effect
+        const storyElement = document.getElementById('story');
+        if (storyElement) {
+            await typewriterEffect(storyElement, fullText);
+        }
+        
+        // Render choices
+        renderInkChoices();
+        
+        console.log("Successfully rendered Ink content");
+    } catch (error) {
+        console.error("Error rendering Ink content:", error);
+        window.inkIntegration.handleInkError(error, renderLegacyContent);
+    }
+}
+
+function renderLegacyContent() {
+    console.log("Rendering legacy content for scene:", window.gameState.currentScene);
+    
     // Get story element once at the start
     const storyElement = document.getElementById('story');
     if (!storyElement) {
@@ -233,6 +302,129 @@ function updateStory() {
         const safeError = window.escapeHTML(String(error.message || 'Unknown error'));
         const safeScene = window.escapeHTML(String(window.gameState.currentScene || 'unknown'));
         storyElement.innerHTML = `<p>Error rendering scene: ${safeError}</p><p>Scene: ${safeScene}</p>`;
+    }
+}
+
+// ============================================
+// Ink.js Helper Functions
+// ============================================
+
+function sanitizeInkOutput(text) {
+    // Use existing escapeHTML from utils.js
+    return window.escapeHTML ? window.escapeHTML(text) : 
+        text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+function processInkTags(tags) {
+    tags.forEach(tag => {
+        let [key, value] = tag.split(':').map(s => s.trim());
+        
+        switch(key) {
+            case 'artwork':
+                updateArtwork(value);
+                break;
+            case 'caption':
+                updateCaption(value);
+                break;
+            case 'font':
+                updateFontStyle(value);
+                break;
+            case 'dialect':
+                updateDialect(value);
+                break;
+        }
+    });
+}
+
+function updateArtwork(artworkPath) {
+    const artworkElement = document.getElementById('scene-artwork');
+    const artworkImage = document.getElementById('artwork-image');
+    const artworkCaption = document.getElementById('artwork-caption');
+    
+    if (artworkElement && artworkImage) {
+        artworkImage.src = artworkPath;
+        artworkImage.alt = 'Scene artwork';
+        
+        artworkImage.onerror = function() {
+            console.warn('Failed to load artwork:', artworkPath);
+            artworkImage.style.display = 'none';
+        };
+        
+        artworkImage.onload = function() {
+            artworkImage.style.display = 'block';
+        };
+        
+        artworkElement.classList.add('visible');
+    }
+}
+
+function updateCaption(captionText) {
+    const artworkCaption = document.getElementById('artwork-caption');
+    if (artworkCaption) {
+        artworkCaption.textContent = captionText;
+        artworkCaption.style.display = 'block';
+    }
+}
+
+function updateFontStyle(fontStyle) {
+    const storyElement = document.getElementById('story');
+    if (storyElement) {
+        switch(fontStyle) {
+            case 'fraktur':
+                storyElement.style.fontFamily = 'Uncial Antiqua, serif';
+                break;
+            case 'norman':
+                storyElement.style.fontFamily = 'Cinzel, serif';
+                break;
+            default:
+                storyElement.style.fontFamily = 'Crimson Text, serif';
+        }
+    }
+}
+
+function updateDialect(dialect) {
+    // Could be used for different language styling
+    console.log('Dialect tag:', dialect);
+}
+
+function renderInkChoices() {
+    const container = document.getElementById('choices-container');
+    if (!container || !window.inkStory) return;
+    
+    container.innerHTML = '';
+    
+    window.inkStory.currentChoices.forEach((choice, index) => {
+        const button = document.createElement('button');
+        button.className = 'choice-button';
+        button.innerHTML = sanitizeInkOutput(choice.text);
+        button.onclick = () => selectInkChoice(index);
+        container.appendChild(button);
+    });
+}
+
+function selectInkChoice(index) {
+    // Prevent accidental choice selection when modals are open
+    if (document.querySelector('.equipment-screen:not(.hidden)') || 
+        document.querySelector('.modal:not(.hidden)')) {
+        return;
+    }
+    
+    if (window.inkStory) {
+        window.inkStory.ChooseChoiceIndex(index);
+        // Update display after choice
+        window.updateDisplay();
+    }
+}
+
+async function typewriterEffect(element, text) {
+    if (!element) return;
+    
+    element.innerHTML = '';
+    element.classList.add('fade-in');
+    
+    for (let i = 0; i < text.length; i++) {
+        element.innerHTML += text[i];
+        await new Promise(resolve => setTimeout(resolve, 20)); // 20ms per character
     }
 }
 

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Ink.js Test</title>
+</head>
+<body>
+    <h1>Simple Ink.js Test</h1>
+    <div id="output"></div>
+    
+    <!-- Ink.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+        
+        log('Testing Ink.js integration...');
+        
+        // Test 1: Check if inkjs is loaded
+        if (typeof inkjs !== 'undefined') {
+            log('✅ Ink.js loaded');
+        } else {
+            log('❌ Ink.js not loaded');
+            return;
+        }
+        
+        // Test 2: Check Story class
+        if (typeof inkjs.Story !== 'undefined') {
+            log('✅ Story class available');
+        } else {
+            log('❌ Story class not available');
+            return;
+        }
+        
+        // Test 3: Create a simple story
+        try {
+            const testInk = `
+=== test ===
+Hello from Ink.js!
+* [Continue] -> END
+`;
+            
+            const story = new inkjs.Story(testInk);
+            log('✅ Story created successfully');
+            
+            // Test 4: Get content
+            const content = story.Continue();
+            log('✅ Content: ' + content);
+            
+            // Test 5: Check choices
+            if (story.currentChoices.length > 0) {
+                log('✅ Choices available: ' + story.currentChoices.length);
+            } else {
+                log('ℹ️ No choices available');
+            }
+            
+        } catch (error) {
+            log('❌ Error creating story: ' + error.message);
+        }
+        
+        log('Test completed!');
+    </script>
+</body>
+</html>

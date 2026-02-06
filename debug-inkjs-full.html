@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ink.js Full Debug</title>
+</head>
+<body>
+    <h1>Ink.js Full Debug Information</h1>
+    <div id="output"></div>
+    
+    <!-- Ink.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+        
+        log('=== Ink.js Debug Information ===');
+        log('typeof inkjs: ' + typeof inkjs);
+        
+        if (inkjs) {
+            log('inkjs object keys: ' + Object.keys(inkjs).join(', '));
+            
+            // Check for Compiler in different places
+            log('inkjs.Compiler: ' + typeof inkjs.Compiler);
+            log('window.inkjs.Compiler: ' + typeof (window.inkjs && window.inkjs.Compiler));
+            
+            // Check Story constructor
+            log('inkjs.Story: ' + typeof inkjs.Story);
+            
+            if (inkjs.Story) {
+                try {
+                    // Test what Story constructor expects
+                    log('Testing Story constructor with different inputs...');
+                    
+                    // Test 1: Try with simple ink content
+                    try {
+                        const testInk = '=== test ===\nHello world!\n* [Continue] -> DONE';
+                        const story1 = new inkjs.Story(testInk);
+                        log('✅ Story constructor works with raw ink content');
+                        log('Story methods: ' + Object.getOwnPropertyNames(Object.getPrototypeOf(story1)).join(', '));
+                    } catch (e1) {
+                        log('❌ Story constructor fails with raw ink: ' + e1.message);
+                    }
+                    
+                    // Test 2: Try with JSON
+                    try {
+                        const testJson = '{"root": [{"text": "Hello"}]}';
+                        const story2 = new inkjs.Story(testJson);
+                        log('✅ Story constructor works with JSON');
+                    } catch (e2) {
+                        log('❌ Story constructor fails with JSON: ' + e2.message);
+                    }
+                    
+                } catch (e) {
+                    log('❌ Story constructor test failed: ' + e.message);
+                }
+            }
+            
+            // Check for any global compiler
+            log('typeof Compiler: ' + typeof Compiler);
+            log('typeof window.Compiler: ' + typeof window.Compiler);
+            
+            // Check if there's a compile function anywhere
+            if (inkjs) {
+                for (let key in inkjs) {
+                    if (typeof inkjs[key] === 'object' && inkjs[key] !== null) {
+                        if (typeof inkjs[key].compile === 'function') {
+                            log('Found compile function in inkjs.' + key);
+                        }
+                    }
+                }
+            }
+        }
+        
+        log('=== Debug Complete ===');
+    </script>
+</body>
+</html>

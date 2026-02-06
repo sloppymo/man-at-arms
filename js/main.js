@@ -222,12 +222,33 @@ function normalizeRegion(location) {
 // Save game
 function saveGame() {
     try {
+        // Check if combat is active
+        if (window.isCombatActive) {
+            window.showNotification("Cannot Save", "Cannot save during combat. Please wait.", "warning");
+            return;
+        }
+        
         // Build a JSON-safe payload (no Sets)
         const saveData = {
             saveVersion: SAVE_VERSION,
             ...gameState,
             enteredScenes: Array.from(window.gameState.enteredScenes)
         };
+        
+        // Add Ink state preservation if available
+        if (window.inkStory && window.inkIntegration.isInkReady()) {
+            try {
+                saveData.inkState = {
+                    storyJson: window.inkStory.state.toJson(),
+                    currentPath: window.inkStory.currentPathString,
+                    visitCounts: window.inkStory.state.visitCounts,
+                    turnIndices: window.inkStory.state.turnIndices
+                };
+            } catch (inkError) {
+                console.warn("Failed to save Ink state:", inkError);
+                // Continue without Ink state
+            }
+        }
         
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
         window.showNotification("Game Saved", "Your progress has been saved!", "success");
@@ -302,6 +323,23 @@ function loadGame() {
         window.gameState.characterName = window.escapeHTML(String(window.gameState.characterName));
     }
     
+    // Restore Ink state if available and Ink is ready
+    if (loaded.inkState && window.inkReady) {
+        window.inkReady.then(() => {
+            if (window.inkStory) {
+                try {
+                    window.inkStory.state.LoadJson(loaded.inkState.storyJson);
+                    console.log("Ink state restored successfully");
+                } catch (inkError) {
+                    console.warn("Failed to restore Ink state:", inkError);
+                    // Continue without Ink state
+                }
+            }
+        }).catch(error => {
+            console.warn("Ink not available for state restoration:", error);
+        });
+    }
+    
     // Reinitialize equipment manager if it exists (will migrate old format)
     if (typeof EquipmentManager !== 'undefined') {
         try {
@@ -327,103 +365,103 @@ function resetGame() {
     // ============================================
     function returnFromRandomEncounter(fallback = 'start') {
         const rs = (window.gameState && window.gameState.randomEncounter && window.gameState.randomEncounter.returnScene) ? window.gameState.randomEncounter.returnScene : null;
-        const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
-        if (window.gameState.randomEncounter) {
-            window.gameState.randomEncounter.active = false;
-            window.gameState.randomEncounter.returnScene = null;
-        }
-        return target;
+    const target = (typeof rs === 'string' && rs.length) ? rs : fallback;
+    if (window.gameState.randomEncounter) {
+        window.gameState.randomEncounter.active = false;
+        window.gameState.randomEncounter.returnScene = null;
     }
+    return target;
+}
     
-    function isCriticalSceneKey(sceneKey) {
-        if (!sceneKey || typeof sceneKey !== 'string') return true;
+function isCriticalSceneKey(sceneKey) {
+    if (!sceneKey || typeof sceneKey !== 'string') return true;
 
-        const criticalPrefixes = [
-            'character_creation',
-            'first_battle',
-            'tutorial',
-            'campfire',
-            'death',
-            'ending',
-            'restart',
-            'reset'
-        ];
+    const criticalPrefixes = [
+        'character_creation',
+        'first_battle',
+        'tutorial',
+        'campfire',
+        'death',
+        'ending',
+        'restart',
+        'reset'
+    ];
 
-        for (const p of criticalPrefixes) {
-            if (sceneKey.startsWith(p)) return true;
-        }
-
-        // Avoid interrupting resolution / combat plumbing.
-        if (sceneKey.endsWith('_resolve')) return true;
-
-        // Allow scenes to opt out explicitly.
-        if (window.scenes[sceneKey] && window.scenes[sceneKey].noRandomEncounter) return true;
-
-        return false;
+    for (const p of criticalPrefixes) {
+        if (sceneKey.startsWith(p)) return true;
     }
 
-    function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
-        // Never chain random encounters or interrupt a random return.
-        if ((fromSceneKey || '').startsWith('random_')) return false;
-        if ((nextSceneKey || '').startsWith('random_')) return false;
+    // Avoid interrupting resolution / combat plumbing.
+    if (sceneKey.endsWith('_resolve')) return true;
 
-        // Cooldown
-        if (window.gameState.randomEncounter && window.gameState.randomEncounter.cooldown > 0) return false;
+    // Allow scenes to opt out explicitly.
+    if (window.scenes[sceneKey] && window.scenes[sceneKey].noRandomEncounter) return true;
 
-        // Exclusions (important scenes / transitions)
-        if (window.isCriticalSceneKey(fromSceneKey) || window.isCriticalSceneKey(nextSceneKey)) return false;
+    return false;
+}
 
-        return true;
+function shouldInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+    // Never chain random encounters or interrupt a random return.
+    if ((fromSceneKey || '').startsWith('random_')) return false;
+    if ((nextSceneKey || '').startsWith('random_')) return false;
+
+    // Cooldown
+    if (window.gameState.randomEncounter && window.gameState.randomEncounter.cooldown > 0) return false;
+
+    // Exclusions (important scenes / transitions)
+    if (window.isCriticalSceneKey(fromSceneKey) || window.isCriticalSceneKey(nextSceneKey)) return false;
+
+    return true;
+}
+
+function tickRandomEncounterCooldown(fromSceneKey) {
+    if (!window.gameState.randomEncounter) return;
+    if ((fromSceneKey || '').startsWith('random_')) return;
+    if (window.gameState.randomEncounter.cooldown > 0) {
+        window.gameState.randomEncounter.cooldown -= 1;
+    }
+}
+
+function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
+    // Fix D: Guard - randomEncounter should never return to resolve scene
+    const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
+                                'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
+
+    if (invalidReturnScenes.includes(nextSceneKey)) {
+        console.warn('[QA ROUTING GUARD] Random encounter blocked - would return to:', nextSceneKey);
+        return nextSceneKey; // Don't insert encounter
     }
 
-    function tickRandomEncounterCooldown(fromSceneKey) {
-        if (!window.gameState.randomEncounter) return;
-        if ((fromSceneKey || '').startsWith('random_')) return;
-        if (window.gameState.randomEncounter.cooldown > 0) {
-            window.gameState.randomEncounter.cooldown -= 1;
-        }
+    if (!window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
+    if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
+
+    const encounterId = RANDOM_ENCOUNTERS[Math.floor(Math.random() * RANDOM_ENCOUNTERS.length)];
+
+    if (!window.gameState.randomEncounter) {
+        window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
     }
 
-    function maybeInsertRandomEncounter(fromSceneKey, nextSceneKey) {
-        // Fix D: Guard - randomEncounter should never return to resolve scene
-        const invalidReturnScenes = ['skirmish_roadside_resolve', 'skirmish_roadside',
-                                    'skirmish_roadside_mud', 'skirmish_roadside_lane', 'campfire_interlude'];
+    let safeReturnScene = nextSceneKey;
 
-        if (invalidReturnScenes.includes(nextSceneKey)) {
-            console.warn('[QA ROUTING GUARD] Random encounter blocked - would return to:', nextSceneKey);
-            return nextSceneKey; // Don't insert encounter
-        }
-
-        if (!window.shouldInsertRandomEncounter(fromSceneKey, nextSceneKey)) return nextSceneKey;
-        if (Math.random() >= RANDOM_ENCOUNTER_CHANCE) return nextSceneKey;
-
-        const encounterId = RANDOM_ENCOUNTERS[Math.floor(Math.random() * RANDOM_ENCOUNTERS.length)];
-
-        if (!window.gameState.randomEncounter) {
-            window.gameState.randomEncounter = { active: false, returnScene: null, cooldown: 0 };
-        }
-
-        let safeReturnScene = nextSceneKey;
-
-        // Fix D: Double-check return scene is valid (redundant guard)
-        if (invalidReturnScenes.includes(nextSceneKey)) {
-            // Fallback to a safe travel scene
-            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-            console.warn('[QA] Random encounter returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
-        }
-
-        // Fix D: Assertion - verify we're not in a loop
-        if (safeReturnScene === fromSceneKey && fromSceneKey && fromSceneKey.startsWith('random_')) {
-            console.error('[QA ASSERTION FAILED] Random encounter would return to random scene! Using fallback.');
-            safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-        }
-
-        window.gameState.randomEncounter.active = true;
-        window.gameState.randomEncounter.returnScene = safeReturnScene;
-        window.gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
-
-        return encounterId;
+    // Fix D: Double-check return scene is valid (redundant guard)
+    if (invalidReturnScenes.includes(nextSceneKey)) {
+        // Fallback to a safe travel scene
+        safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+        console.warn('[QA] Random encounter returnScene was invalid:', nextSceneKey, 'using fallback:', safeReturnScene);
     }
+
+    // Fix D: Assertion - verify we're not in a loop
+    if (safeReturnScene === fromSceneKey && fromSceneKey && fromSceneKey.startsWith('random_')) {
+        console.error('[QA ASSERTION FAILED] Random encounter would return to random scene! Using fallback.');
+        safeReturnScene = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
+    }
+
+    window.gameState.randomEncounter.active = true;
+    window.gameState.randomEncounter.returnScene = safeReturnScene;
+    window.gameState.randomEncounter.cooldown = RANDOM_ENCOUNTER_COOLDOWN_SCENES;
+
+    return encounterId;
+}
 
 function maybeInsertSkirmish(nextSceneKey) {
     // Respect shared cooldown (skirmishes and random encounters share the same bucket)
@@ -2407,4 +2445,59 @@ function showStats() {
         get: function() { return equipmentManager; },
         set: function(val) { equipmentManager = val; }
     });
+    
+    // ============================================
+    // Ink.js Initialization
+    // ============================================
+    
+    // Initialize Ink.js system when DOM is ready
+    function initializeInkSystem() {
+        if (window.inkIntegration && window.storyLoader) {
+            console.log("Initializing Ink.js system...");
+            
+            // Preload core stories
+            window.storyLoader.preloadStories(['main', 'character-creation', 'training'])
+                .then(() => {
+                    console.log("Ink stories preloaded successfully");
+                    
+                    // Load appropriate story based on current scene
+                    const currentScene = window.gameState.currentScene;
+                    if (currentScene === 'character_creation') {
+                        window.inkIntegration.loadStory('character-creation');
+                    } else {
+                        window.inkIntegration.loadStory('main');
+                    }
+                })
+                .catch(error => {
+                    console.error("Failed to preload Ink stories:", error);
+                });
+        } else {
+            console.warn("Ink integration not available");
+        }
+    }
+    
+    // Initialize when DOM is loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeInkSystem);
+    } else {
+        initializeInkSystem();
+    }
+    
+    // Global combat state flag
+    window.isCombatActive = false;
+    
+    // Debug tools shortcut
+    window.addEventListener('keydown', (event) => {
+        // Ctrl+Shift+D for debug panel
+        if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+            if (window.inkDebugTools) {
+                if (document.getElementById('ink-debug-panel')) {
+                    window.inkDebugTools.removeDebugPanel();
+                } else {
+                    window.inkDebugTools.createDebugPanel();
+                }
+            }
+        }
+    });
+    
 })();

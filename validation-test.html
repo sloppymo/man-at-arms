@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink.js Validation Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        #results { margin-top: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Ink.js Integration Validation Test</h1>
+    
+    <div>
+        <button onclick="runBasicTests()">Run Basic Tests</button>
+        <button onclick="runValidationSuite()">Run Full Validation</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <!-- Ink.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js"></script>
+    
+    <!-- Core Ink Integration Files -->
+    <script src="js/ink/story-loader.js"></script>
+    <script src="js/ink/narrative-bridge.js"></script>
+    <script src="js/ink/ink-integration.js"></script>
+    <script src="js/ink/debug-tools.js"></script>
+    
+    <!-- Validation Suite -->
+    <script src="js/ink/ink-validation-suite.js"></script>
+    <script src="js/ink/validation/infrastructure-validation.js"></script>
+    <script src="js/ink/validation/state-sync-validation.js"></script>
+    <script src="js/ink/validation/external-function-validation.js"></script>
+    <script src="js/ink/validation/batch-runner.js"></script>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function runBasicTests() {
+            addResult('Starting basic Ink.js integration tests...', 'info');
+            
+            try {
+                // Test 1: Ink.js CDN Loading
+                if (typeof window.inkjs !== 'undefined') {
+                    addResult('✅ Ink.js CDN loaded successfully', 'pass');
+                } else {
+                    addResult('❌ Ink.js CDN failed to load', 'fail');
+                }
+                
+                // Test 2: Core Modules Loading
+                const modules = [
+                    { name: 'Story Loader', obj: 'window.storyLoader' },
+                    { name: 'Ink Integration', obj: 'window.inkIntegration' },
+                    { name: 'Debug Tools', obj: 'window.inkDebugTools' }
+                ];
+                
+                for (const module of modules) {
+                    if (eval(module.obj) !== undefined) {
+                        addResult(`✅ ${module.name} loaded successfully`, 'pass');
+                    } else {
+                        addResult(`❌ ${module.name} failed to load`, 'fail');
+                    }
+                }
+                
+                // Test 3: Validation Suite Loading
+                if (typeof window.InkValidationSuite !== 'undefined') {
+                    addResult('✅ Validation suite loaded successfully', 'pass');
+                } else {
+                    addResult('❌ Validation suite failed to load', 'fail');
+                }
+                
+                // Test 4: Story Loading
+                if (window.storyLoader) {
+                    try {
+                        const story = await window.storyLoader.loadStory('character-creation');
+                        addResult('✅ Story loading works', 'pass');
+                    } catch (error) {
+                        addResult(`❌ Story loading failed: ${error.message}`, 'fail');
+                    }
+                }
+                
+                // Test 5: Basic Ink Functionality
+                if (window.inkjs) {
+                    try {
+                        const testStory = `
+=== test ===
+Hello world!
+* [Continue] -> DONE
+`;
+                        const compiled = inkjs.Compiler.compile(testStory);
+                        const story = new inkjs.Story(compiled.toJson());
+                        const content = story.Continue();
+                        
+                        if (content.includes('Hello world')) {
+                            addResult('✅ Basic Ink functionality works', 'pass');
+                        } else {
+                            addResult('❌ Basic Ink functionality failed', 'fail');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Basic Ink functionality failed: ${error.message}`, 'fail');
+                    }
+                }
+                
+                addResult('Basic tests completed!', 'info');
+                
+            } catch (error) {
+                addResult(`❌ Test suite error: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function runValidationSuite() {
+            addResult('Starting comprehensive validation suite...', 'info');
+            
+            try {
+                if (window.InkBatchRunner) {
+                    const results = await window.InkBatchRunner.runQuickValidation();
+                    addResult(`✅ Validation suite completed! Passed: ${results.passedTests}, Failed: ${results.failedTests}`, 'pass');
+                } else {
+                    addResult('❌ Validation batch runner not available', 'fail');
+                }
+            } catch (error) {
+                addResult(`❌ Validation suite failed: ${error.message}`, 'fail');
+            }
+        }
+        
+        // Auto-run basic tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runBasicTests, 1000);
+        });
+    </script>
+</body>
+</html>

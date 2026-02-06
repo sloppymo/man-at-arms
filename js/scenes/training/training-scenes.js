@@ -147,7 +147,7 @@
         year: 1337,
         age: function() { return window.gameState.age || 18; },
         location: "England",
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The training yard - where field hands become soldiers",
         text: function() {
             const name = window.gameState.characterName || "Soldier";
@@ -178,7 +178,7 @@
         year: 1337,
         age: function() { return gameState.age || 18; },
         location: "England",
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The forge glows in the evening - fire and metal",
         text: function() {
             const name = gameState.characterName || "Soldier";
@@ -374,7 +374,7 @@
         year: 1337,
         age: function() { return gameState.age || 18; },
         location: "England",
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The training yard - learning the weight of steel",
         text: function() {
             const result = gameState.lastResolution;

@@ -11,7 +11,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.jpg",
+        artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.png",
         artworkCaption: "The long march through difficult terrain",
         text: function() {
             return `<p>Water. Everywhere water. The ground had turned to marsh two miles back. Now you waded through it. Knee-deep in places. The water was brown. Thick with sediment. It smelled of rot. Of things long dead. Insects swarmed. Biting. Relentless. You swatted at them but more came.</p>
@@ -54,7 +54,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.jpg",
+        artwork: "artwork/Passages_faiz_oultre_mer_SEBASTIEN_MAMEROT_143r.png",
         artworkCaption: "Finding a better way through the marsh",
         text: function() {
             const result = gameState.lastResolution;
@@ -302,7 +302,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "The swollen river - a dangerous crossing",
         text: function() {
             return `<p>The river ran fast. Brown water churning. It had rained for three days. Upstream somewhere. Now the river was high. Angry. The ford that should have been passable was gone. Drowned beneath six feet of rushing water. The column halted at the bank. Men looked at the water. At each other. No one wanted to be first.</p>
@@ -350,7 +350,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "The river behind you - cold and wet but alive",
         text: function() {
             const result = gameState.lastResolution;
@@ -391,7 +391,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "Watching others cross - learning the way",
         text: function() {
             return `<p>You wait. Watch. The first group goes. You see where they struggle. Where the current is strongest. Where the ford dips. Where it rises. You mark it in your mind. The safe path. The dangerous spots. Knowledge. That's what waiting gives you.</p>
@@ -412,7 +412,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "A rope across the river - making it safer for all",
         text: function() {
             return `<p>You find rope. Old. Worn. But strong enough. You tie one end to a tree on this bank. Strip your gear. Wade into the water. The current pulls. But you hold the rope. Use it to guide you. To steady you. You reach the far side. Tie the other end. Secure it. The rope stretches across. A lifeline. A guide. Something to hold onto.</p>
@@ -433,7 +433,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "A different path - upstream, looking for another crossing",
         text: function() {
             const result = gameState.lastResolution;
@@ -933,7 +933,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The whetstone and the blade - maintaining the tools of war",
         text: function() {
             return `<p>Your sword was dull. Nicked. The edge that had been sharp three battles ago was now blunt. Useless against mail. Maybe useless against leather. You needed to fix it. Needed to sharpen it. Your life depended on your blade. A dull sword was a death sentence.</p>
@@ -1204,7 +1204,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/roadsideshrine.jpg",
+        artwork: "artwork/unnamed.jpg",
         artworkCaption: "The wayside cross at the crossroads - a place of last resort",
         text: function() {
             return `<p>The shrine stood at a crossroads. Stone cross. Weathered by centuries. At its base offerings. Flowers. Wilted. Candles. Burned down to stubs. Small coins. Wooden figures. The devotions of travelers. Of locals. Of people seeking protection. Seeking mercy. Seeking something from God or the saints or whatever power might listen.</p>
@@ -1246,7 +1246,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/market.jpg",
+        artwork: "artwork/map.jpg",
         artworkCaption: "The merchant's cart at the camp's edge",
         text: function() {
             const wealth = gameState.stats.wealth || 0;
@@ -1336,7 +1336,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/monk.jpg",
+        artwork: "artwork/Vigiles_du_roi_Charles_VII_32.jpg",
         artworkCaption: "A small stone church in the French countryside",
         text: function() {
             return `<p>The church was small. Stone. Ancient. It had stood here since before the Normans. Before William. Before England and France were separate things. The walls were thick. Windows narrow. Built to last. Built to endure. Wars. Plague. The passage of time. It had seen it all. Survived it all.</p>
@@ -1819,7 +1819,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/monk.jpg",
+        artwork: "artwork/Vigiles_du_roi_Charles_VII_32.jpg",
         artworkCaption: "The abandoned church - dark and empty",
         text: function() {
             return `<p>The church stood empty. The priest had fled. Or been killed. The doors were open. Inviting. Or warning. You couldn't tell. Inside was dark. Cool. The smell of incense and age. Of something sacred. Or something that had been sacred. Before the war. Before men like you came.</p>
@@ -2035,7 +2035,7 @@
         year: function() { return gameState.year; },
         age: function() { return gameState.age; },
         location: function() { return gameState.location; },
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The forge glows in the evening - fire and metal",
         text: function() {
             const wealth = gameState.stats.wealth || 0;

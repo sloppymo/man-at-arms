@@ -11,7 +11,7 @@
         year: 1340,
         age: function() { return window.gameState.age; },
         location: "Northern France",
-        artwork: "artwork/drunkfire.jpg",
+        artwork: "artwork/campfire.jpg",
         artworkCaption: "Winter in the camp - a moment of rest",
         text: function() {
             const pay = Math.floor(5 + gameState.stats.reputation / 5);
@@ -53,7 +53,7 @@
         year: 1340,
         age: function() { return window.gameState.age; },
         location: "Northern France",
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The forge glows - hammer on steel, like a heartbeat",
         text: `<p>The blacksmith's forge glows. Hot. Bright. The sound of hammer on steel rings. Steady. Rhythmic. Like a heartbeat. Like war.</p>
                <p>You invest. Coins on the table. Metal in your hands. A sturdier sword. Reinforced leather. Better gear. Better protection. Better chance of survival. Of victory. Of living through the next fight. The next battle.</p>
@@ -361,7 +361,7 @@
         year: 1340,
         age: function() { return window.gameState.age; },
         location: "Northern France",
-        artwork: "artwork/blacksmith.jpg",
+        artwork: "artwork/blacksmith.png",
         artworkCaption: "The blacksmith's daughter - a winter's cruel joke",
         text: `<p>You approach Marie. Speak to her. Tell her how you feel. What you want. What you hope for. She listens. Smiles. Nods. But there's something in her eyes. Something you don't see. Not yet.</p>
                <p>Her father watches. The blacksmith. Big man. Hard hands. He laughs. Not at you. With you. Or so you think. He approves. Offers his daughter's hand. You're happy. Proud. Foolish.</p>
@@ -782,7 +782,7 @@
         year: 1348,
         age: function() { return window.gameState.age; },
         location: "Calais",
-        artwork: "artwork/battle-scene-3.jpg",
+        artwork: "artwork/battle-scene-3.png",
         artworkCaption: "Combat in the narrow streets",
         text: `<p>Calais is tight stone and narrow lanes. The air is bad—smoke, rot, old fish. Everything echoes. A shout becomes ten shouts. A footstep becomes a warning.</p>
                <p>Your unit pushes into a street and the street pushes back. A bolt from a window. A man drops. A door bursts open and there's a Frenchman in it, just as surprised as you are.</p>
@@ -974,7 +974,7 @@
         year: 1344,
         age: function() { return window.gameState.age; },
         location: "Gascony",
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "Men struggle across the river under fire",
         text: `<p>The river is wide, cold, and fast. The far bank is lined with French archers. You can see the draw of their bows even before you hear the strings.</p>
                <p>Men step in and the water grabs them. Packs drag. Boots slip in the mud. An arrow hits a man midstream and he goes under like he's been pulled.</p>
@@ -1014,7 +1014,7 @@
         year: 1344,
         age: function() { return window.gameState.age; },
         location: "Gascony",
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "The far bank - wet and angry and alive",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -1326,7 +1326,7 @@
         age: function() { return window.gameState.age; },
         location: "Portsmouth, England",
         noCampfire: true, // Prevent campfire insertion here
-        artwork: "artwork/dock.jpg",
+        artwork: "artwork/signup.jpg",
         artworkCaption: "The docks of Portsmouth - preparing for war",
         text: `<p><strong>Mid-June 1346 — Portsmouth</strong></p>
                <p>After signing the contract, you step out of the clerk's tent into the open air. The docks are a chaos of activity, but you're directed away from the harbor, up the hillside to the muster field.</p>
@@ -1383,7 +1383,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Southern England",
-        artwork: "artwork/market.jpg",
+        artwork: "artwork/map.jpg",
         artworkCaption: "Fair prices and proper receipts - small acts of kindness",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -1638,7 +1638,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Saint-Vaast-la-Hougue, Normandy",
-        artwork: "artwork/naval-battle-2.jpg", // Naval battle with ships and coastal city
+        artwork: "artwork/naval-battle-2.png", // Naval battle with ships and coastal city
         artworkCaption: "Landing at Saint-Vaast-la-Hougue",
         text: `<p><strong>12 July 1346 — Saint-Vaast-la-Hougue / Cotentin</strong></p>
                <p>The shoreline looks quiet until you notice how many doors are barred. Men spill out and form ranks. The order is simple: move inland, take what can be taken, and keep moving.</p>`,
@@ -1711,7 +1711,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Normandy",
-        artwork: "artwork/naval-battle-3.jpg", // Another naval battle scene
+        artwork: "artwork/naval-battle-3.png", // Another naval battle scene
         artworkCaption: "The first raid on French soil",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -1908,7 +1908,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Normandy",
-        artwork: "artwork/monk.jpg",
+        artwork: "artwork/Vigiles_du_roi_Charles_VII_32.jpg",
         artworkCaption: "The ancient church stands against the smoke-filled sky",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -2383,7 +2383,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Blanchetaque, Somme River",
-        artwork: "artwork/bridgerain.jpg",
+        artwork: "artwork/bridgerain.png",
         artworkCaption: "Crossing the Somme at Blanchetaque - the tide waits for no man",
         text: `<p><strong>24 August 1346 — Somme crossing at Blanchetaque</strong></p>
                <p>The ford is wide, the mud grabs ankles, and the tide is a clock you can't argue with. Crossbow bolts skip off the water like stones. Men try to keep powder-dry things dry in a world made of river.</p>`,
@@ -2758,7 +2758,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Crécy, Picardy",
-        artwork: "artwork/afterbattle.jpg",
+        artwork: "artwork/battle-aftermath.jpg",
         artworkCaption: "Night on the field - tending the wounded",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -4575,6 +4575,8 @@
 
     skirmish_roadside_mud: {
         title: "Mud & Ruts",
+        artwork: "artwork/march.jpg",
+        artworkCaption: "The road becomes mud and ruts under marching boots",
         text: `<p>The road is a quagmire. Mud clings to boots. Ruts trap wheels. The enemy blocks the way, but footing is treacherous.</p>
                <p>Every step is uncertain. Every move costs more. The clash comes anyway.</p>`,
         choices: [

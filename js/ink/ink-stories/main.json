@@ -1,0 +1,61 @@
+{
+  "inkVersion": 19,
+  "root": [
+    [
+      "-> START",
+      null
+    ],
+    [
+      "=== START ===",
+      null
+    ],
+    [
+      "=== THE CAMPAIGN BEGINS ===\n\nChapter 1: The Chevauchée\n\nThe crossing was hell. Three days of storm-tossed seas, men retching over the rails, the constant fear of French ships appearing from the mist. But now you stand on French soil near Harfleur, the salt spray still fresh in your memory, the ground firm beneath your feet.\n\nKing Henry's voice carries across the assembled host: 'We come not as conquerors, but as claimants! The French crown is mine by right of blood, and God will see justice done!'\n\nThe army roars its approval, but you know the truth. This is a chevauchée - a raid of terror and destruction. You'll burn villages, steal food, kill anyone who resists. It's ugly work, but it's how wars are won.\n\n~ chapter = 1\n~ morale = morale + 1\n\nYour lord {patronId} gathers his men. 'We move inland tomorrow. Burn what we cannot carry, kill what we cannot control. The French must learn to fear the English name.'\n\nThe first village appears at dawn, smoke already rising from some houses. Peasants are fleeing with what they can carry. Your commander gives the order:\n\n* [Raid the village thoroughly] ~ wealth = wealth + 15 ~ reputation = reputation - 5 ~ stress = stress + 1 ~ morale = morale - 1\n  You throw yourself into the ugly work. The fighting is brief - peasants with pitchforks against men-at-arms with steel. You find a small chest of silver coins, some dried meat, and a fine woolen cloak. The screams of the dying follow you down the road.\n  -> village_raid_complete\n\n* [Focus on military targets only] ~ reputation = reputation + 3 ~ wealth = wealth + 5 ~ morale = morale + 1\n  You avoid the civilian houses, concentrating on the small garrison building. The fight is harder - trained soldiers, not farmers - but you sleep better at night. Your share of the plunder is smaller, but your honor remains intact.\n  -> village_raid_complete\n\n* [Try to protect some civilians] ~ charisma = charisma + 1 ~ reputation = reputation + 5 ~ wealth = wealth - 5 ~ patronFavor = patronFavor - 1\n  You quietly guide some peasants toward the woods, create distractions, give them a chance to escape. Your commander notices but says nothing. Later, a grateful peasant slips you a small silver coin. Your conscience is clearer, but your purse is lighter.\n  -> village_raid_complete",
+      null
+    ],
+    [
+      "=== village_raid_complete ===\n\nThree days of marching bring you to a larger town. The French militia is waiting, formed up on a hill. Your commander calls for volunteers:\n\n* [Join the vanguard] ~ strength = strength + 1 ~ experience = experience + 2 ~ stress = stress + 2\n  You're among the first to meet the French line. The fighting is brutal, your shield splintering, your sword finding flesh. You kill two men before the line breaks, earning respect from your comrades and the attention of your commander.\n  -> first_battle_complete\n\n* [Stay in the main line] ~ endurance = endurance + 1 ~ experience = experience + 1 ~ stress = stress + 1\n  You fight in the press of bodies, shield wall to shield wall. It's grinding, bloody work, but safer than the vanguard. You do your duty, kill your man, and live to fight another day.\n  -> first_battle_complete\n\n* [Protect the baggage train] ~ luck = luck + 1 ~ wealth = wealth + 10 ~ experience = experience + 1\n  The French try to flank you, attack your supplies. You and a handful of others hold them off long enough for reinforcements to arrive. Your quick thinking saves the army's food and pay.\n  -> first_battle_complete",
+      null
+    ],
+    [
+      "=== first_battle_complete ===\n\nThat night, as you clean your weapons, a French arrow thuds into the ground beside you. A message is tied to it: 'The English fight like devils, but even devils can bleed. Tomorrow we meet again.'\n\n~ stress = stress + 1\n\n-> chapter_2",
+      null
+    ],
+    [
+      "=== chapter_2 ===\n\n=== CHAPTER 2: SIEGE OF HARFLEUR ===\n\n~ chapter = 2\n\nHarfleur stands before you, walls thick and towers tall. The French have had time to prepare, and they're not giving up their port without a fight. Your army settles in for a siege - weeks of digging, building, waiting.\n\nThe camp is a city of canvas, smoke, and noise. Men gamble, fight, pray, and die. Disease spreads through the ranks faster than any French arrow.\n\n~ stress = stress + 2\n\nYour commander calls for volunteers for a dangerous mission:\n\n* [Join the mining team] ~ wits = wits + 1 ~ experience = experience + 2 ~ stress = stress + 2\n  You spend days digging tunnels beneath the French walls, the earth crushing above you, the constant fear of collapse or discovery. When the mine is fired and the wall collapses, you're among the first through the breach.\n  -> siege_mission_complete\n\n* [Help build the siege towers] ~ strength = strength + 1 ~ experience = experience + 1 ~ stress = stress + 1\n  Heavy labor under the watchful eyes of French archers. Men fall around you, but the towers rise. When the assault comes, you're in the first wave to climb the ladders.\n  -> siege_mission_complete\n\n* [Join the archery line] ~ agility = agility + 1 ~ experience = experience + 1 ~ stress = stress + 1\n  You exchange arrows with the French defenders, the air thick with deadly shafts. You kill three men on the walls before the assault begins, your arrows finding their marks with deadly accuracy.\n  -> siege_mission_complete",
+      null
+    ],
+    [
+      "=== siege_mission_complete ===\n\nThe assault succeeds, but at terrible cost. The town falls, but dysentery ravages your army. You watch strong men waste away, their bodies betraying them when French steel could not.\n\n~ endurance = endurance - 1 ~ stress = stress + 3\n\nYour lord calls you to his tent. 'The King is moving toward Calais. We follow, but the road is long and the French are gathering. I need good men for the rearguard.'\n\n* [Accept the rearguard duty] ~ reputation = reputation + 3 ~ patronFavor = patronFavor + 1 ~ stress = stress + 2\n  The rearguard sees the most fighting, faces the greatest danger. But your lord notices your courage, and such notice is worth more than gold.\n  -> rearguard_assigned\n\n* [Request to join the main body] ~ stress = stress - 1 ~ endurance = endurance + 1\n  You march with the main army, safer but less glorious. The walking is hard, but you live to fight another day.\n  -> rearguard_assigned\n\n* [Ask for leave to recover] ~ endurance = endurance + 2 ~ stress = stress - 2 ~ patronFavor = patronFavor - 1\n  Your health has suffered. A few days of rest might save your life, even if it costs you your lord's favor.\n  -> rearguard_assigned",
+      null
+    ],
+    [
+      "=== rearguard_assigned ===\n\n-> chapter_3",
+      null
+    ],
+    [
+      "=== chapter_3 ===\n\n=== CHAPTER 3: THE LONG ROAD ===\n\n~ chapter = 3\n\nThe march to Calais is hell. The French harry your flanks constantly. Every day brings skirmishes, every night brings fear. Your army grows smaller, the baggage train lighter as supplies are abandoned.\n\nThe food runs out. Men eat their horses, then their dogs, then leather from their armor. You haven't seen a proper meal in weeks.\n\n~ endurance = endurance - 2 ~ morale = morale - 2 ~ stress = stress + 3\n\nA French scouting party attacks your foraging detail:\n\n* [Stand and fight] ~ strength = strength + 1 ~ experience = experience + 2 ~ stress = stress + 2\n  You plant your feet and sell your life dearly. The fighting is desperate, but you drive them off and save what little food you've found. Your courage becomes legend among the starving men.\n  -> foraging_battle_complete\n\n* [Tactical retreat] ~ wits = wits + 1 ~ agility = agility + 1 ~ stress = stress + 1\n  You give ground strategically, leading them into a trap. Half the French force falls to your ambush, and you escape with most of your forage intact.\n  -> foraging_battle_complete\n\n* [Surrender the forage, save the men] ~ charisma = charisma + 1 ~ morale = morale + 1 ~ reputation = reputation + 2\n  You let the French take the food rather than risk your men's lives. They'll starve tomorrow, but today they live. Your men would follow you anywhere.\n  -> foraging_battle_complete",
+      null
+    ],
+    [
+      "=== foraging_battle_complete ===\n\nThe French army finally corners you near Agincourt. The English are outnumbered five to one, exhausted, starving. The French nobles celebrate their coming victory, drinking wine and planning which English prisoners they'll ransom.\n\nKing Henry addresses his army: 'We few, we happy few, we band of brothers! For he today that sheds his blood with me shall be my brother!'\n\n~ morale = morale + 3 ~ stress = stress - 1\n\n-> chapter_4",
+      null
+    ],
+    [
+      "=== chapter_4 ===\n\n=== CHAPTER 4: BATTLE OF AGINCOURT ===\n\n~ chapter = 4\n\nThe field is mud and death. The French advance across ground turned to swamp by recent rains. Their knights, weighed down by heavy armor, sink to their knees in the mire.\n\nYour commander gives his final orders: 'No quarter asked, none given. Today we win or we die.'\n\n* [Fight in the front line] ~ strength = strength + 2 ~ experience = experience + 3 ~ stress = stress + 3\n  You're in the thick of it, shield locked with shield, sword finding gaps in armor. The mud is thick with blood, the air thick with screams. You kill three French knights before the day is done, your name sung by your comrades.\n  -> agincourt_battle_complete\n\n* [Protect the archers] ~ agility = agility + 2 ~ experience = experience + 2 ~ stress = stress + 2\n  When the French threaten your longbowmen, you lead the counter-charge. The fighting is desperate, but you save the archers who win the battle. The King himself notices your courage.\n  -> agincourt_battle_complete\n\n* [Guard the baggage train] ~ luck = luck + 2 ~ wealth = wealth + 20 ~ experience = experience + 1\n  The French try to capture your supplies, but you hold them off. When the battle turns, you're perfectly positioned to capture fleeing French nobles and their ransom.\n  -> agincourt_battle_complete",
+      null
+    ],
+    [
+      "=== agincourt_battle_complete ===\n\nThe French break. Their army flees, their knights captured, their dead littering the field. Against all odds, against all logic, England has won.\n\n~ reputation = reputation + 10 ~ morale = morale + 5 ~ experience = experience + 5 ~ stress = stress - 2\n\nYour lord finds you among the dead and dying. '{characterName}, you've served well. The King has granted lands to those who fought bravely, and your name was mentioned.'\n\n* [Accept the land grant] ~ wealth = wealth + 100 ~ reputation = reputation + 15 ~ patronFavor = patronFavor + 3\n  You're now a landowner, no longer just a man-at-arms. The grant is small - 50 acres and a modest house - but it's yours. You've risen in the world, through blood and courage.\n  -> campaign_ending\n\n* [Request continued military service] ~ patronFavor = patronFavor + 5 ~ experience = experience + 2 ~ strength = strength + 1\n  You're a soldier, not a farmer. You ask to remain in your lord's service, to continue the life you know. Your lord respects your choice and makes you his second-in-command.\n  -> campaign_ending\n\n* [Ask for your pay and leave] ~ wealth = wealth + 50 ~ stress = stress - 3\n  You've had enough of war. You take your wages, your share of the plunder, and head home. Others may seek glory, but you seek peace.\n  -> campaign_ending",
+      null
+    ],
+    [
+      "=== campaign_ending ===\n\n=== CAMPAIGN COMPLETE ===\n\nThe Battle of Agincourt will be sung for generations. You were there, you fought, you survived. Whether you chose land, continued service, or peaceful retirement, your name will be remembered.\n\nYour final stats:\nWealth: {EXTERNAL formatCurrency(wealth)} pence\nReputation: {reputation}\nExperience: {experience}\nStress: {stress}\nPatron Favor: {patronFavor}\n\nThe campaign is over, {characterName}. But in this world of constant warfare, peace is never permanent. New battles await, new challenges call. Your story continues...\n\n-> END",
+      null
+    ],
+    [
+      "=== END ===",
+      null
+    ]
+  ]
+}

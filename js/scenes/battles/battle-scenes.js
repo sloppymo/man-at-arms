@@ -100,7 +100,7 @@
         year: 1338,
         age: function() { return gameState.age; },
         location: "Northern France",
-        artwork: "artwork/battle-scene-3.jpg",
+        artwork: "artwork/battle-scene-2.jpg",
         artworkCaption: "The first battle - staying with the main force",
         text: `<p>You fight in formation. Stay close to your comrades. To your shield. To your safety. Or what passes for it. But you hold. Keep formation. Keep discipline. Keep going. Because that's what you do. That's what you're trained to do.</p>
                <p>The battle is fierce. Terrible. Deadly. But you emerge unscathed. For now. That's something. That's enough. Your caution served you well. Your discipline. Your care. You've learned the value of discipline and formation. Of staying together.</p>
@@ -123,7 +123,7 @@
         year: 1338,
         age: function() { return gameState.age; },
         location: "Northern France",
-        artwork: "artwork/battle-scene-6.jpg",
+        artwork: "artwork/battle-scene-1.jpg",
         artworkCaption: "A tactical mind - seeing the field differently",
         text: `<p>Your suggestion works. To flank the French position. Attack from the side. From behind. Where they're not expecting it. Your lord takes notice of your thinking. Of your strategy. Not just another sword arm. Someone who sees the field. Who understands how battles are won.</p>
                <p>You've earned respect through intelligence. Through strategy. Not just force. Not just strength. But thinking and planning. Seeing what others miss. You've done right. Done well. Done what needed doing. That's something. That's enough.</p>
@@ -148,7 +148,7 @@
         year: 1338,
         age: function() { return gameState.age; },
         location: "Northern France",
-        artwork: "artwork/battle-scene-4.jpg",
+        artwork: "artwork/battle-scene-3.png",
         artworkCaption: "Leading a unit in your first battle",
         text: `<p>You lead them into battle. Your unit. Your men. Your responsibility. The French line ahead. Your men look to you. For orders. For courage. For something to follow.</p>
                <p>The battle begins. Steel clashes. Men shout. The chaos of war surrounds you. Can you lead them through this? Can you keep them together? Can you make the right choices when everything is happening at once?</p>`,
