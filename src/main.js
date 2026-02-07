@@ -30,6 +30,7 @@ import {
 import { migrateEquipment, dryRunMigration, validateMigration } from './core/equipment-migration.js';
 import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
 import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
+import { MapScene, createMapScene, initializeMapSystem } from './scenes/overworld/map-scene.js';
 
 console.log('=== Man-at-Arms v2.0.0 (Vite Build) ===');
 console.log('Core modules loaded successfully');
@@ -117,6 +118,11 @@ if (typeof window !== 'undefined') {
   window.setMode = setMode;
   window.initializeGameState = initializeGameState;
   window.getModeDisplayName = getModeDisplayName;
+
+  // Map system (Phase 4)
+  window.MapScene = MapScene;
+  window.createMapScene = createMapScene;
+  window.initializeMapSystem = initializeMapSystem;
 }
 
 // ============================================
@@ -133,25 +139,28 @@ function bootGame() {
     console.log('Ink.js detected:', window.inkjs.Story ? 'v2.0+' : 'legacy');
   }
   
-  // Initialize UI (placeholder - Phase 3 event-driven flow active)
+  // Initialize UI (placeholder - Phase 4 map system active)
   const storyEl = document.getElementById('story');
   if (storyEl) {
     storyEl.innerHTML = `
       <div style="padding: 20px; text-align: center;">
-        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 3</h2>
-        <p style="color: #888;">Event-Driven Flow System Active</p>
+        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 4</h2>
+        <p style="color: #888;">DOM-based Map System Active</p>
         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          Dispatcher: ✓<br>
-          Game Modes: ✓<br>
-          Mode State: ✓<br>
-          Event System: ✓
+          Map Renderer: ✓<br>
+          Node System: ✓<br>
+          Player Movement: ✓<br>
+          Event Integration: ✓
         </p>
         <p style="color: #888; margin-top: 30px;">
-          <em>Phase 4: Map system next.</em>
+          <em>Phase 5: Ink bridge cleanup next.</em>
         </p>
       </div>
     `;
   }
+
+  // Initialize map system
+  initializeMapSystem(gameState, dispatcher);
   
   console.log('Boot complete. Ready for Phase 2+ integration.');
 }
@@ -203,7 +212,10 @@ export {
   isValidMode,
   setMode,
   initializeGameState,
-  getModeDisplayName
+  getModeDisplayName,
+  MapScene,
+  createMapScene,
+  initializeMapSystem
 };
 
 // Default export for convenience
