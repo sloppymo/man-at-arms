@@ -31,9 +31,13 @@ import { migrateEquipment, dryRunMigration, validateMigration } from './core/equ
 import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
 import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
 import { MapScene, createMapScene, initializeMapSystem } from './scenes/overworld/map-scene.js';
+import { DialogueService, createDialogueService } from './systems/dialogue-service.js';
+import { createNarrativeBridge } from './ink/narrative-bridge.js';
 
 console.log('=== Man-at-Arms v2.0.0 (Vite Build) ===');
 console.log('Core modules loaded successfully');
+
+// Placeholder for future phase imports
 
 // Verify globals are set (backward compatibility)
 console.log('Window globals:', {
@@ -123,6 +127,11 @@ if (typeof window !== 'undefined') {
   window.MapScene = MapScene;
   window.createMapScene = createMapScene;
   window.initializeMapSystem = initializeMapSystem;
+
+  // Ink system (Phase 5)
+  window.DialogueService = DialogueService;
+  window.createDialogueService = createDialogueService;
+  window.createNarrativeBridge = createNarrativeBridge;
 }
 
 // ============================================
@@ -139,21 +148,21 @@ function bootGame() {
     console.log('Ink.js detected:', window.inkjs.Story ? 'v2.0+' : 'legacy');
   }
   
-  // Initialize UI (placeholder - Phase 4 map system active)
+  // Initialize UI (placeholder - Phase 5 Ink bridge cleanup active)
   const storyEl = document.getElementById('story');
   if (storyEl) {
     storyEl.innerHTML = `
       <div style="padding: 20px; text-align: center;">
-        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 4</h2>
-        <p style="color: #888;">DOM-based Map System Active</p>
+        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 5</h2>
+        <p style="color: #888;">Ink Bridge Cleanup Complete</p>
         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          Map Renderer: ✓<br>
-          Node System: ✓<br>
-          Player Movement: ✓<br>
-          Event Integration: ✓
+          Dialogue Service: ✓<br>
+          External Functions: ✓<br>
+          Clean Boundaries: ✓<br>
+          Dispatcher Integration: ✓
         </p>
         <p style="color: #888; margin-top: 30px;">
-          <em>Phase 5: Ink bridge cleanup next.</em>
+          <em>All phases complete - ready for deployment!</em>
         </p>
       </div>
     `;
@@ -215,7 +224,10 @@ export {
   getModeDisplayName,
   MapScene,
   createMapScene,
-  initializeMapSystem
+  initializeMapSystem,
+  DialogueService,
+  createDialogueService,
+  createNarrativeBridge
 };
 
 // Default export for convenience
