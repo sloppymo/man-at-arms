@@ -37,6 +37,9 @@ export function makeDefaultGameState() {
     location: "England",
     region: "England", // Normalized region for equipment availability
     
+    // Game flow mode (Phase 3)
+    mode: "title", // Current UI/game mode
+    
     // Progression
     level: 1,
     levelUpPoints: 0,
@@ -331,6 +334,11 @@ export function hydrateLoadedState(loaded) {
   // Coerce other numeric fields that matter
   base.age = Number(base.age) || 18;
   base.year = Number(base.year) || 1337;
+
+  // Ensure mode is set and valid
+  if (!base.mode || (typeof window !== 'undefined' && window.isValidMode && !window.isValidMode(base.mode))) {
+    base.mode = "title"; // Default fallback
+  }
 
   // Ensure strings
   base.location = typeof base.location === "string" ? base.location : "England";

@@ -28,6 +28,8 @@ import {
   calculateEquipmentStats
 } from './core/equipment-schema.js';
 import { migrateEquipment, dryRunMigration, validateMigration } from './core/equipment-migration.js';
+import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
+import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
 
 console.log('=== Man-at-Arms v2.0.0 (Vite Build) ===');
 console.log('Core modules loaded successfully');
@@ -102,6 +104,19 @@ if (typeof window !== 'undefined') {
   window.migrateEquipment = migrateEquipment;
   window.dryRunMigration = dryRunMigration;
   window.validateMigration = validateMigration;
+
+  // Event dispatcher (Phase 3)
+  window.dispatcher = dispatcher;
+  window.EVENT_TYPES = EVENT_TYPES;
+
+  // Game modes (Phase 3)
+  window.GameMode = GameMode;
+  window.isValidTransition = isValidTransition;
+  window.getValidTransitions = getValidTransitions;
+  window.isValidMode = isValidMode;
+  window.setMode = setMode;
+  window.initializeGameState = initializeGameState;
+  window.getModeDisplayName = getModeDisplayName;
 }
 
 // ============================================
@@ -118,21 +133,21 @@ function bootGame() {
     console.log('Ink.js detected:', window.inkjs.Story ? 'v2.0+' : 'legacy');
   }
   
-  // Initialize UI (placeholder - Phase 2 equipment migration active)
+  // Initialize UI (placeholder - Phase 3 event-driven flow active)
   const storyEl = document.getElementById('story');
   if (storyEl) {
     storyEl.innerHTML = `
       <div style="padding: 20px; text-align: center;">
-        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 2</h2>
-        <p style="color: #888;">Equipment Migration System Active</p>
+        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 3</h2>
+        <p style="color: #888;">Event-Driven Flow System Active</p>
         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          Schema v2: ✓<br>
-          Migration: ✓<br>
-          Equipment API: ✓<br>
-          Backward Compatibility: ✓
+          Dispatcher: ✓<br>
+          Game Modes: ✓<br>
+          Mode State: ✓<br>
+          Event System: ✓
         </p>
         <p style="color: #888; margin-top: 30px;">
-          <em>Phase 3: Event-driven flow system next.</em>
+          <em>Phase 4: Map system next.</em>
         </p>
       </div>
     `;
@@ -179,7 +194,16 @@ export {
   calculateEquipmentStats,
   migrateEquipment,
   dryRunMigration,
-  validateMigration
+  validateMigration,
+  dispatcher,
+  EVENT_TYPES,
+  GameMode,
+  isValidTransition,
+  getValidTransitions,
+  isValidMode,
+  setMode,
+  initializeGameState,
+  getModeDisplayName
 };
 
 // Default export for convenience
