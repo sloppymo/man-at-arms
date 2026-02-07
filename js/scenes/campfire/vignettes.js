@@ -2187,8 +2187,6 @@ const CAMPFIRE_VIGNETTES = [
         ]
     },
 
-    // ... (rest of the code remains the same)
-
     // ===== OANA CAMPFIRE SCENES =====
 
     campfire_oana_01_the_song: {
@@ -2230,8 +2228,6 @@ const CAMPFIRE_VIGNETTES = [
             }
         ]
     },
-
-    // ... (rest of the code remains the same)
 
     // ===== MIXED CAMPFIRE SCENES =====
 
@@ -2281,11 +2277,7 @@ const CAMPFIRE_VIGNETTES = [
             }
         ]
     },
-
-    // ... (rest of the code remains the same)
 ];
 
-
-    
 window.CAMPFIRE_VIGNETTES = CAMPFIRE_VIGNETTES;
 })();
