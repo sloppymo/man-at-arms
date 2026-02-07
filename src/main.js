@@ -5,7 +5,7 @@
 
 // Core modules (ES module exports + window globals for compatibility)
 import { CHAPTERS, PATRONS, KIT_TIER_MAP, statLimits } from './core/constants.js';
-import { gameState, makeDefaultGameState } from './core/gameState.js';
+import { gameState, makeDefaultGameState, hydrateLoadedState } from './core/gameState.js';
 import {
   clampStat,
   applyStatChange,
@@ -19,6 +19,15 @@ import {
   checkLevelUp,
   getEffectiveStat
 } from './core/utils.js';
+import {
+  EQUIPMENT_SLOTS,
+  LAYER_TYPES,
+  isValidEquipmentStructure,
+  createEmptyEquipment,
+  getAllEquippedItems,
+  calculateEquipmentStats
+} from './core/equipment-schema.js';
+import { migrateEquipment, dryRunMigration, validateMigration } from './core/equipment-migration.js';
 
 console.log('=== Man-at-Arms v2.0.0 (Vite Build) ===');
 console.log('Core modules loaded successfully');
@@ -54,6 +63,48 @@ console.log('Window globals:', {
 // For now, we depend on the original files being loaded as globals
 
 // ============================================
+// Backward Compatibility - Attach to Window
+// Maintain all existing global functions for legacy code
+// ============================================
+
+if (typeof window !== 'undefined') {
+  // Core constants
+  window.CHAPTERS = CHAPTERS;
+  window.PATRONS = PATRONS;
+  window.KIT_TIER_MAP = KIT_TIER_MAP;
+  window.statLimits = statLimits;
+
+  // Game state
+  window.gameState = gameState;
+  window.makeDefaultGameState = makeDefaultGameState;
+  window.hydrateLoadedState = hydrateLoadedState;
+
+  // Utility functions
+  window.clampStat = clampStat;
+  window.applyStatChange = applyStatChange;
+  window.escapeHTML = escapeHTML;
+  window.rollDice = rollDice;
+  window.resolveAction = resolveAction;
+  window.normalizeRegion = normalizeRegion;
+  window.normalizeSocialClass = normalizeSocialClass;
+  window.normalizeSlot = normalizeSlot;
+  window.hasShieldEquipped = hasShieldEquipped;
+  window.checkLevelUp = checkLevelUp;
+  window.getEffectiveStat = getEffectiveStat;
+
+  // Equipment functions
+  window.EQUIPMENT_SLOTS = EQUIPMENT_SLOTS;
+  window.LAYER_TYPES = LAYER_TYPES;
+  window.isValidEquipmentStructure = isValidEquipmentStructure;
+  window.createEmptyEquipment = createEmptyEquipment;
+  window.getAllEquippedItems = getAllEquippedItems;
+  window.calculateEquipmentStats = calculateEquipmentStats;
+  window.migrateEquipment = migrateEquipment;
+  window.dryRunMigration = dryRunMigration;
+  window.validateMigration = validateMigration;
+}
+
+// ============================================
 // Boot sequence
 // ============================================
 
@@ -67,20 +118,21 @@ function bootGame() {
     console.log('Ink.js detected:', window.inkjs.Story ? 'v2.0+' : 'legacy');
   }
   
-  // Initialize UI (placeholder - Phase 1 just validates module loading)
+  // Initialize UI (placeholder - Phase 2 equipment migration active)
   const storyEl = document.getElementById('story');
   if (storyEl) {
     storyEl.innerHTML = `
       <div style="padding: 20px; text-align: center;">
-        <h2 style="color: #d4af37;">Man-at-Arms v2.0 Initialized</h2>
-        <p style="color: #888;">Vite build pipeline active</p>
+        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Phase 2</h2>
+        <p style="color: #888;">Equipment Migration System Active</p>
         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          Core modules loaded: ✓<br>
-          Game state: ✓<br>
-          Utilities: ✓
+          Schema v2: ✓<br>
+          Migration: ✓<br>
+          Equipment API: ✓<br>
+          Backward Compatibility: ✓
         </p>
         <p style="color: #888; margin-top: 30px;">
-          <em>Full game integration coming in subsequent phases.</em>
+          <em>Phase 3: Event-driven flow system next.</em>
         </p>
       </div>
     `;
@@ -107,6 +159,7 @@ export {
   statLimits,
   gameState,
   makeDefaultGameState,
+  hydrateLoadedState,
   clampStat,
   applyStatChange,
   escapeHTML,
@@ -117,7 +170,16 @@ export {
   normalizeSlot,
   hasShieldEquipped,
   checkLevelUp,
-  getEffectiveStat
+  getEffectiveStat,
+  EQUIPMENT_SLOTS,
+  LAYER_TYPES,
+  isValidEquipmentStructure,
+  createEmptyEquipment,
+  getAllEquippedItems,
+  calculateEquipmentStats,
+  migrateEquipment,
+  dryRunMigration,
+  validateMigration
 };
 
 // Default export for convenience
