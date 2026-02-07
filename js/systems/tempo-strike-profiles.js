@@ -200,6 +200,175 @@
       }
     }
     
+    // Tempo Strike Minigame Implementation
+    function startTempoStrike(options) {
+        console.log('startTempoStrike called with options:', options);
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('minigame-overlay');
+            const content = document.getElementById('minigame-content');
+            const title = document.getElementById('minigame-title');
+            const subtitle = document.getElementById('minigame-subtitle');
+            const display = document.getElementById('minigame-display');
+            const instructions = document.getElementById('minigame-instructions');
+
+            // Set content
+            title.textContent = options.title || 'Tempo Strike';
+            subtitle.textContent = options.subtitle || 'Time your strike!';
+            instructions.textContent = 'Choose your risk level and tap Stop when the marker is in the orange zone.';
+
+            // Style the overlay as a modal
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 99999;';
+
+            // Style the content
+            content.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #d4af37; border-radius: 10px; padding: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; color: #d4af37;';
+
+            // Clear previous content
+            display.innerHTML = '';
+
+            // Create tier selection
+            const tierSelect = document.createElement('div');
+            tierSelect.innerHTML = '<div style="margin: 20px 0; text-align: center;"><button id="safe-tier-btn" style="padding: 10px 20px; margin: 0 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Safe (Easier)</button><button id="greedy-tier-btn" style="padding: 10px 20px; margin: 0 10px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer;">Greedy (Harder)</button></div>';
+            display.appendChild(tierSelect);
+
+            // Show overlay
+            overlay.style.display = 'flex';
+            console.log('minigame overlay shown');
+
+            let selectedTier = 'safe';
+            let animationId = null;
+            let markerPosition = 0;
+            let direction = 1; // 1 = right, -1 = left
+            let isRunning = false;
+
+            // Tier selection handlers
+            const safeBtn = document.getElementById('safe-tier-btn');
+            const greedyBtn = document.getElementById('greedy-tier-btn');
+            
+            safeBtn.addEventListener('click', () => {
+                console.log('safe tier button clicked');
+                selectedTier = 'safe';
+                startMinigame();
+            });
+
+            greedyBtn.addEventListener('click', () => {
+                console.log('greedy tier button clicked');
+                selectedTier = 'greedy';
+                startMinigame();
+            });
+
+            function startMinigame() {
+                // Clear tier selection
+                display.innerHTML = '';
+
+                // Create progress bar
+                const progressContainer = document.createElement('div');
+                progressContainer.style.cssText = 'width: 400px; height: 40px; background: #333; border: 2px solid #666; border-radius: 5px; margin: 20px auto; position: relative; overflow: hidden;';
+
+                const progressBar = document.createElement('div');
+                progressBar.style.cssText = 'width: 100%; height: 100%; background: linear-gradient(to right, #ff4444 0%, #ffaa44 40%, #44ff44 60%, #ffaa44 100%); position: relative;';
+
+                const marker = document.createElement('div');
+                marker.style.cssText = 'width: 4px; height: 100%; background: #fff; position: absolute; left: 0px; box-shadow: 0 0 10px #fff;';
+
+                progressBar.appendChild(marker);
+                progressContainer.appendChild(progressBar);
+                display.appendChild(progressContainer);
+
+                // Create stop button
+                const stopBtn = document.createElement('button');
+                stopBtn.textContent = 'STOP!';
+                stopBtn.style.cssText = 'display: block; margin: 20px auto; padding: 15px 30px; background: #FF4444; color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer;';
+                
+                // Add stop button to display
+                display.appendChild(stopBtn);
+
+                // Animation variables
+                const speed = selectedTier === 'greedy' ? 3 : 2; // pixels per frame
+                const maxPosition = 400 - 4; // container width minus marker width
+                let animationId = null;
+
+                // Stop handler - add BEFORE starting animation
+                stopBtn.addEventListener('click', function stopHandler(e) {
+                    e.preventDefault();
+                    console.log('STOP BUTTON CLICKED! position:', markerPosition, 'isRunning:', isRunning);
+                    if (!isRunning) {
+                        console.log('Already stopped, ignoring click');
+                        return;
+                    }
+
+                    isRunning = false;
+                    clearInterval(animationId);
+                    console.log('Animation stopped');
+
+                    // Calculate result
+                    const percentage = (markerPosition / maxPosition) * 100;
+                    console.log('percentage:', percentage);
+                    let grade = 'MISS';
+                    let bonus = 0;
+                    let label = 'Miss';
+
+                    // Check PERFECT zone first (45-55%)
+                    if (percentage >= 45 && percentage <= 55) {
+                        grade = 'PERFECT';
+                        bonus = selectedTier === 'greedy' ? 4 : 2;
+                        label = 'Perfect Timing';
+                    }
+                    // Then check GOOD zone (40-60%)
+                    else if (percentage >= 40 && percentage <= 60) {
+                        grade = 'GOOD';
+                        bonus = selectedTier === 'greedy' ? 2 : 1;
+                        label = 'Good Timing';
+                    }
+
+                    console.log('FINAL RESULT:', { grade, bonus, label, percentage });
+
+                    // Calculate exertion
+                    const exertionDelta = selectedTier === 'greedy' ? (grade === 'MISS' ? 1 : 0) : 0;
+
+                    // Show result immediately
+                    instructions.innerHTML = '<div style="text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; color: ' + (grade === 'PERFECT' ? '#4CAF50' : grade === 'GOOD' ? '#FF9800' : '#F44336') + ';">' + label + '!</div>';
+                    
+                    // Hide overlay after delay
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        resolve({
+                            bonus: bonus,
+                            label: label,
+                            grade: grade,
+                            hitErrorMs: 0,
+                            direction: 'center',
+                            tier: selectedTier,
+                            effectTags: [],
+                            exertionDelta: exertionDelta,
+                            beats: 1
+                        });
+                    }, 1500);
+                });
+
+                function animate() {
+                    if (!isRunning) return;
+
+                    markerPosition += speed * direction;
+
+                    if (markerPosition >= maxPosition) {
+                        markerPosition = maxPosition;
+                        direction = -1;
+                    } else if (markerPosition <= 0) {
+                        markerPosition = 0;
+                        direction = 1;
+                    }
+
+                    marker.style.left = markerPosition + 'px';
+                }
+
+                // Start animation AFTER setting up event listener
+                isRunning = true;
+                animationId = setInterval(animate, 16); // ~60fps
+                console.log('Animation started, stop button ready');
+            }
+        });
+    }
+
     // Make available globally
     window.TempoStrikeProfiles = TempoStrikeProfiles;
     window.RiskTiers = RiskTiers;
@@ -212,5 +381,6 @@
     window.calculateTempoExertion = calculateExertionDelta;
     window.setTempoTelemetryCallback = setTelemetryCallback;
     window.sendTempoTelemetry = sendTelemetry;
-    
-  })();
+    window.startTempoStrike = startTempoStrike;
+
+})();
