@@ -2144,7 +2144,12 @@ const CAMPFIRE_VIGNETTES = [
                     {
                         text: "Turn in for the night.",
                         effects: function(gs) { applyStatChange("stress", -1, {silent:true}); },
-
+                        isExit: true
+                    }
+                ]
+            }
+        ]
+    },
     // ===== COOK CAMPFIRE SCENES =====
 
     campfire_cook_01_the_stew: {
@@ -2278,7 +2283,7 @@ const CAMPFIRE_VIGNETTES = [
     },
 
     // ... (rest of the code remains the same)
-};
+];
 
 
     

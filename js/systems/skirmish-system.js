@@ -192,8 +192,14 @@ function buildCostList(deltas, choiceId, mods, result, flags, timing) {
         if (choiceId === 'press') {
             exertionReasons.push('press');
         }
-        if (timing && timing.bonus === 2) {
+        // Use new timing data for exertion reasons
+        if (timing && timing.grade === 'PERFECT') {
             exertionReasons.push('perfect tempo');
+        } else if (timing && timing.grade === 'GOOD') {
+            exertionReasons.push('good tempo');
+        }
+        if (timing && timing.tier === 'greedy') {
+            exertionReasons.push('greedy tier');
         }
         const reasonText = exertionReasons.length > 0 ? ` (${exertionReasons.join(', ')})` : '';
         costs.push(`Exertion +${deltas.exertion}${reasonText}`);
@@ -265,21 +271,33 @@ async function runSkirmish(choiceId) {
     // Get variant context (set by scene choice)
     const variantContext = gameState.lastSkirmishContext || {};
     
-    // Run Tempo Strike timing minigame (only for Press choice, or all choices - comment your preference)
-    // For now, applying to all choices for consistency
-    const timing = await window.startTempoStrike({
-        title: 'Tempo Strike',
-        subtitle: 'Tap to stop the marker in the orange zone for a timing bonus.'
-    });
+    // Get equipped weapon for context
+    const equippedWeapon = window.gameState.equipment?.weapon?.item;
+    const weaponId = equippedWeapon?.id || null;
     
-    // Apply deterministic timing cost: +1 exertion for +2 bonus
-    let timingExertionCost = 0;
-    if (timing.bonus === 2) {
-        timingExertionCost = 1;
-    }
+    // Map choiceId to profileId
+    const profileMap = {
+        'press': 'press',
+        'hold': 'hold', 
+        'drive': 'drive'
+    };
+    const profileId = profileMap[choiceId] || 'press';
     
     const mods = computeSkirmishModifiers(choiceId);
     const exertion = window.gameState.exertion || 0;
+    
+    // Run Tempo Strike timing minigame with profile context
+    const timing = await window.startTempoStrike({
+        title: 'Tempo Strike',
+        subtitle: 'Tap to stop the marker in the orange zone for a timing bonus.',
+        profileId: profileId,
+        tierId: 'safe', // Default to safe tier
+        weaponId: weaponId,
+        statKey: null, // Will be determined by profile
+        isRetry: false,
+        opponentArmor: Math.floor(mods.armorDefenseBonus / 2), // Scale armor bonus to armor level
+        skillLevel: Math.floor((window.gameState.stats?.agility || 0) / 5) + 1 // Scale agility to skill level
+    });
     
     let statKey, dc, bonus;
     if (choiceId === 'press') {
@@ -298,13 +316,16 @@ async function runSkirmish(choiceId) {
     
     const result = window.resolveAction(statKey, dc, bonus);
     
-    // Calculate total exertion cost for this skirmish
-    let totalExertionCost = 0;
+    // Use exertion from QTE (single source of truth)
+    const timingExertionCost = timing.exertionDelta || 0;
+    
+    // Calculate base exertion for action choice
+    let baseExertionCost = 0;
     if (choiceId === 'press') {
-        totalExertionCost = 1 + timingExertionCost;
-    } else if (timingExertionCost > 0) {
-        totalExertionCost = timingExertionCost;
+        baseExertionCost = 1; // Press always costs 1
     }
+    
+    const totalExertionCost = baseExertionCost + timingExertionCost;
     
     // Compute costs based on margin (returns deltas + metadata flags)
     const costResult = computeSkirmishCosts(result, choiceId, mods);
@@ -396,7 +417,17 @@ async function runSkirmish(choiceId) {
         costs: buildCostList(costResult.deltas, choiceId, mods, result, costResult.flags, timing),
         gearCallouts: buildGearCallouts(choiceId, mods, result, costResult.flags),
         insideReach: costResult.flags.insideReach || false, // From cost calculation metadata
-        timing: { bonus: timing.bonus, label: timing.label }, // Store timing data for deterministic rendering
+        timing: { 
+            bonus: timing.bonus, 
+            label: timing.label,
+            grade: timing.grade,
+            hitErrorMs: timing.hitErrorMs,
+            direction: timing.direction,
+            tier: timing.tier,
+            effectTags: timing.effectTags || [],
+            exertionDelta: timing.exertionDelta || 0,
+            beats: timing.beats
+        }, // Store enhanced timing data
         // Use same fallback logic as getPostSkirmishNextScene() to ensure consistency
         returnScene: window.gameState.randomEncounter?.returnScene || (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : null) // Fallback: null is safer than 'start'; getPostSkirmishNextScene() will handle it
     };

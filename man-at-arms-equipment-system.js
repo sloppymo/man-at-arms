@@ -2100,3 +2100,8 @@ if (typeof module !== 'undefined' && module.exports) {
         DAMAGE_TYPES
     };
 }
+
+// Attach to window for browser usage
+if (typeof window !== 'undefined') {
+    window.EQUIPMENT_DATABASE = EQUIPMENT_DATABASE;
+}

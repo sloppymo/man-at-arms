@@ -4,9 +4,10 @@
 
 /**
  * Show tooltip for a region on the location select map
+ * @param {Event} event - Mouse event
  * @param {string} regionName - Name of the region
  */
-function showRegionTooltip(regionName) {
+function showRegionTooltip(event, regionName) {
     // Create or update tooltip
     let tooltip = document.getElementById('region-tooltip');
     if (!tooltip) {
@@ -28,6 +29,8 @@ function showRegionTooltip(regionName) {
             </div>
         `;
         tooltip.style.display = 'block';
+        tooltip.style.left = (event.pageX + 10) + 'px';
+        tooltip.style.top = (event.pageY + 10) + 'px';
     }
 }
 
@@ -51,7 +54,21 @@ function selectCulture(cultureId) {
     // Update game state
     window.gameState.culture = cultureId;
 
-    // Update UI to show selection
+    // Update region marker button styles
+    const regions = ['Lancashire', 'Yorkshire', 'Norfolk', 'Essex', 'London', 'Kent', 'Somerset', 'Cornwall'];
+    regions.forEach(region => {
+        const button = document.getElementById(`region-marker-${region}`);
+        if (button) {
+            const isSelected = region === cultureId;
+            button.style.border = `4px solid ${isSelected ? '#ffd700' : '#ff6b35'}`;
+            button.style.background = isSelected ? 'rgba(255, 215, 0, 0.95)' : 'rgba(255, 107, 53, 0.9)';
+            if (region === 'London') {
+                button.style.borderWidth = isSelected ? '5px' : '5px'; // London has thicker border
+            }
+        }
+    });
+
+    // Update UI to show selection (legacy code, may not be needed)
     const buttons = document.querySelectorAll('.culture-button');
     buttons.forEach(button => {
         button.classList.remove('selected');
@@ -71,6 +88,9 @@ function selectCulture(cultureId) {
 
     // Update character name based on culture
     updateCharacterNameForCulture(cultureId);
+
+    // Refresh the display to show selected region flavor text
+    window.updateDisplay();
 }
 
 /**
@@ -120,17 +140,21 @@ function getRegionInfo(regionName) {
  */
 function updateCharacterNameForCulture(cultureId) {
     const nameSuggestions = {
-        'english': ['William', 'Thomas', 'John', 'Robert', 'Richard'],
-        'french': ['Pierre', 'Jean', 'Philippe', 'Louis', 'Henri'],
-        'flemish': ['Jan', 'Pieter', 'Karel', 'Hendrik', 'Willem'],
-        'occitan': ['Bernard', 'Raymond', 'Ademar', 'Guillaume', 'Pons']
+        "Yorkshire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Kent": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "London": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Cornwall": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Lancashire": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Essex": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Norfolk": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"],
+        "Somerset": ["William", "John", "Thomas", "Richard", "Robert", "Henry", "Geoffrey", "Roger", "Edward", "Hugh", "Simon", "Walter", "Ralph", "Nicholas", "Peter"]
     };
 
-    const suggestions = nameSuggestions[cultureId] || nameSuggestions['english'];
+    const suggestions = nameSuggestions[cultureId] || nameSuggestions['Yorkshire'];
     const randomName = suggestions[Math.floor(Math.random() * suggestions.length)];
 
     // Update name input placeholder or suggestion
-    const nameInput = document.getElementById('character-name');
+    const nameInput = document.getElementById('character-name-input');
     if (nameInput && !nameInput.value) {
         nameInput.placeholder = `e.g. ${randomName}`;
     }

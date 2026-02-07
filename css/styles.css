@@ -799,6 +799,103 @@ body {
     font-size: 18px;
 }
 
+/* Tempo Strike QTE Styles */
+.tempo-container {
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.tempo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.tempo-tier {
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tempo-beat {
+    color: #f4d03f;
+    font-weight: bold;
+}
+
+.tempo-bar {
+    position: relative;
+    height: 22px;
+    border: 2px solid #a8732a;
+    background: #231a12;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.tempo-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+
+.tempo-zone-good {
+    left: 42.5%;
+    width: 15%;
+    background: rgba(214, 116, 32, 0.35);
+}
+
+.tempo-zone-perfect {
+    left: 47.5%;
+    width: 5%;
+    background: rgba(214, 116, 32, 0.55);
+}
+
+.tempo-marker {
+    position: absolute;
+    top: -3px;
+    width: 10px;
+    height: 28px;
+    background: #f4d03f;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(244, 208, 63, 0.55);
+}
+
+.tempo-result {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.tempo-controls {
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tempo-instructions {
+    text-align: center;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.tempo-feedback {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.tempo-direction-early {
+    color: #6b9fff;
+}
+
+.tempo-direction-late {
+    color: #ff6b6b;
+}
+
 .combat-progress {
     display: flex;
     justify-content: space-between;
