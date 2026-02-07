@@ -2451,26 +2451,25 @@ function showStats() {
     // ============================================
     
     // Initialize Ink.js system when DOM is ready
-    function initializeInkSystem() {
+    async function initializeInkSystem() {
         if (window.inkIntegration && window.storyLoader) {
             console.log("Initializing Ink.js system...");
             
-            // Preload core stories
-            window.storyLoader.preloadStories(['main', 'character-creation', 'training'])
-                .then(() => {
-                    console.log("Ink stories preloaded successfully");
-                    
-                    // Load appropriate story based on current scene
-                    const currentScene = window.gameState.currentScene;
-                    if (currentScene === 'character_creation') {
-                        window.inkIntegration.loadStory('character-creation');
-                    } else {
-                        window.inkIntegration.loadStory('main');
-                    }
-                })
-                .catch(error => {
-                    console.error("Failed to preload Ink stories:", error);
-                });
+            try {
+                // Preload core stories
+                await window.storyLoader.preloadStories(['main', 'character-creation', 'training']);
+                console.log("Ink stories preloaded successfully");
+                
+                // Load appropriate story based on current scene
+                const currentScene = window.gameState.currentScene;
+                if (currentScene === 'character_creation') {
+                    await window.inkIntegration.loadStory('character-creation');
+                } else {
+                    await window.inkIntegration.loadStory('main');
+                }
+            } catch (error) {
+                console.error("Failed to initialize Ink system:", error);
+            }
         } else {
             console.warn("Ink integration not available");
         }

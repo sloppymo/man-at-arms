@@ -104,6 +104,26 @@
      */
     async function loadStory(storyName) {
         try {
+            // First try to get the story from the story-loader cache
+            if (window.storyLoader) {
+                try {
+                    const cachedStory = await window.storyLoader.loadStory(storyName);
+                    if (cachedStory) {
+                        initializeInkWithStory(cachedStory);
+                        
+                        // Set initial state from gameState
+                        if (narrativeBridge) {
+                            narrativeBridge.syncFromGameState();
+                        }
+                        
+                        return true;
+                    }
+                } catch (cacheError) {
+                    console.warn(`Story ${storyName} not in cache, trying direct load:`, cacheError.message);
+                }
+            }
+            
+            // Fallback: try loading from .ink file (though this won't work with current inkjs)
             const storyPath = `js/ink/ink-stories/${storyName}.ink`;
             const story = await loadStoryFile(storyPath);
             initializeInkWithStory(story);

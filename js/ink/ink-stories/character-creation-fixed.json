@@ -1,0 +1,41 @@
+{
+  "inkVersion": 19,
+  "root": [
+    [
+      "-> character_creation",
+      null
+    ],
+    [
+      "// Character creation story for A Man-At-Arms' Life\n// This handles the step-by-step character creation process\n\nVAR characterName = \"\"\nVAR ageRange = \"\"\nVAR age = 27\nVAR background = \"\"\nVAR priorities = []\nVAR patronId = \"\"\n\nVAR strength = 5\nVAR agility = 5\nVAR endurance = 5\nVAR charisma = 5\nVAR luck = 5\nVAR wits = 5\nVAR wealth = 120\nVAR reputation = 0\nVAR morale = 5\nVAR stress = 0",
+      null
+    ],
+    [
+      "=== character_creation ===\n# artwork: opening-tapestry.jpg\n# caption: Here the soldiers lay waste to the land\n\nThe year is {gameState.year}. You are a man-at-arms in service to the {gameState.faction} crown.\n\nThe call to arms has reached you, and you've decided to join a lord's retinue.\n\nFirst, what is your name?\n\n* [Enter your name]\n  -> name_selection",
+      null
+    ],
+    [
+      "=== name_selection ===\n# artwork: character-portrait.jpg\n# caption: A fresh face ready for war\n\nWhat shall you be known as?\n~ characterName = \"William Thatcher\"\n\nYour name is now {characterName}.\n\n* [Continue to age selection]\n  -> age_selection",
+      null
+    ],
+    [
+      "=== age_selection ===\n# artwork: age-selection.jpg\n# caption: The years have shaped you\n\nHow old are you? Your age will affect your starting attributes and opportunities.\n\n* [Young (18-25)]\n  ~ ageRange = \"young\"\n  ~ age = 21\n  -> background_selection\n\n* [Prime (26-35)]\n  ~ ageRange = \"prime\"\n  ~ age = 30\n  -> background_selection\n\n* [Veteran (36-45)]\n  ~ ageRange = \"veteran\"\n  ~ age = 40\n  -> background_selection",
+      null
+    ],
+    [
+      "=== background_selection ===\n# artwork: background-selection.jpg\n# caption: Your past has prepared you for this moment\n\nWhat was your life before joining the army?\n\n{ageRange == \"young\" :\n  As a young man, you have energy but limited experience.\n  - else if ageRange == \"prime\" -\n  In your prime years, you balance energy with some life experience.\n  - else -\n  As a veteran, you bring wisdom but your body shows the wear.\n}\n\n* [Peasant Farmer]\n  ~ background = \"peasant\"\n  ~ strength += 1\n  ~ endurance += 1\n  -> priority_selection\n\n* [Town Merchant]\n  ~ background = \"merchant\"\n  ~ charisma += 1\n  ~ wits += 1\n  -> priority_selection\n\n* [Manor Retainer]\n  ~ background = \"retainer\"\n  ~ strength += 1\n  ~ charisma += 1\n  -> priority_selection\n\n* [Urban Militia]\n  ~ background = \"militia\"\n  ~ agility += 1\n  ~ wits += 1\n  -> priority_selection",
+      null
+    ],
+    [
+      "=== priority_selection ===\n# artwork: priority-selection.jpg\n# caption: Choose what matters most to you\n\nEvery soldier must choose their priorities. What do you value most?\n\nYou must assign points to three different priorities. Each choice affects your starting attributes.\n\n{background == \"peasant\" :\n  Your farming background gives you natural strength and endurance.\n  - else if background == \"merchant\" -\n  Your merchant experience has sharpened your mind and social skills.\n  - else if background == \"retainer\" -\n  Time in a manor has taught you both strength and diplomacy.\n  - else -\n  Militia service has trained your agility and tactical thinking.\n}\n\n* [Strength is most important]\n  ~ priorities = [\"strength\", \"agility\", \"endurance\"]\n  -> patron_selection\n\n* [Agility is most important]\n  ~ priorities = [\"agility\", \"wits\", \"charisma\"]\n  -> patron_selection\n\n* [Wits are most important]\n  ~ priorities = [\"wits\", \"charisma\", \"luck\"]\n  -> patron_selection\n\n* [Charisma is most important]\n  ~ priorities = [\"charisma\", \"luck\", \"wits\"]\n  -> patron_selection",
+      null
+    ],
+    [
+      "=== patron_selection ===\n# artwork: patron-selection.jpg\n# caption: Choose who will command you\n\nYour reputation has reached the ears of several commanders. Each offers different opportunities.\n\nBased on your priorities ({priorities.join(\", \")}), these commanders are interested in your service:\n\n{priorities.includes(\"strength\") :\n  Your martial focus attracts the warrior leaders.\n  - else if priorities.includes(\"wits\") -\n  Your tactical mind interests the strategic commanders.\n  - else -\n  Your balanced approach makes you appealing to various lords.\n}\n\n* [Sir James \"The Reaver\" de Looney (Free Company)]\n  ~ patronId = \"james_olooney\"\n  ~ strength += 1\n  ~ agility += 1\n  ~ morale -= 1\n  ~ wealth += 2\n  -> character_summary\n\n* [Sir David de Montfort (Noble Household)]\n  ~ patronId = \"lord_david\"\n  ~ charisma += 1\n  ~ morale += 1\n  ~ wits += 1\n  ~ wealth -= 2\n  -> character_summary\n\n* [Baron Caley of Tournai (Noble Household)]\n  ~ patronId = \"duke_caley\"\n  ~ wealth += 3\n  ~ reputation += 1\n  ~ morale -= 1\n  ~ stress += 1\n  -> character_summary\n\n* [Count Charles \"The Grim\" of Suffolk (Noble Household)]\n  ~ patronId = \"count_charles\"\n  ~ strength += 1\n  ~ endurance += 1\n  ~ morale -= 1\n  ~ stress += 1\n  ~ wits -= 1\n  -> character_summary\n\n* [Ashkhan of the Mamluk Guard (Mercenary Company)]\n  ~ patronId = \"ashkhan\"\n  ~ agility += 1\n  ~ wits += 1\n  ~ reputation += 1\n  -> character_summary",
+      null
+    ],
+    [
+      "=== character_summary ===\n# artwork: character-summary.jpg\n# caption: Your character is ready\n\nYour character is complete. Here is your summary:\n\n**Name:** {characterName}\n**Age:** {age} ({ageRange})\n**Background:** {background}\n**Patron:** {patronId}\n\n**Final Stats:**\n- Strength: {strength}\n- Agility: {agility}\n- Endurance: {endurance}\n- Charisma: {charisma}\n- Wits: {wits}\n- Luck: {luck}\n- Wealth: {EXTERNAL formatCurrency(wealth)}\n- Morale: {morale}\n- Stress: {stress}\n\n{patronId == \"james_olooney\" :\n Sir James \"The Reaver\" welcomes you. \"We'll make good money, but the fighting will be fierce.\"\n - else if patronId == \"lord_david\" -\n Sir David nods approvingly. \"I value my men's lives. We'll fight smart, not hard.\"\n - else if patronId == \"duke_caley\" -\n Baron Caley barely acknowledges you. \"Prove your worth, and you'll be rewarded.\"\n - else if patronId == \"count_charles\" -\n Count Charles grunts. \"Another body for the meat grinder. Try to survive.\"\n - else -\n Ashkhan studies you carefully. \"Your skills will serve us well. Welcome to the Guard.\"\n}\n\nYour military life begins now. The year is {gameState.year}, and the future awaits.\n\n* [Begin your story]\n -> start",
+      null
+    ]
+  ]
+}

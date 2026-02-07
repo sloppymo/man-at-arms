@@ -66,19 +66,49 @@
     
     // Resolution system: roll against difficulty (uses effective stat)
     // Morale/stress can modify difficulty instead of stat for clearer feedback
-    function resolveAction(stat, difficulty = 7, bonus = 0) {
+    function resolveAction(stat, difficulty = 12, bonus = 0) { // Increased default difficulty from 7 to 12
         const effectiveStat = window.getEffectiveStat(stat);
         
         // Morale/stress modify difficulty (easier to succeed with high morale, harder with high stress)
         let adjustedDifficulty = difficulty;
-        if (window.gameState.stats.morale >= 8) {
-            adjustedDifficulty -= 1; // High morale makes checks easier
-        } else if (window.gameState.stats.morale <= 2) {
-            adjustedDifficulty += 1; // Low morale makes checks harder
+        
+        // More aggressive morale modifiers
+        if (window.gameState.stats.morale >= 9) {
+            adjustedDifficulty -= 2; // High morale makes checks significantly easier
+        } else if (window.gameState.stats.morale >= 7) {
+            adjustedDifficulty -= 1; // Moderate morale helps a bit
+        } else if (window.gameState.stats.morale <= 1) {
+            adjustedDifficulty += 3; // Very low morale makes checks much harder
+        } else if (window.gameState.stats.morale <= 3) {
+            adjustedDifficulty += 2; // Low morale makes checks harder
+        } else if (window.gameState.stats.morale <= 5) {
+            adjustedDifficulty += 1; // Slightly low morale still penalizes
         }
-        if (window.gameState.stats.stress >= 7) {
-            adjustedDifficulty += 1; // High stress makes checks harder
+        
+        // More aggressive stress modifiers
+        if (window.gameState.stats.stress >= 9) {
+            adjustedDifficulty += 3; // Very high stress makes checks much harder
+        } else if (window.gameState.stats.stress >= 7) {
+            adjustedDifficulty += 2; // High stress significantly penalizes
+        } else if (window.gameState.stats.stress >= 5) {
+            adjustedDifficulty += 1; // Moderate stress still hurts
         }
+        
+        // Exertion penalty (makes checks harder when tired)
+        if (window.gameState.exertion >= 8) {
+            adjustedDifficulty += 2; // Very exhausted
+        } else if (window.gameState.exertion >= 5) {
+            adjustedDifficulty += 1; // Tired
+        }
+        
+        // Injury/condition penalties (if conditions system is active)
+        if (window.gameState.conditions && Array.isArray(window.gameState.conditions)) {
+            const negativeConditions = window.gameState.conditions.filter(c => c.type === 'negative' || !c.type);
+            adjustedDifficulty += negativeConditions.length; // Each negative condition makes checks harder
+        }
+        
+        // Clamp difficulty to reasonable bounds (3-20)
+        adjustedDifficulty = Math.max(3, Math.min(20, adjustedDifficulty));
         
         const roll = rollDice(effectiveStat + bonus);
         const success = roll >= adjustedDifficulty;

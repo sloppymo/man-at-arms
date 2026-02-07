@@ -28,54 +28,78 @@
             const criticalStats = ['strength', 'agility', 'endurance', 'charisma', 'luck', 'wits', 'wealth', 'reputation', 'morale', 'stress', 'experience', 'patronFavor'];
             
             criticalStats.forEach(stat => {
-                const observer = (value) => {
-                    // Prevent feedback loops and unnecessary updates
-                    if (this.gameState.stats[stat] !== value) {
-                        // Validate stat change
-                        if (this.validateStatChange(stat, this.gameState.stats[stat], value)) {
-                            this.gameState.stats[stat] = value;
-                            
-                            // Trigger UI update
-                            if (window.updateStats) {
-                                window.updateStats();
+                try {
+                    // Check if the variable exists in the story before trying to observe it
+                    const testValue = this.inkStory.variablesState[stat];
+                    if (testValue !== undefined) {
+                        const observer = (value) => {
+                            // Prevent feedback loops and unnecessary updates
+                            if (this.gameState.stats[stat] !== value) {
+                                // Validate stat change
+                                if (this.validateStatChange(stat, this.gameState.stats[stat], value)) {
+                                    this.gameState.stats[stat] = value;
+                                    
+                                    // Trigger UI update
+                                    if (window.updateStats) {
+                                        window.updateStats();
+                                    }
+                                    
+                                    // Dispatch event
+                                    this.eventTarget.dispatchEvent(new CustomEvent('statChange', {
+                                        detail: { stat, value, source: 'ink' }
+                                    }));
+                                }
                             }
-                            
-                            // Dispatch event
-                            this.eventTarget.dispatchEvent(new CustomEvent('statChange', {
-                                detail: { stat, value, source: 'ink' }
-                            }));
-                        }
+                        };
+                        
+                        this.inkStory.ObserveVariable(stat, observer);
+                        this.observers.push({ stat, observer });
+                    } else {
+                        console.warn(`Variable '${stat}' not found in Ink story, skipping observation`);
                     }
-                };
-                
-                this.inkStory.ObserveVariable(stat, observer);
-                this.observers.push({ stat, observer });
+                } catch (error) {
+                    console.warn(`Cannot observe variable '${stat}': ${error.message}`);
+                }
             });
             
             // Game state properties
-            const gameStateProps = ['faction', 'age', 'year', 'location', 'level', 'currentScene', 'characterName', 'patronId', 'background'];
+            const gameStateProps = ['faction', 'age', 'ageRange', 'year', 'location', 'level', 'currentScene', 'characterName', 'patronId', 'background'];
             
             gameStateProps.forEach(prop => {
-                const observer = (value) => {
-                    if (this.gameState[prop] !== value) {
-                        this.gameState[prop] = value;
-                        
-                        // Trigger specific updates
-                        if (prop === 'location' || prop === 'year') {
-                            if (window.updateStatusBar) {
-                                window.updateStatusBar();
+                try {
+                    // Check if the variable exists in the story before trying to observe it
+                    const testValue = this.inkStory.variablesState[prop];
+                    if (testValue !== undefined) {
+                        const observer = (value) => {
+                            if (this.gameState[prop] !== value) {
+                                this.gameState[prop] = value;
+                                
+                                // Trigger specific updates
+                                if (prop === 'location' || prop === 'year') {
+                                    if (window.updateStatusBar) {
+                                        window.updateStatusBar();
+                                    }
+                                }
+                                
+                                // Dispatch event
+                                this.eventTarget.dispatchEvent(new CustomEvent('gameStateChange', {
+                                    detail: { property: prop, value, source: 'ink' }
+                                }));
                             }
-                        }
+                        };
                         
-                        // Dispatch event
-                        this.eventTarget.dispatchEvent(new CustomEvent('gameStateChange', {
-                            detail: { property: prop, value, source: 'ink' }
-                        }));
+                        try {
+                            this.inkStory.ObserveVariable(prop, observer);
+                            this.observers.push({ prop, observer });
+                        } catch (error) {
+                            console.warn(`Cannot observe variable '${prop}': ${error.message}`);
+                        }
+                    } else {
+                        console.warn(`Variable '${prop}' not found in Ink story, skipping observation`);
                     }
-                };
-                
-                this.inkStory.ObserveVariable(prop, observer);
-                this.observers.push({ prop, observer });
+                } catch (error) {
+                    console.warn(`Cannot observe variable '${prop}': ${error.message}`);
+                }
             });
         }
         
@@ -159,6 +183,14 @@
                 return window.resolveAction ? window.resolveAction(stat, difficulty, bonus) : { roll: 0, success: false };
             });
             
+            // Narrative authoring helper: boolean check wrapper
+            this.inkStory.BindExternalFunction("doCheck", (stat, difficulty = 7, bonus = 0) => {
+                const result = window.resolveAction ? window.resolveAction(stat, difficulty, bonus) : { roll: 0, success: false };
+                // Optional debugging hook for UI/logging
+                window.lastCheckResult = result;
+                return !!result.success;
+            });
+            
             // Equipment checks (read-only)
             this.inkStory.BindExternalFunction("hasShieldEquipped", () => {
                 return window.hasShieldEquipped ? window.hasShieldEquipped() : false;
@@ -185,17 +217,52 @@
          */
         syncFromGameState() {
             try {
+                // First, ensure all gameState stats variables exist in the Ink story
+                const statsToSync = ['strength', 'agility', 'endurance', 'charisma', 'luck', 'wits', 'wealth', 'reputation', 'morale', 'stress', 'experience', 'patronFavor'];
+                
+                statsToSync.forEach(stat => {
+                    if (this.inkStory.variablesState[stat] === undefined) {
+                        // Try to declare the variable by setting it
+                        try {
+                            this.inkStory.variablesState[stat] = this.gameState.stats[stat] || 0;
+                        } catch (e) {
+                            console.warn(`Could not declare variable '${stat}' in Ink story:`, e.message);
+                        }
+                    }
+                });
+                
                 // Sync stats
                 Object.keys(this.gameState.stats).forEach(stat => {
-                    if (this.inkStory.variablesState[stat] !== this.gameState.stats[stat]) {
-                        this.inkStory.variablesState[stat] = this.gameState.stats[stat];
+                    if (this.inkStory.variablesState[stat] !== undefined) {
+                        try {
+                            this.inkStory.variablesState[stat] = this.gameState.stats[stat];
+                        } catch (e) {
+                            console.warn(`Could not sync stat '${stat}' to Ink:`, e.message);
+                        }
+                    }
+                });
+                
+                // Ensure gameState properties exist in Ink
+                const propsToSync = ['faction', 'age', 'ageRange', 'year', 'location', 'level', 'currentScene', 'characterName', 'patronId', 'background'];
+                
+                propsToSync.forEach(prop => {
+                    if (this.inkStory.variablesState[prop] === undefined) {
+                        try {
+                            this.inkStory.variablesState[prop] = this.gameState[prop] || '';
+                        } catch (e) {
+                            console.warn(`Could not declare property '${prop}' in Ink story:`, e.message);
+                        }
                     }
                 });
                 
                 // Sync game state properties
-                ['faction', 'age', 'year', 'location', 'level', 'currentScene', 'characterName', 'patronId', 'background'].forEach(prop => {
-                    if (this.inkStory.variablesState[prop] !== this.gameState[prop]) {
-                        this.inkStory.variablesState[prop] = this.gameState[prop];
+                propsToSync.forEach(prop => {
+                    if (this.inkStory.variablesState[prop] !== undefined) {
+                        try {
+                            this.inkStory.variablesState[prop] = this.gameState[prop];
+                        } catch (e) {
+                            console.warn(`Could not sync property '${prop}' to Ink:`, e.message);
+                        }
                     }
                 });
                 
@@ -220,8 +287,22 @@
                 const startedVar = `chapter_${chapterId}_started`;
                 const completedVar = `chapter_${chapterId}_completed`;
                 
-                this.inkStory.variablesState[startedVar] = progress.started;
-                this.inkStory.variablesState[completedVar] = progress.completed;
+                // Only assign if variables exist in the story
+                if (this.inkStory.variablesState[startedVar] !== undefined) {
+                    try {
+                        this.inkStory.variablesState[startedVar] = progress.started;
+                    } catch (e) {
+                        console.warn(`Could not sync chapter '${chapterId}' started to Ink:`, e.message);
+                    }
+                }
+                
+                if (this.inkStory.variablesState[completedVar] !== undefined) {
+                    try {
+                        this.inkStory.variablesState[completedVar] = progress.completed;
+                    } catch (e) {
+                        console.warn(`Could not sync chapter '${chapterId}' completed to Ink:`, e.message);
+                    }
+                }
             });
         }
         
@@ -234,14 +315,24 @@
             // Clear existing condition variables
             Object.keys(this.inkStory.variablesState).forEach(varName => {
                 if (varName.startsWith('condition_')) {
-                    delete this.inkStory.variablesState[varName];
+                    try {
+                        delete this.inkStory.variablesState[varName];
+                    } catch (e) {
+                        // Silently ignore deletion errors
+                    }
                 }
             });
             
-            // Set current conditions
+            // Set current conditions - only if variable exists in story
             this.gameState.conditions.forEach(condition => {
                 const varName = `condition_${condition.name.replace(/\s+/g, '_').toLowerCase()}`;
-                this.inkStory.variablesState[varName] = true;
+                if (this.inkStory.variablesState[varName] !== undefined) {
+                    try {
+                        this.inkStory.variablesState[varName] = true;
+                    } catch (e) {
+                        console.warn(`Could not sync condition '${condition.name}' to Ink:`, e.message);
+                    }
+                }
             });
         }
         

@@ -51,50 +51,112 @@ function updateStory() {
 }
 
 function renderStoryContent() {
+    console.log("=== RENDER STORY CONTENT START ===");
+
     // Check if we should use Ink rendering
-    if (window.inkStory && isInkScene(window.gameState.currentScene)) {
+    const currentScene = window.gameState.currentScene;
+    const isInkSceneResult = isInkScene(currentScene);
+    console.log(`Scene: ${currentScene}, Is Ink Scene: ${isInkSceneResult}`);
+    console.log(`window.inkStory exists: ${!!window.inkStory}`);
+    console.log(`window.inkStory type: ${typeof window.inkStory}`);
+
+    if (window.inkStory && isInkSceneResult) {
+        console.log("Rendering Ink content for scene:", currentScene);
         renderInkContent();
     } else {
+        console.log("Rendering legacy content for scene:", currentScene);
+        console.log(`Reason: inkStory=${!!window.inkStory}, isInkScene=${isInkSceneResult}`);
         renderLegacyContent();
     }
 }
 
 function isInkScene(sceneId) {
     // Define which scenes use Ink rendering
-    const inkScenes = ['start', 'training_brawny', 'character_creation'];
+    const inkScenes = ['training_brawny', 'simple_test_scene']; // Re-enabled simple_test_scene with fixed JSON
     return inkScenes.includes(sceneId);
 }
 
 async function renderInkContent() {
     try {
         console.log("Rendering Ink content for scene:", window.gameState.currentScene);
+
+        // Ensure the correct Ink story is loaded for this scene
+        const sceneName = window.gameState.currentScene;
+        let storyToLoad = sceneName;
         
+        // For testing, use the working 'training' story for simple_test_scene
+        if (sceneName === 'simple_test_scene') {
+            storyToLoad = 'training';
+        }
+        
+        // For training_brawny, use the main story (which contains it)
+        if (sceneName === 'training_brawny') {
+            storyToLoad = 'main';
+        }
+        
+        if (window.inkIntegration) {
+            // Check if we need to load a different story
+            const currentStoryName = window.inkStory ? window.inkStory._storyName || 'unknown' : null;
+            if (currentStoryName !== storyToLoad) {
+                console.log(`Loading Ink story: ${storyToLoad} for scene: ${sceneName}`);
+                try {
+                    await window.inkIntegration.loadStory(storyToLoad);
+                    console.log(`Successfully loaded story: ${storyToLoad}`);
+                    
+                    // Navigate to the correct knot if this is a sub-scene
+                    if (sceneName === 'training_brawny' && storyToLoad === 'main') {
+                        try {
+                            window.inkStory.ChoosePathString('training_brawny');
+                            console.log(`Navigated to knot: training_brawny`);
+                        } catch (navError) {
+                            console.warn(`Could not navigate to knot training_brawny:`, navError);
+                        }
+                    }
+                    
+                } catch (loadError) {
+                    console.error(`Failed to load story ${storyToLoad}:`, loadError);
+                    throw new Error(`Could not load Ink story: ${storyToLoad}`);
+                }
+            }
+        }
+
         if (!window.inkStory) {
             throw new Error("Ink story not initialized");
         }
-        
+
         let fullText = "";
         let tags = [];
-        
+
         // Collect all content until choices
-        while (window.inkStory.canContinue) {
+        let iterationCount = 0;
+        const maxIterations = 50; // Safety limit
+        
+        while (window.inkStory.canContinue && iterationCount < maxIterations) {
             const content = window.inkStory.Continue();
             fullText += sanitizeInkOutput(content);
             tags = tags.concat(window.inkStory.currentTags);
+            iterationCount++;
+            
+            if (iterationCount >= maxIterations) {
+                console.warn(`Ink rendering stopped after ${maxIterations} iterations to prevent infinite loop`);
+                break;
+            }
         }
         
+        console.log(`Ink rendering completed in ${iterationCount} iterations`);
+
         // Process tags for artwork/metadata
         processInkTags(tags);
-        
+
         // Apply typewriter effect
         const storyElement = document.getElementById('story');
         if (storyElement) {
             await typewriterEffect(storyElement, fullText);
         }
-        
+
         // Render choices
         renderInkChoices();
-        
+
         console.log("Successfully rendered Ink content");
     } catch (error) {
         console.error("Error rendering Ink content:", error);
@@ -388,18 +450,28 @@ function updateDialect(dialect) {
 }
 
 function renderInkChoices() {
+    console.log('=== RENDER INK CHOICES CALLED ===');
     const container = document.getElementById('choices-container');
-    if (!container || !window.inkStory) return;
-    
+    if (!container || !window.inkStory) {
+        console.log('renderInkChoices: container or inkStory not found');
+        return;
+    }
+
+    console.log('renderInkChoices: currentChoices =', window.inkStory.currentChoices);
+    console.log('renderInkChoices: canContinue =', window.inkStory.canContinue);
+
     container.innerHTML = '';
-    
+
     window.inkStory.currentChoices.forEach((choice, index) => {
+        console.log(`renderInkChoices: rendering choice ${index}:`, choice.text);
         const button = document.createElement('button');
         button.className = 'choice-button';
         button.innerHTML = sanitizeInkOutput(choice.text);
         button.onclick = () => selectInkChoice(index);
         container.appendChild(button);
     });
+
+    console.log(`renderInkChoices: rendered ${window.inkStory.currentChoices.length} choices`);
 }
 
 function selectInkChoice(index) {
@@ -431,4 +503,69 @@ async function typewriterEffect(element, text) {
     // Expose globally
     window.updateDisplay = updateDisplay;
     window.updateStory = updateStory;
+    window.testInkRendering = () => {
+        console.log('=== TEST INK RENDERING CALLED ===');
+        console.log('Current scene:', window.gameState.currentScene);
+        renderStoryContent();
+    };
+    window.setSceneAndRender = (sceneName) => {
+        console.log(`Setting scene to: ${sceneName}`);
+        if (window.gameState) {
+            window.gameState.currentScene = sceneName;
+            console.log(`Scene set to: ${window.gameState.currentScene}`);
+            window.updateDisplay();
+        } else {
+            console.error('window.gameState not available');
+        }
+    };
+    window.debugInkState = () => {
+        try {
+            const debugInfo = [
+                '=== INK SYSTEM DEBUG ===',
+                `window.inkStory exists: ${!!window.inkStory}`,
+                `window.inkStory type: ${typeof window.inkStory}`,
+                `Current scene: ${window.gameState?.currentScene}`,
+                `Is training_brawny Ink scene: ${isInkScene('training_brawny')}`,
+                `Story loader available: ${!!window.storyLoader}`,
+                `Ink integration available: ${!!window.inkIntegration}`
+            ];
+            
+            if (window.inkStory) {
+                debugInfo.push(`inkStory.canContinue: ${window.inkStory.canContinue}`);
+                debugInfo.push(`inkStory.currentChoices: ${window.inkStory.currentChoices}`);
+                debugInfo.push(`inkStory.currentChoices type: ${typeof window.inkStory.currentChoices}`);
+                if (window.inkStory.currentChoices) {
+                    debugInfo.push(`inkStory.currentChoices length: ${window.inkStory.currentChoices.length}`);
+                    debugInfo.push(`inkStory.currentChoices isArray: ${Array.isArray(window.inkStory.currentChoices)}`);
+                } else {
+                    debugInfo.push(`inkStory.currentChoices is null/undefined`);
+                }
+            }
+            
+            debugInfo.push('=== DEBUG COMPLETE ===');
+            
+            // Log to console
+            debugInfo.forEach(line => console.log(line));
+            
+            // Also show on page
+            const storyElement = document.getElementById('story');
+            if (storyElement) {
+                const debugDiv = document.createElement('div');
+                debugDiv.style.background = 'black';
+                debugDiv.style.color = 'white';
+                debugDiv.style.padding = '10px';
+                debugDiv.style.fontFamily = 'monospace';
+                debugDiv.innerHTML = debugInfo.join('<br>');
+                storyElement.innerHTML = '';
+                storyElement.appendChild(debugDiv);
+            }
+            
+        } catch (error) {
+            console.error('Error in debugInkState:', error);
+            const storyElement = document.getElementById('story');
+            if (storyElement) {
+                storyElement.innerHTML = `<div style="background: red; color: white; padding: 10px;">Error in debugInkState: ${error.message}</div>`;
+            }
+        }
+    };
 })();

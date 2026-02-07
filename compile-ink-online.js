@@ -54,7 +54,7 @@ async function compileInkFile(inkFilePath) {
         // Create the JSON structure
         const jsonStructure = {
             version: "0.1",
-            inkVersion: 20,
+            inkVersion: 19,
             root: content
         };
         

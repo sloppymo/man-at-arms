@@ -746,6 +746,39 @@
                 nextScene: "first_battle_brave"
             }
         ]
+    },
+    simple_test_scene: {
+        title: "Ink Scene Test",
+        year: 1337,
+        age: function() { return gameState.age || 18; },
+        location: "England",
+        artwork: "artwork/battlefield.jpg",
+        artworkCaption: "Testing Ink rendering functionality",
+        text: function() {
+            const name = gameState.characterName || "Soldier";
+            return `<p><strong>Welcome to the Ink scene test!</strong></p>
+                   <p>This demonstrates that Ink rendering is working properly.</p>
+                   <p>If you see this text, the Ink system is successfully rendering legacy content as a fallback.</p>
+                   <p>Your name: <strong>${name}</strong></p>
+                   <p>Current scene: <strong>simple_test_scene</strong></p>`;
+        },
+        choices: [
+            {
+                text: "Test choice A",
+                effects: {},
+                nextScene: "start"
+            },
+            {
+                text: "Test choice B",
+                effects: {},
+                nextScene: "character_creation"
+            },
+            {
+                text: "Exit test",
+                effects: {},
+                nextScene: "start"
+            }
+        ]
     }
     });
 })();

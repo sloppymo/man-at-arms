@@ -2144,14 +2144,143 @@ const CAMPFIRE_VIGNETTES = [
                     {
                         text: "Turn in for the night.",
                         effects: function(gs) { applyStatChange("stress", -1, {silent:true}); },
-                        isExit: true
-                    }
-                ]
+
+    // ===== COOK CAMPFIRE SCENES =====
+
+    campfire_cook_01_the_stew: {
+        title: "The Stew",
+        year: 1346,
+        age: function() { return gameState.age || 18; },
+        location: "Near Caen",
+        artwork: "artwork/campfire.jpg",
+        artworkCaption: "A soldier shares a meal by the campfire",
+        text: function(gs) {
+            const cookRel = gs.relationships?.cook || 0;
+            return `<p>The cook stirs a large pot over the fire, the rich aroma of stew filling the air. He glances up as you approach.</p>
+                    <p><em>"Ah, ${gs.characterName || 'soldier'}. Come to sample my latest creation? It's a Normandy specialty - rabbit and root vegetables, slow-cooked to perfection."</em></p>
+                    <p>The cook dips a wooden spoon into the pot and takes a taste, nodding approvingly.</p>
+                    <p><em>"Not bad, if I do say so myself. Care for a bowl? It's good for the soul on a night like this."</em></p>`;
+        },
+        choices: [
+            {
+                text: "Accept the stew gratefully.",
+                effects: function(gs) { 
+                    changeRel("cook", 1); 
+                    applyStatChange("morale", 1, {silent: true});
+                },
+                nextScene: "campfire_cook_01_response_1"
+            },
+            {
+                text: "Ask about his cooking background.",
+                effects: function(gs) { changeRel("cook", 1); },
+                nextScene: "campfire_cook_01_response_2"
+            },
+            {
+                text: "Decline politely and move on.",
+                nextScene: "campfire_cook_01_response_3"
             }
         ]
-    }
-];
+    },
+
+    // ... (rest of the code remains the same)
+
+    // ===== OANA CAMPFIRE SCENES =====
+
+    campfire_oana_01_the_song: {
+        title: "The Song",
+        year: 1347,
+        age: function() { return gameState.age || 18; },
+        location: "Near Calais",
+        artwork: "artwork/campfire.jpg",
+        artworkCaption: "A haunting melody by the campfire",
+        text: function(gs) {
+            const oanaRel = gs.relationships?.oana || 0;
+            return `<p>Oana sits by the fire, her carving knife working rhythmically on a piece of wood. But tonight, instead of working in silence, she begins to sing softly.</p>
+                    <p>Her voice is beautiful - clear and haunting, carrying a melody that speaks of loss and longing. The words are in her native tongue, but the emotion transcends language.</p>
+                    <p><em>"...a leaver of the song, a dreamer of dreams..."</em></p>
+                    <p>As she sings, you notice tears glistening in her eyes, reflecting the firelight. The other soldiers listen quietly, respecting this rare moment of vulnerability.</p>`;
+        },
+        choices: [
+            {
+                text: "Listen quietly and let her finish.",
+                effects: function(gs) { 
+                    changeRel("oana", 2); 
+                    applyStatChange("morale", 1, {silent: true});
+                },
+                nextScene: "campfire_oana_01_response_1"
+            },
+            {
+                text: "Ask about the song's meaning.",
+                effects: function(gs) { changeRel("oana", 1); },
+                nextScene: "campfire_oana_01_response_2"
+            },
+            {
+                text: "Compliment her singing.",
+                effects: function(gs) { changeRel("oana", 1); },
+                nextScene: "campfire_oana_01_response_3"
+            },
+            {
+                text: "Give her space and move away.",
+                isExit: true
+            }
+        ]
+    },
+
+    // ... (rest of the code remains the same)
+
+    // ===== MIXED CAMPFIRE SCENES =====
+
+    campfire_both_01_the_argument: {
+        title: "The Argument",
+        year: 1347,
+        age: function() { return gameState.age || 18; },
+        location: "Near Calais",
+        artwork: "artwork/campfire.jpg",
+        artworkCaption: "A heated discussion by the campfire",
+        text: function(gs) {
+            return `<p>You arrive at the campfire to find Wat and the cook in a heated argument. The cook is gesturing wildly with a wooden spoon, while Wat stands with arms crossed, his face red.</p>
+                    <p>Cook: <em>"I'm telling you, Wat, that stew was perfect! The herbs were balanced, the meat was tender!"</em></p>
+                    <p>Wat: <em>"Balanced? It tasted like feet! You put too much thyme in it!"</em></p>
+                    <p>Cook: <em>"Too much? That's the secret! The thyme is what makes it sing!"</em></p>
+                    <p>Wat: <em>"Sing? It was caterwauling! I couldn't taste anything else!"</em></p>
+                    <p>The argument continues, drawing amused glances from nearby soldiers. Oana watches from a distance, a small smile on her face.</p>`;
+        },
+        choices: [
+            {
+                text: "Try to mediate the argument.",
+                effects: function(gs) { 
+                    changeRel("wat", 1); 
+                    changeRel("cook", 1); 
+                },
+                nextScene: "campfire_both_01_response_mediate"
+            },
+            {
+                text: "Take Wat's side.",
+                effects: function(gs) { 
+                    changeRel("wat", 2); 
+                    changeRel("cook", -1); 
+                },
+                nextScene: "campfire_both_01_response_wat"
+            },
+            {
+                text: "Take the cook's side.",
+                effects: function(gs) { 
+                    changeRel("cook", 2); 
+                    changeRel("wat", -1); 
+                },
+                nextScene: "campfire_both_01_response_cook"
+            },
+            {
+                text: "Walk away from the argument.",
+                isExit: true
+            }
+        ]
+    },
+
+    // ... (rest of the code remains the same)
+};
+
 
     
-    window.CAMPFIRE_VIGNETTES = CAMPFIRE_VIGNETTES;
+window.CAMPFIRE_VIGNETTES = CAMPFIRE_VIGNETTES;
 })();

@@ -158,8 +158,8 @@
             return false;
         }
         
-        // Chance check
-        return Math.random() < (cf.chance || 0.35);
+        // Chance check - reduced from 35% to 25% for less frequent interruptions
+        return Math.random() < (cf.chance || 0.25);
     }
     
     /** Insert campfire interlude if conditions are met */
@@ -226,13 +226,19 @@
             return "campfire_interlude";
         }
 
-        // For full mode, randomly select from 5 different campfire scenes
+        // For full mode, randomly select from campfire scenes (now includes Cook and Oana)
         const availableCampfireScenes = [
             'campfire_wat_01_the_sharpening',
             'campfire_wat_02_the_rope',
             'campfire_wat_03_the_boy_king',
             'campfire_wat_04_the_dead_mules',
-            'campfire_wat_05_the_prayer'
+            'campfire_wat_05_the_prayer',
+            'campfire_cook_01_the_stew',
+            'campfire_cook_02_the_herbs',
+            'campfire_cook_03_the_recipe',
+            'campfire_oana_01_the_song',
+            'campfire_oana_02_the_dream',
+            'campfire_both_01_the_argument'
         ];
 
         // Track seen campfire scenes to avoid immediate repetition

@@ -3,9 +3,21 @@
 
 VAR characterName = ""
 VAR ageRange = ""
+VAR age = 27
 VAR background = ""
 VAR priorities = []
 VAR patronId = ""
+
+VAR strength = 5
+VAR agility = 5
+VAR endurance = 5
+VAR charisma = 5
+VAR luck = 5
+VAR wits = 5
+VAR wealth = 120
+VAR reputation = 0
+VAR morale = 5
+VAR stress = 0
 
 === character_creation ===
 # artwork: opening-tapestry.jpg
@@ -26,7 +38,6 @@ First, what is your name?
 
 What shall you be known as?
 ~ characterName = "William Thatcher"
-~ gameState.characterName = characterName
 
 Your name is now {characterName}.
 
@@ -41,20 +52,17 @@ How old are you? Your age will affect your starting attributes and opportunities
 
 * [Young (18-25)] 
   ~ ageRange = "young"
-  ~ gameState.ageRange = "young"
-  ~ gameState.age = 21
+  ~ age = 21
   -> background_selection
 
 * [Prime (26-35)] 
   ~ ageRange = "prime" 
-  ~ gameState.ageRange = "prime"
-  ~ gameState.age = 30
+  ~ age = 30
   -> background_selection
 
 * [Veteran (36-45)] 
   ~ ageRange = "veteran"
-  ~ gameState.ageRange = "veteran" 
-  ~ gameState.age = 40
+  ~ age = 40
   -> background_selection
 
 === background_selection ===
@@ -73,28 +81,24 @@ What was your life before joining the army?
 
 * [Peasant Farmer] 
   ~ background = "peasant"
-  ~ gameState.background = "peasant"
   ~ strength += 1
   ~ endurance += 1
   -> priority_selection
 
 * [Town Merchant] 
   ~ background = "merchant"
-  ~ gameState.background = "merchant"
   ~ charisma += 1
   ~ wits += 1
   -> priority_selection
 
 * [Manor Retainer] 
   ~ background = "retainer"
-  ~ gameState.background = "retainer"
   ~ strength += 1
   ~ charisma += 1
   -> priority_selection
 
 * [Urban Militia] 
   ~ background = "militia"
-  ~ gameState.background = "militia"
   ~ agility += 1
   ~ wits += 1
   -> priority_selection
@@ -151,7 +155,6 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 * [Sir James "The Reaver" de Looney (Free Company)]
   ~ patronId = "james_olooney"
-  ~ gameState.patronId = "james_olooney"
   ~ strength += 1
   ~ agility += 1
   ~ morale -= 1
@@ -160,7 +163,6 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 * [Sir David de Montfort (Noble Household)]
   ~ patronId = "lord_david"
-  ~ gameState.patronId = "lord_david"
   ~ charisma += 1
   ~ morale += 1
   ~ wits += 1
@@ -169,7 +171,6 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 * [Baron Caley of Tournai (Noble Household)]
   ~ patronId = "duke_caley"
-  ~ gameState.patronId = "duke_caley"
   ~ wealth += 3
   ~ reputation += 1
   ~ morale -= 1
@@ -178,7 +179,6 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 * [Count Charles "The Grim" of Suffolk (Noble Household)]
   ~ patronId = "count_charles"
-  ~ gameState.patronId = "count_charles"
   ~ strength += 1
   ~ endurance += 1
   ~ morale -= 1
@@ -188,7 +188,6 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 * [Ashkhan of the Mamluk Guard (Mercenary Company)]
   ~ patronId = "ashkhan"
-  ~ gameState.patronId = "ashkhan"
   ~ agility += 1
   ~ wits += 1
   ~ reputation += 1
@@ -200,21 +199,21 @@ Based on your priorities ({priorities.join(", ")}), these commanders are interes
 
 Your character is complete. Here is your summary:
 
-**Name:** {gameState.characterName}
-**Age:** {gameState.age} ({gameState.ageRange})
-**Background:** {gameState.background}
+**Name:** {characterName}
+**Age:** {age} ({ageRange})
+**Background:** {background}
 **Patron:** {patronId}
 
 **Final Stats:**
-- Strength: {gameState.stats.strength}
-- Agility: {gameState.stats.agility}
-- Endurance: {gameState.stats.endurance}
-- Charisma: {gameState.stats.charisma}
-- Wits: {gameState.stats.wits}
-- Luck: {gameState.stats.luck}
-- Wealth: {EXTERNAL formatCurrency(gameState.stats.wealth)}
-- Morale: {gameState.stats.morale}
-- Stress: {gameState.stats.stress}
+- Strength: {strength}
+- Agility: {agility}
+- Endurance: {endurance}
+- Charisma: {charisma}
+- Wits: {wits}
+- Luck: {luck}
+- Wealth: {EXTERNAL formatCurrency(wealth)}
+- Morale: {morale}
+- Stress: {stress}
 
 {patronId == "james_olooney" :
   Sir James "The Reaver" welcomes you. "We'll make good money, but the fighting will be fierce."
