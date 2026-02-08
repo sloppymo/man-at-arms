@@ -102,7 +102,7 @@ function hydrateLoadedState(loaded) {
     }
     
     base.conditions = Array.isArray(loaded.conditions) ? loaded.conditions : [];
-    base.backgroundQuestionsAnswered = Array.isArray(loaded.backgroundQuestionsAnswered) ? loaded.backgroundQuestionsAnswered : [];
+    base.selectedBackground = loaded.selectedBackground || null;
     
     // Priorities system
     base.priorities = base.priorities || { might: null, finesse: null, wits: null, presence: null, fortune: null };
@@ -601,20 +601,17 @@ function selectOrigin(originId) {
 // Make selectOrigin globally available
 window.selectOrigin = selectOrigin;
 
-/** Answer background question for character creation */
-function answerBackgroundQuestion(questionId) {
-    if (!window.gameState.backgroundQuestionsAnswered) {
-        window.gameState.backgroundQuestionsAnswered = [];
-    }
-    if (!window.gameState.backgroundQuestionsAnswered.includes(questionId)) {
-        window.gameState.backgroundQuestionsAnswered.push(questionId);
-    }
+/** Select background for character creation */
+function selectCharacterBackground(backgroundId) {
+    console.log('selectCharacterBackground called with:', backgroundId);
+    window.gameState.selectedBackground = backgroundId;
+    console.log('selectedBackground set to:', window.gameState.selectedBackground);
     window.recalculateCharacterCreationDerivedStats();
     window.updateDisplay();
 }
 
-// Make answerBackgroundQuestion globally available
-window.answerBackgroundQuestion = answerBackgroundQuestion;
+// Make selectCharacterBackground globally available
+window.selectCharacterBackground = selectCharacterBackground;
 
 /** Set patron for character creation */
 function setPatron(patronId) {
@@ -680,7 +677,7 @@ function recalculateCharacterCreationDerivedStats() {
     }
     
     // Step 4: Apply background question mods (silent)
-    if (window.gameState.backgroundQuestionsAnswered && Array.isArray(window.gameState.backgroundQuestionsAnswered)) {
+    if (window.gameState.selectedBackground) {
         const backgroundEffects = {
             hard_father: { strength: 1, endurance: 1, charisma: -1 },
             mangled_hand: { agility: -1, endurance: -1, wits: 3 },
@@ -689,14 +686,14 @@ function recalculateCharacterCreationDerivedStats() {
             apprentice_master: { wits: 2, agility: 1, stress: 1 },
             first_love: { charisma: -1, wits: 1, morale: 1 }
         };
-        window.gameState.backgroundQuestionsAnswered.forEach(function(qId) {
-            const effects = backgroundEffects[qId];
-            if (effects) {
-                Object.keys(effects).forEach(function(stat) {
-                    window.applyStatChange(stat, effects[stat], {silent: true});
-                });
-            }
-        });
+        const effects = backgroundEffects[window.gameState.selectedBackground];
+        if (effects) {
+            Object.keys(effects).forEach(function(stat) {
+                if (typeof applyStatChange === 'function') {
+                    applyStatChange(stat, effects[stat], { silent: true });
+                }
+            });
+        }
     }
     
     // Step 5: Apply patron stat mods (silent)
@@ -1007,7 +1004,7 @@ function nextCharacterCreationStep() {
         window.updateDisplay();
     } else if (currentStep === maxStep) {
         // On step 6, clicking Next creates the character
-        window.window.completeCharacterCreation();
+        window.completeCharacterCreation();
     }
 }
 
@@ -1040,10 +1037,9 @@ window.completeCharacterCreation = function() {
         return;
     }
     
-    // Validate priorities
-    const priorityValidation = window.validatePrioritiesCompleteAndUnique();
-    if (!priorityValidation.ok) {
-        window.showNotification('Character Creation', priorityValidation.message);
+    // Validate background is selected
+    if (!window.gameState.selectedBackground) {
+        window.showNotification('Character Creation', 'Please select a background before continuing.');
         return;
     }
     
@@ -1252,46 +1248,6 @@ function renderCharacterCreationStep3() {
                     '<div style="margin-bottom: 5px;"><strong>Challenges:</strong> Political stakes — errors are punished</div>' +
                 '</div>' +
             '</button>' +
-        '</div>' +
-    '</div>';
-}
-
-function renderCharacterCreationStep4() {
-    const backgroundQuestions = [
-        { id: 'hard_father', text: "Your father was a hard, cruel man. Your entire life you have woken before the dawn to break hard Earth, scratching a living out of the frozen soil to appease him. You learned hard lessons from those days, but each day in that house is a stain of black misery in your memories.", effects: { strength: 1, endurance: 1, charisma: -1 } },
-        { id: 'mangled_hand', text: "Your hand was mangled as a youth. It wasn't ruined, but it bears the twisted scars of that old trauma and has never been quite the same. Your hand excused you from some of the chores that would have been assigned to a healthy boy. Instead, you often helped in the homestead with women's work, and learned to read at the local Abbey.", effects: { agility: -1, endurance: -1, wits: 3 } },
-        { id: 'lost_sibling', text: "You had a sibling who died young—fever, accident, or the simple cruelty of a world that takes children. Their absence shaped you. You learned to be careful, to watch for danger, but also to value what remains.", effects: { wits: 1, endurance: 1, morale: -1 } },
-        { id: 'village_hero', text: "When bandits came to your village, you stood with the others. You weren't the strongest or the fastest, but you were there when it mattered. The respect you earned that day still follows you.", effects: { charisma: 1, reputation: 2, strength: -1 } },
-        { id: 'apprentice_master', text: "Your master was a harsh teacher, but fair. Every mistake was a lesson, every success earned a nod. You learned discipline and precision, but also learned to fear failure.", effects: { wits: 2, agility: 1, stress: 1 } },
-        { id: 'first_love', text: "There was someone once—a first love, a promise made, a promise broken. Whether by war, by family, or by your own choices, it ended. The memory of what was lost makes you careful with new bonds.", effects: { charisma: -1, wits: 1, morale: 1 } }
-    ];
-    
-    if (!window.gameState.backgroundQuestionsAnswered) {
-        window.gameState.backgroundQuestionsAnswered = [];
-    }
-    
-    return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
-        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 4 — Background Questions</h3>' +
-        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">These questions shape your past. Each answer adjusts your stats. You may answer as many or as few as you wish. <em style="color: #d4af37;">(Optional)</em></p>' +
-        '<div style="display: grid; grid-template-columns: 1fr; gap: 15px;">' +
-            backgroundQuestions.map(function(q) {
-                const isAnswered = window.gameState.backgroundQuestionsAnswered.includes(q.id);
-                const effectText = Object.entries(q.effects).map(function([stat, val]) {
-                    const sign = val > 0 ? '+' : '';
-                    const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
-                    return sign + val + ' ' + statName;
-                }).join(', ');
-                
-                return '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (isAnswered ? '#d4af37' : '#555') + ';">' +
-                    '<div style="color: #d4af37; font-style: italic; margin-bottom: 10px; line-height: 1.6;">"' + q.text + '"</div>' +
-                    (isAnswered ? 
-                        '<div style="color: #0f0; font-size: 12px; margin-top: 8px;">✓ Answered: ' + effectText + '</div>' :
-                        '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">Secret result: ' + effectText + '</div>') +
-                    '<button onclick="window.answerBackgroundQuestion(\'' + q.id + '\')" style="margin-top: 10px; padding: 8px 15px; background: ' + (isAnswered ? '#444' : '#8b6914') + '; border: 1px solid #d4af37; color: ' + (isAnswered ? '#666' : '#d4af37') + '; border-radius: 3px; cursor: ' + (isAnswered ? 'not-allowed' : 'pointer') + '; font-size: 13px;" ' + (isAnswered ? 'disabled' : '') + '>' +
-                        (isAnswered ? 'Already Answered' : 'This Was My Past') +
-                    '</button>' +
-                '</div>';
-            }).join('') +
         '</div>' +
     '</div>';
 }
@@ -1526,39 +1482,7 @@ function generateQuickStartCharacter() {
         });
     }
     
-    // Random 1-2 background questions (apply after priorities and age)
-    const backgroundQuestions = ['hard_father', 'mangled_hand', 'lost_sibling', 'village_hero', 'apprentice_master', 'first_love'];
-    window.gameState.backgroundQuestionsAnswered = [];
-    const numQuestions = Math.random() < 0.5 ? 1 : 2;
-    // Fisher-Yates shuffle for proper random distribution
-    const shuffled = [...backgroundQuestions];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    for (let i = 0; i < numQuestions && i < shuffled.length; i++) {
-        window.gameState.backgroundQuestionsAnswered.push(shuffled[i]);
-    }
-    
-    // Apply background question effects
-    const backgroundEffects = {
-        hard_father: { strength: 1, endurance: 1, charisma: -1 },
-        mangled_hand: { agility: -1, endurance: -1, wits: 3 },
-        lost_sibling: { wits: 1, endurance: 1, morale: -1 },
-        village_hero: { charisma: 1, reputation: 2, strength: -1 },
-        apprentice_master: { wits: 2, agility: 1, stress: 1 },
-        first_love: { charisma: -1, wits: 1, morale: 1 }
-    };
-    if (typeof applyStatChange === 'function') {
-        window.gameState.backgroundQuestionsAnswered.forEach(function(qId) {
-            const effects = backgroundEffects[qId];
-            if (effects) {
-                Object.keys(effects).forEach(function(stat) {
-                    window.applyStatChange(stat, effects[stat]);
-                });
-            }
-        });
-    }
+    // Background is now selected by player, not random
     
     // Random patron
     const patrons = ['james_olooney', 'lord_david', 'duke_caley', 'count_charles', 'ashkhan'];
@@ -2308,133 +2232,6 @@ function showStats() {
     window.renderCharacterCreationStep5 = renderCharacterCreationStep5;
     window.renderCharacterCreationStep6 = renderCharacterCreationStep6;
     
-    // Tempo Strike minigame - Upgraded with profile-driven system
-    function startTempoStrike({
-        title = 'Tempo Strike', 
-        subtitle = 'Tap to stop the marker in the orange zone.',
-        profileId = 'press',
-        tierId = 'safe',
-        weaponId = null,
-        statKey = null,
-        isRetry = false,
-        onTelemetry = null,
-        opponentArmor = 0,
-        skillLevel = 1
-    } = {}) {
-        return new Promise((resolve) => {
-            const overlay = document.getElementById('minigame-overlay');
-            const titleEl = document.getElementById('minigame-title');
-            const subtitleEl = document.getElementById('minigame-subtitle');
-            const display = document.getElementById('minigame-display');
-            const instructions = document.getElementById('minigame-instructions');
-            const progress = document.getElementById('combat-progress');
-            const log = document.getElementById('combat-log');
-
-            if (!overlay || !display || !titleEl || !instructions) {
-                console.warn('TempoStrike: minigame overlay elements missing');
-                resolve({bonus: 0, label: 'SKIP'});
-                return;
-            }
-
-            // Hide unused combat UI bits
-            if (progress) progress.style.display = 'none';
-            if (log) log.style.display = 'none';
-            const healthBars = overlay.querySelector('.health-bars');
-            if (healthBars) healthBars.style.display = 'none';
-
-            overlay.style.display = 'flex';
-            titleEl.textContent = title;
-            if (subtitleEl) subtitleEl.textContent = subtitle;
-
-            // State for this instance
-            let resolved = false;
-            const state = {
-                running: false,
-                raf: null,
-                startMs: 0,
-                periodMs: 2000, // Fixed 2-second oscillation - will be updated below
-                currentTier: tierId,
-                currentBeat: 0,
-                maxBeats: 1,
-                beats: []
-            };
-
-            // Calculate dynamic bar width based on opponent armor (smaller = harder)
-            const baseBarWidth = 300;
-            const armorReduction = Math.min(opponentArmor * 10, 150); // Max 150px reduction
-            const barWidth = Math.max(baseBarWidth - armorReduction, 100); // Min 100px width
-            
-            // Calculate dynamic animation period based on skill level (slower = more controllable)
-            const basePeriodMs = 2000;
-            const skillSlowdown = Math.min(skillLevel * 200, 1000); // Max 1 second slower
-            state.periodMs = basePeriodMs + skillSlowdown;
-
-            // Setup UI with CSS classes instead of inline styles
-            display.innerHTML = `
-              <div class="tempo-container">
-                <div class="tempo-header">
-                  <div id="tempo-tier-display" class="tempo-tier">Tier: ${window.RiskTiers[state.currentTier].name}</div>
-                  <div id="tempo-beat-display" class="tempo-beat" style="display: none;"></div>
-                </div>
-                <div id="tempo-bar" class="tempo-bar" style="width: ${barWidth}px;">
-                  <div class="tempo-zone tempo-zone-good"></div>
-                  <div class="tempo-zone tempo-zone-perfect"></div>
-                  <div id="tempo-marker" class="tempo-marker"></div>
-                </div>
-                <div id="tempo-result" class="tempo-result"></div>
-                <div class="tempo-controls">
-                  <button class="control-button" id="tempo-stop-btn">Stop</button>
-                  <button class="control-button" id="tempo-skip-btn">Skip</button>
-                  <button class="control-button" id="tempo-tier-btn">Toggle Tier (G)</button>
-                </div>
-              </div>
-            `;
-
-            instructions.innerHTML = `<div class="tempo-instructions">Tap the bar (or press Space/Enter) to stop. G to toggle tier. Esc or Skip to skip.</div>`;
-
-            // Define missing functions
-            const stopTempo = () => {
-                // Placeholder: calculate result and resolve
-                resolve({ bonus: 0, label: 'SKIP' });
-            };
-            const toggleTier = () => {
-                // Placeholder
-            };
-            const keyHandler = (e) => {
-                // Placeholder
-            };
-            const updateUI = () => {
-                // Placeholder
-            };
-            const startTempo = () => {
-                // Placeholder
-            };
-            const resolveWithResult = (result) => {
-                resolve(result);
-            };
-
-            // Wire buttons
-            const stopBtn = document.getElementById('tempo-stop-btn');
-            const skipBtn = document.getElementById('tempo-skip-btn');
-            const tierBtn = document.getElementById('tempo-tier-btn');
-            if (stopBtn) stopBtn.onclick = stopTempo;
-            if (skipBtn) skipBtn.onclick = () => resolveWithResult({ status: 'skipped', grade: 'SKIP', bonus: 0, hitErrorMs: 0, direction: 'none' });
-            if (tierBtn) tierBtn.onclick = toggleTier;
-
-            // Tap anywhere on the bar to stop
-            const bar = document.getElementById('tempo-bar');
-            if (bar) {
-                bar.onclick = stopTempo;
-                bar.ontouchstart = (ev) => { ev.preventDefault(); stopTempo(); };
-            }
-
-            window.addEventListener('keydown', keyHandler);
-            updateUI();
-            startTempo();
-        });
-    }
-    
-    window.startTempoStrike = startTempoStrike;
     
     // Flag management functions
     function setFlag(name, value = true) {

@@ -438,23 +438,18 @@ async function runSkirmish(choiceId) {
 
 // Helper: Get the next scene after leaving skirmish resolve
 function getPostSkirmishNextScene() {
-    const fallback = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1'] ? 'march_through_normandy_1' : 'start');
-    const rs = (window.gameState.lastSkirmish && typeof window.gameState.lastSkirmish.returnScene === "string")
-        ? window.gameState.lastSkirmish.returnScene
-        : "";
-    
-    // Never route back into the skirmish loop from the resolve exit.
-    // This can happen if an interlude previously set returnScene to the resolve scene.
-    const invalidReturnScenes = [
-        'skirmish_roadside_resolve', 'skirmish_roadside', 
-        'skirmish_roadside_mud', 'skirmish_roadside_lane',
-        'start', 'character_creation', 'quick_start_review'
-    ];
-    if (!rs || invalidReturnScenes.includes(rs)) {
-        return fallback;
+    const fallback = (typeof window.scenes !== 'undefined' && window.scenes['march_through_normandy_1']) ? 'march_through_normandy_1' : 'between_years_1341';
+    const rs = window.gameState.lastSkirmish?.returnScene;
+
+    // CRITICAL: Validate scene exists before routing
+    if (rs && typeof window.scenes === 'object' && window.scenes[rs] &&
+        !['skirmish_roadside', 'skirmish_roadside_resolve', 'skirmish_roadside_mud', 'skirmish_roadside_lane',
+          'start', 'character_creation', 'quick_start_review'].includes(rs)) {
+        return rs;
     }
-    
-    return rs;
+
+    console.warn('[SKIRMISH] Invalid or missing returnScene, using fallback:', fallback);
+    return fallback;
 }
 
     

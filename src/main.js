@@ -28,116 +28,54 @@ import {
   calculateEquipmentStats
 } from './core/equipment-schema.js';
 import { migrateEquipment, dryRunMigration, validateMigration } from './core/equipment-migration.js';
+import { migrateSavePayload } from './core/save-migration.js';
 import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
 import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
 import { MapScene, createMapScene, initializeMapSystem } from './scenes/overworld/map-scene.js';
 import { DialogueService, createDialogueService } from './systems/dialogue-service.js';
 import { createNarrativeBridge } from './ink/narrative-bridge.js';
 import { initializeErrorHandling, initializeDebugTools } from './core/error-handler.js';
+import { createInkValidationSuite } from './ink/ink-validation-suite.js';
 
-console.log('=== Man-at-Arms v2.0.0 (Vite Build) ===');
-console.log('Core modules loaded successfully');
+// Phaser Overworld (Phase 4)
+import { createOverworldGame } from './phaser/createOverworldGame.js';
 
-// Placeholder for future phase imports
+// Equipment System
+import { EQUIPMENT_DATABASE, EquipmentManager } from './systems/equipment-system.js';
 
-// Verify globals are set (backward compatibility)
-console.log('Window globals:', {
-  gameState: !!window.gameState,
-  CHAPTERS: !!window.CHAPTERS,
-  PATRONS: !!window.PATRONS,
-  clampStat: !!window.clampStat
-});
+// UI Functions (new implementations)
+import { showStats } from './ui/stats-display.js';
+import { openEquipmentScreen } from './ui/equipment-ui.js';
+import { saveGame, loadGame } from './systems/save-load.js';
+import { toggleEffectsPreview, initializeEffectsPreview } from './ui/effects-preview.js';
+import { updateDisplay, showNotification, resetGame } from './ui/ui-functions.js';
 
-// ============================================
-// Placeholder for future phase imports
-// These will be uncommented as phases progress
-// ============================================
+console.log('Assigning UI functions to window...');
+console.log('showStats function:', typeof showStats);
+console.log('saveGame function:', typeof saveGame);
+console.log('loadGame function:', typeof loadGame);
+console.log('openEquipmentScreen function:', typeof openEquipmentScreen);
+console.log('toggleEffectsPreview function:', typeof toggleEffectsPreview);
 
-// Phase 2: Equipment modules
-// import { EquipmentManager } from './core/equipment-manager.js';
-// import { migrateEquipment } from './core/equipment-migration.js';
+window.showStats = showStats;
+window.openEquipmentScreen = openEquipmentScreen;
+window.saveGame = saveGame;
+window.loadGame = loadGame;
+window.toggleEffectsPreview = toggleEffectsPreview;
+window.migrateSavePayload = migrateSavePayload;
+window.EQUIPMENT_DATABASE = EQUIPMENT_DATABASE;
+window.EquipmentManager = EquipmentManager;
+window.updateDisplay = updateDisplay;
+window.showNotification = showNotification;
+window.resetGame = resetGame;
 
-// Phase 3: Event system
-// import { dispatcher } from './core/dispatcher.js';
-// import { GameMode, setMode } from './core/game-modes.js';
-
-// Phase 4: Map system
-// import { MapRenderer } from './scenes/overworld/map-renderer.js';
-
-// Phase 5: Ink integration
-// import { initializeInk, bindExternals } from './ink/ink-integration.js';
-
-// UI modules (will convert later)
-// For now, we depend on the original files being loaded as globals
-
-// ============================================
-// Backward Compatibility - Attach to Window
-// Maintain all existing global functions for legacy code
-// ============================================
-
-if (typeof window !== 'undefined') {
-  // Core constants
-  window.CHAPTERS = CHAPTERS;
-  window.PATRONS = PATRONS;
-  window.KIT_TIER_MAP = KIT_TIER_MAP;
-  window.statLimits = statLimits;
-
-  // Game state
-  window.gameState = gameState;
-  window.makeDefaultGameState = makeDefaultGameState;
-  window.hydrateLoadedState = hydrateLoadedState;
-
-  // Utility functions
-  window.clampStat = clampStat;
-  window.applyStatChange = applyStatChange;
-  window.escapeHTML = escapeHTML;
-  window.rollDice = rollDice;
-  window.resolveAction = resolveAction;
-  window.normalizeRegion = normalizeRegion;
-  window.normalizeSocialClass = normalizeSocialClass;
-  window.normalizeSlot = normalizeSlot;
-  window.hasShieldEquipped = hasShieldEquipped;
-  window.checkLevelUp = checkLevelUp;
-  window.getEffectiveStat = getEffectiveStat;
-
-  // Equipment functions
-  window.EQUIPMENT_SLOTS = EQUIPMENT_SLOTS;
-  window.LAYER_TYPES = LAYER_TYPES;
-  window.isValidEquipmentStructure = isValidEquipmentStructure;
-  window.createEmptyEquipment = createEmptyEquipment;
-  window.getAllEquippedItems = getAllEquippedItems;
-  window.calculateEquipmentStats = calculateEquipmentStats;
-  window.migrateEquipment = migrateEquipment;
-  window.dryRunMigration = dryRunMigration;
-  window.validateMigration = validateMigration;
-
-  // Event dispatcher (Phase 3)
-  window.dispatcher = dispatcher;
-  window.EVENT_TYPES = EVENT_TYPES;
-
-  // Game modes (Phase 3)
-  window.GameMode = GameMode;
-  window.isValidTransition = isValidTransition;
-  window.getValidTransitions = getValidTransitions;
-  window.isValidMode = isValidMode;
-  window.setMode = setMode;
-  window.initializeGameState = initializeGameState;
-  window.getModeDisplayName = getModeDisplayName;
-
-  // Map system (Phase 4)
-  window.MapScene = MapScene;
-  window.createMapScene = createMapScene;
-  window.initializeMapSystem = initializeMapSystem;
-
-  // Ink system (Phase 5)
-  window.DialogueService = DialogueService;
-  window.createDialogueService = createDialogueService;
-  window.createNarrativeBridge = createNarrativeBridge;
-
-  // Error handling and debug tools (Phase 7)
-  window.initializeErrorHandling = initializeErrorHandling;
-  window.initializeDebugTools = initializeDebugTools;
-}
+console.log('Window assignments complete');
+console.log('window.EQUIPMENT_DATABASE:', typeof window.EQUIPMENT_DATABASE, !!window.EQUIPMENT_DATABASE);
+console.log('window.EquipmentManager:', typeof window.EquipmentManager);
+console.log('window.inkReady:', typeof window.inkReady, window.inkReady instanceof Promise);
+console.log('window.updateDisplay:', typeof window.updateDisplay);
+console.log('window.showNotification:', typeof window.showNotification);
+console.log('window.resetGame:', typeof window.resetGame);
 
 // ============================================
 // Boot sequence
@@ -184,7 +122,67 @@ function bootGame() {
     enableSentry: false // Set to true and provide DSN for production error reporting
   });
 
-  initializeDebugTools(gameState, dispatcher);
+  initializeDebugTools(gameState, dispatcher, {
+    environment: isDevelopment ? 'development' : 'production'
+  });
+
+  // Initialize effects preview state
+  initializeEffectsPreview();
+
+  // Initialize dialogue service (loads Ink stories and binds externals)
+  console.log('Initializing dialogue service...');
+  createDialogueService(dispatcher, gameState, window.EquipmentManager);
+
+  // Initialize validation suite (dev-only)
+  console.log('Initializing validation suite...');
+  createInkValidationSuite();
+  
+  // Initialize Phaser overworld (Phase 4) - feature flag controlled
+  console.log('Initializing Phaser overworld...');
+  const enableOverworldPhaser = gameState.flags?.enableOverworldPhaser || false;
+  // TEMPORARY: Force enable for Phase 4 testing
+  const enableOverworldPhaser_TEST = true;
+  const overworldGame = createOverworldGame({
+    parentId: 'phaser-root',
+    dispatch: dispatcher.dispatch.bind(dispatcher),
+    getGameState: () => gameState,
+    setMode: setMode,
+    isEnabled: enableOverworldPhaser_TEST
+  });
+  
+  // Subscribe to mode changes for Phaser scene management
+  if (overworldGame) {
+    dispatcher.subscribe('MODE_CHANGE', (event) => {
+      console.log('Phaser mode change event received:', event);
+      const newMode = event.payload?.to;
+      console.log(`Mode changed to: ${newMode}`);
+      
+      if (newMode === 'overworld') {
+        console.log('Resuming Phaser overworld scene');
+        overworldGame.resume();
+      } else {
+        console.log('Pausing Phaser overworld scene');
+        overworldGame.pause();
+      }
+    });
+    
+    console.log('Phaser overworld initialized and mode subscription active');
+  } else {
+    console.log('Phaser overworld disabled or failed to initialize');
+  }
+  
+  // Verify globals are set after boot (backward compatibility)
+  console.log('Window globals after boot:', {
+    gameState: !!window.gameState,
+    CHAPTERS: !!window.CHAPTERS,
+    PATRONS: !!window.PATRONS,
+    clampStat: !!window.clampStat,
+    showStats: !!window.showStats,
+    saveGame: !!window.saveGame,
+    loadGame: !!window.loadGame,
+    openEquipmentScreen: !!window.openEquipmentScreen,
+    toggleEffectsPreview: !!window.toggleEffectsPreview
+  });
   
   console.log('Boot complete. Ready for Phase 2+ integration.');
 }
@@ -228,6 +226,7 @@ export {
   migrateEquipment,
   dryRunMigration,
   validateMigration,
+  migrateSavePayload,
   dispatcher,
   EVENT_TYPES,
   GameMode,
@@ -244,7 +243,14 @@ export {
   createDialogueService,
   createNarrativeBridge,
   initializeErrorHandling,
-  initializeDebugTools
+  initializeDebugTools,
+  // UI Functions
+  showStats,
+  openEquipmentScreen,
+  saveGame,
+  loadGame,
+  toggleEffectsPreview,
+  initializeEffectsPreview
 };
 
 // Default export for convenience

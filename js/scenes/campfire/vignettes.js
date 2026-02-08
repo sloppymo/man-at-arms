@@ -2151,8 +2151,8 @@ const CAMPFIRE_VIGNETTES = [
         ]
     },
     // ===== COOK CAMPFIRE SCENES =====
-
-    campfire_cook_01_the_stew: {
+    {
+        id: "campfire_cook_01_the_stew",
         title: "The Stew",
         year: 1346,
         age: function() { return gameState.age || 18; },
@@ -2186,10 +2186,9 @@ const CAMPFIRE_VIGNETTES = [
             }
         ]
     },
-
     // ===== OANA CAMPFIRE SCENES =====
-
-    campfire_oana_01_the_song: {
+    {
+        id: "campfire_oana_01_the_song",
         title: "The Song",
         year: 1347,
         age: function() { return gameState.age || 18; },
@@ -2228,10 +2227,9 @@ const CAMPFIRE_VIGNETTES = [
             }
         ]
     },
-
     // ===== MIXED CAMPFIRE SCENES =====
-
-    campfire_both_01_the_argument: {
+    {
+        id: "campfire_both_01_the_argument",
         title: "The Argument",
         year: 1347,
         age: function() { return gameState.age || 18; },

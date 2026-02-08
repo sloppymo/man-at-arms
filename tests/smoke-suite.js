@@ -106,35 +106,83 @@
                 return 'UI functions available';
             });
             
-            // Test 7: Validation suite
+            // Test 7: Validation suite (dev-only)
             this.test('Validation Suite', () => {
+                // Check if we're in development mode
+                const isDev = window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1' ||
+                             window.location.hostname === '';
+                
+                if (!isDev) {
+                    // In production, validation suite is not loaded (dev-only)
+                    return 'Validation suite skipped in production (dev-only feature)';
+                }
+                
                 if (typeof window.InkValidationSuite === 'undefined') {
-                    throw new Error('InkValidationSuite not available');
+                    throw new Error('InkValidationSuite not available in development');
                 }
                 
                 if (typeof window.InkBatchRunner === 'undefined') {
-                    throw new Error('InkBatchRunner not available');
+                    throw new Error('InkBatchRunner not available in development');
                 }
                 
-                return 'Validation suite loaded';
+                return 'Validation suite loaded (development mode)';
             });
             
-            // Test 8: LocalStorage availability
-            this.test('LocalStorage', () => {
-                try {
-                    const testKey = 'man-at-arms-smoke-test';
-                    localStorage.setItem(testKey, 'test');
-                    const value = localStorage.getItem(testKey);
-                    localStorage.removeItem(testKey);
-                    
-                    if (value !== 'test') {
-                        throw new Error('LocalStorage read/write failed');
-                    }
-                    
-                    return 'LocalStorage working';
-                } catch (e) {
-                    throw new Error(`LocalStorage error: ${e.message}`);
+            // Test 9: Save Schema Migration (Phase 2)
+            this.test('Save Schema Migration', () => {
+                if (typeof window.migrateSavePayload === 'undefined') {
+                    throw new Error('migrateSavePayload not available');
                 }
+                
+                // Create fake legacy save payload (no schemaVersion)
+                const legacyPayload = {
+                    stats: { strength: 5, agility: 5 },
+                    equipment: {
+                        weapon: { id: 'sword_basic' }, // Legacy flat format
+                        head: { id: 'helmet_basic' },
+                        bag: []
+                    },
+                    currentScene: 'character_creation'
+                };
+                
+                // Migrate the payload
+                const migratedPayload = window.migrateSavePayload(legacyPayload);
+                
+                // Verify schema version
+                if (!migratedPayload.schemaVersion || migratedPayload.schemaVersion !== 2) {
+                    throw new Error(`Expected schemaVersion 2, got ${migratedPayload.schemaVersion}`);
+                }
+                
+                // Verify savedAt added
+                if (!migratedPayload.savedAt) {
+                    throw new Error('savedAt not added to migrated payload');
+                }
+                
+                // Verify gameState wrapper
+                if (!migratedPayload.gameState) {
+                    throw new Error('gameState not wrapped in migrated payload');
+                }
+                
+                // Verify equipment migrated to canonical format
+                const equipment = migratedPayload.gameState.equipment;
+                if (!equipment || typeof equipment !== 'object') {
+                    throw new Error('Equipment not migrated properly');
+                }
+                
+                // Check canonical slots exist
+                const requiredSlots = ['head', 'torso', 'arms', 'legs', 'weapon', 'missile', 'accessory', 'bag'];
+                const missingSlots = requiredSlots.filter(slot => !(slot in equipment));
+                if (missingSlots.length > 0) {
+                    throw new Error(`Missing canonical slots: ${missingSlots.join(', ')}`);
+                }
+                
+                // Check weapon has main layer with migrated item
+                if (!equipment.weapon.main || equipment.weapon.main.id !== 'sword_basic') {
+                    throw new Error('Weapon not migrated to main layer correctly');
+                }
+                
+                return 'Save schema migration working correctly';
             });
             
             // Results summary

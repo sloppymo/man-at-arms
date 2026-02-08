@@ -671,7 +671,7 @@ export function initializeErrorHandling(options = {}) {
 /**
  * Initialize debug tools
  */
-export function initializeDebugTools(gameState, dispatcher) {
+export function initializeDebugTools(gameState, dispatcher, options = {}) {
   if (!debugTools) {
     debugTools = new DebugTools(gameState, dispatcher);
   }

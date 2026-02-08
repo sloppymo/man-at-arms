@@ -39,6 +39,7 @@
             patronEventPath: null, // Convenience copy of PATRONS[patronId].eventPath
             startingKitTier: null, // Resolved after priorities + patron
             background: null,
+            selectedBackground: null,
             scenesVisited: [],
             enteredScenes: new Set(), // Track scenes that have had onEnter called
             inventory: [],
@@ -72,6 +73,19 @@
                 battles: 0,
                 wounds: 0,
                 promotions: 0
+            },
+            overworld: {
+                time: 480,          // minutes since start (8:00 AM)
+                heat: 0,            // 0-100 pursuit level
+                fatigue: 0,         // 0-100 fatigue level
+                position: { q: 0, r: 0 },  // axial hex coordinates
+                discovered: new Set(),      // discovered hexes as "q,r" strings
+                encounterSeed: Math.random().toString(36).substring(2), // random seed string
+                supplies: {
+                    food: 3,          // days worth
+                    arrows: 20,
+                    coin: 0
+                }
             }
         };
     }

@@ -4888,11 +4888,12 @@
         title: "New Beginning",
         year: null,
         age: null,
-        text: `<p>The war ends. Or you do. One way or another. The story closes. The journey stops. The life you lived. The choices you made. The man you became. All of it. Done. Finished. Over. Or supposed to be. Supposed to mean something. But does it. Does any of it.</p>
-               <p>Would you like to start again. A new game. A new life. To try again. To be different. To make different choices. To become someone else. Or the same. Or something in between. The choice is yours.</p>`,
+        text: `<p>The war has ended. So has your story. The banners are furled, the swords are sheathed, and the long road that carried you through blood and mud has finally reached its end. You stand at the crossroads of memory and oblivion, weighing the life you lived against the man you became.</p>
+               <p>Was it worth it? The choices that haunt your nights, the comrades who fell beside you, the enemy who became your mirror—do they echo with meaning, or fade into the silence of history?</p>
+               <p>But perhaps endings are not final. Perhaps every story, once told, can be begun anew. The page is blank. The road stretches forward once more. Will you walk it again?</p>`,
         choices: [
             {
-                text: "Yes, start over",
+                text: "Begin anew",
                 effects: {},
                 nextScene: "reset"
             }

@@ -236,7 +236,7 @@
 
             let selectedTier = 'safe';
             let animationId = null;
-            let markerPosition = 0;
+            let markerPosition = 200; // Start at center to prevent instant MISS on rapid click
             let direction = 1; // 1 = right, -1 = left
             let isRunning = false;
 
@@ -265,7 +265,12 @@
                 progressContainer.style.cssText = 'width: 400px; height: 40px; background: #333; border: 2px solid #666; border-radius: 5px; margin: 20px auto; position: relative; overflow: hidden;';
 
                 const progressBar = document.createElement('div');
-                progressBar.style.cssText = 'width: 100%; height: 100%; background: linear-gradient(to right, #ff4444 0%, #ffaa44 40%, #44ff44 60%, #ffaa44 100%); position: relative;';
+                progressBar.style.cssText = 'width: 100%; height: 100%; background: #333; position: relative;';
+
+                // Add orange zone indicator (40-60% of width)
+                const orangeZone = document.createElement('div');
+                orangeZone.style.cssText = 'position: absolute; left: 40%; width: 20%; height: 100%; background: rgba(255, 165, 0, 0.3);';
+                progressBar.appendChild(orangeZone);
 
                 const marker = document.createElement('div');
                 marker.style.cssText = 'width: 4px; height: 100%; background: #fff; position: absolute; left: 0px; box-shadow: 0 0 10px #fff;';
@@ -345,10 +350,18 @@
                     }, 1500);
                 });
 
-                function animate() {
+                // Use requestAnimationFrame for smoother animation with time-based movement
+                isRunning = true;
+                let lastTime = performance.now();
+
+                function frame(currentTime) {
                     if (!isRunning) return;
 
-                    markerPosition += speed * direction;
+                    const deltaTime = currentTime - lastTime;
+                    lastTime = currentTime;
+
+                    // Smooth movement based on actual time elapsed (normalize to ~60fps baseline)
+                    markerPosition += (speed * direction * deltaTime) / 16;
 
                     if (markerPosition >= maxPosition) {
                         markerPosition = maxPosition;
@@ -359,12 +372,11 @@
                     }
 
                     marker.style.left = markerPosition + 'px';
+                    animationId = requestAnimationFrame(frame);
                 }
 
-                // Start animation AFTER setting up event listener
-                isRunning = true;
-                animationId = setInterval(animate, 16); // ~60fps
-                console.log('Animation started, stop button ready');
+                animationId = requestAnimationFrame(frame);
+                console.log('Animation started with requestAnimationFrame, stop button ready');
             }
         });
     }

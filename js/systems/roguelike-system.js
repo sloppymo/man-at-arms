@@ -282,27 +282,54 @@ const PSYCHOLOGICAL_DISORDERS = [
     }
 ];
 
+// Select psychological disorder based on playstyle
+function selectDisorder() {
+    const flags = window.gameState.flags || {};
+    const stats = window.gameState.stats || {};
+
+    // Weight based on playstyle
+    if (flags.aggressiveChoices > 5) {
+        return PSYCHOLOGICAL_DISORDERS.find(d => d.id === 'rage') || PSYCHOLOGICAL_DISORDERS[0];
+    }
+    if (stats.charisma > 7 && flags.diplomaticSuccess > 3) {
+        return PSYCHOLOGICAL_DISORDERS.find(d => d.id === 'paranoia') || PSYCHOLOGICAL_DISORDERS[1];
+    }
+    if (flags.avoidedConflict > 5 || stats.morale < 3) {
+        return PSYCHOLOGICAL_DISORDERS.find(d => d.id === 'despair') || PSYCHOLOGICAL_DISORDERS[3];
+    }
+    if (stats.wits > 7 && (flags.wat_boot_story || flags.cook_apprentice_hint)) {
+        return PSYCHOLOGICAL_DISORDERS.find(d => d.id === 'nightmares') || PSYCHOLOGICAL_DISORDERS[0];
+    }
+
+    // Fallback: weighted by current stats
+    if (stats.charisma < stats.strength) {
+        return PSYCHOLOGICAL_DISORDERS.find(d => d.id === 'rage') || PSYCHOLOGICAL_DISORDERS[0];
+    }
+
+    return PSYCHOLOGICAL_DISORDERS[Math.floor(Math.random() * PSYCHOLOGICAL_DISORDERS.length)];
+}
+
 // Check for psychological disorders at stress cap
 function checkStressCapDisorders() {
     if (gameState.stats.stress >= 10) {
         // Check if already has a disorder
-        const hasDisorder = gameState.conditions.some(c => 
-            c.name === 'Nightmares' || 
-            c.name === 'Paranoia' || 
-            c.name === 'Uncontrollable Rage' || 
+        const hasDisorder = gameState.conditions.some(c =>
+            c.name === 'Nightmares' ||
+            c.name === 'Paranoia' ||
+            c.name === 'Uncontrollable Rage' ||
             c.name === 'Despair'
         );
-        
+
         if (!hasDisorder) {
-            // Randomly assign a disorder
-            const disorder = PSYCHOLOGICAL_DISORDERS[Math.floor(Math.random() * PSYCHOLOGICAL_DISORDERS.length)];
+            // Deterministic selection based on playstyle
+            const disorder = selectDisorder();
             addCondition(disorder.condition, 'negative', -1); // Permanent
-            
+
             // Apply stat debuffs
             Object.entries(disorder.statDebuffs).forEach(([stat, debuff]) => {
                 applyStatChange(stat, debuff, { silent: true });
             });
-            
+
             showNotification('Psychological Disorder', disorder.text, 'error');
         }
     }

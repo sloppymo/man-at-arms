@@ -206,14 +206,8 @@ export function hydrateLoadedState(loaded) {
   base.relationships = { ...base.relationships, ...(loaded.relationships || {}) };
   base.career = { ...base.career, ...(loaded.career || {}) };
 
-  // Handle schema version and equipment migration
-  const loadedVersion = Number(loaded.schemaVersion) || 1;
-  if (loadedVersion < 2 && loaded.equipment) {
-    console.log(`Migrating equipment from schema v${loadedVersion} to v2`);
-    base.equipment = migrateLegacyEquipment(loaded.equipment);
-    base.schemaVersion = 2;
-  } else if (loaded.equipment) {
-    // Already v2 or newer, deep merge
+  // Handle equipment (always canonical layered format after migration)
+  if (loaded.equipment) {
     base.equipment = mergeEquipment(base.equipment, loaded.equipment);
   }
 
@@ -353,10 +347,19 @@ export function hydrateLoadedState(loaded) {
   base.rank = typeof base.rank === "string" ? base.rank : "Common Soldier";
   base.faction = typeof base.faction === "string" ? base.faction : "English";
 
-  // Ensure inventory is an array
-  if (!Array.isArray(base.inventory)) {
-    base.inventory = [];
-  }
+  // Overworld state hydration
+  base.overworld = base.overworld && typeof base.overworld === "object" ? base.overworld : {};
+  base.overworld.time = Number(base.overworld.time) || 480;
+  base.overworld.heat = Math.max(0, Math.min(100, Number(base.overworld.heat) || 0));
+  base.overworld.fatigue = Math.max(0, Math.min(100, Number(base.overworld.fatigue) || 0));
+  base.overworld.position = base.overworld.position && typeof base.overworld.position === "object" ? base.overworld.position : { q: 0, r: 0 };
+  base.overworld.discovered = base.overworld.discovered instanceof Set ? base.overworld.discovered : new Set(Array.isArray(base.overworld.discovered) ? base.overworld.discovered : []);
+  base.overworld.encounterSeed = typeof base.overworld.encounterSeed === "string" ? base.overworld.encounterSeed : Math.random().toString(36).substring(2);
+  base.overworld.supplies = base.overworld.supplies && typeof base.overworld.supplies === "object" ? {
+    food: Math.max(0, Number(base.overworld.supplies.food) || 0),
+    arrows: Math.max(0, Number(base.overworld.supplies.arrows) || 0),
+    coin: Math.max(0, Number(base.overworld.supplies.coin) || 0)
+  } : { food: 3, arrows: 20, coin: 0 };
 
   return base;
 }
@@ -364,40 +367,6 @@ export function hydrateLoadedState(loaded) {
 // ============================================
 // Equipment Migration Helpers
 // ============================================
-
-/**
- * Migrate legacy equipment to canonical v2 format
- * @param {Object} legacyEquipment - Legacy equipment object
- * @returns {Object} Canonical v2 equipment
- */
-function migrateLegacyEquipment(legacyEquipment) {
-  // Import migration function dynamically to avoid circular dependencies
-  if (typeof window !== 'undefined' && window.migrateEquipment) {
-    return window.migrateEquipment(legacyEquipment);
-  }
-
-  // Fallback: simple migration for basic cases
-  const canonical = createEmptyEquipment();
-
-  for (const [slot, data] of Object.entries(legacyEquipment || {})) {
-    if (slot === 'bag') {
-      canonical.bag = Array.isArray(data) ? data : [];
-    } else if (data && data.id) {
-      // Simple case: put in first available layer
-      const layers = canonical[slot] ? Object.keys(canonical[slot]) : [];
-      if (layers.length > 0) {
-        canonical[slot][layers[0]] = {
-          id: String(data.id),
-          name: data.name || 'Unknown Item',
-          condition: Math.max(0, Math.min(100, Number(data.condition) || 100)),
-          fit: data.fit || 'off-the-rack'
-        };
-      }
-    }
-  }
-
-  return canonical;
-}
 
 /**
  * Deep merge equipment objects (for v2+)

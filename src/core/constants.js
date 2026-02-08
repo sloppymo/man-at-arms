@@ -3,6 +3,9 @@
 // Historical chapters and game constants (ES Module)
 // ============================================
 
+// Save schema version for migration tracking
+export const SAVE_SCHEMA_VERSION = 3;
+
 // Historical chapters that structure the game's narrative arc
 export const CHAPTERS = {
   chevauchée: {

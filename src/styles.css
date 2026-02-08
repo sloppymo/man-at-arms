@@ -1001,8 +1001,21 @@ body {
     animation: pulse 2s infinite;
 }
 
-/* Enhanced hover glow effect for region markers */
-[id^="region-marker-"]:hover {
-    box-shadow: 0 0 15px 5px rgba(212, 175, 55, 0.8), 0 0 6px rgba(255, 215, 0, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.3) !important;
-    transform: translate(-50%, -50%) scale(1.4) !important;
+/* ===== PHASER OVERWORLD STYLES (Phase 4) ===== */
+#phaser-root {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1; /* Below DOM UI overlays (equipment screen: 2000, combat: 2500) */
+    pointer-events: none; /* Allow clicks to pass through to DOM UI */
+}
+
+/* Enable pointer events for Phaser canvas specifically when needed */
+#phaser-root canvas {
+    pointer-events: auto; /* Allow interaction with Phaser canvas */
+    position: absolute;
+    top: 0;
+    left: 0;
 }

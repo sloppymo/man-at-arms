@@ -28,7 +28,7 @@ export const GameMode = {
  * Prevents invalid state changes
  */
 const ALLOWED_TRANSITIONS = {
-  [GameMode.TITLE]: [GameMode.CHARACTER_CREATION, GameMode.DIALOGUE],
+  [GameMode.TITLE]: [GameMode.CHARACTER_CREATION, GameMode.DIALOGUE, GameMode.EQUIPMENT],
   [GameMode.CHARACTER_CREATION]: [GameMode.DIALOGUE, GameMode.CAMP],
   [GameMode.DIALOGUE]: [
     GameMode.CAMP,

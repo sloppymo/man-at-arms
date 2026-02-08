@@ -5,6 +5,64 @@
         window.scenes = {};
     }
     
+    // Define renderCharacterCreationStep4 function first
+    function renderCharacterCreationStep4() {
+        const backgroundQuestions = [
+            { id: 'hard_father', text: "Your father was a hard, cruel man. Your entire life you have woken before the dawn to break hard Earth, scratching a living out of the frozen soil to appease him. You learned hard lessons from those days, but each day in that house is a stain of black misery in your memories.", effects: { strength: 1, endurance: 1, charisma: -1 } },
+            { id: 'mangled_hand', text: "Your hand was mangled as a youth. It wasn't ruined, but it bears the twisted scars of that old trauma and has never been quite the same. Your hand excused you from some of the chores that would have been assigned to a healthy boy. Instead, you often helped in the homestead with women's work, and learned to read at the local Abbey.", effects: { agility: -1, endurance: -1, wits: 3 } },
+            { id: 'lost_sibling', text: "You had a sibling who died young—fever, accident, or the simple cruelty of a world that takes children. Their absence shaped you. You learned to be careful, to watch for danger, but also to value what remains.", effects: { wits: 1, endurance: 1, morale: -1 } },
+            { id: 'village_hero', text: "When bandits came to your village, you stood with the others. You weren't the strongest or the fastest, but you were there when it mattered. The respect you earned that day still follows you.", effects: { charisma: 1, reputation: 2, strength: -1 } },
+            { id: 'apprentice_master', text: "Your master was a harsh teacher, but fair. Every mistake was a lesson, every success earned a nod. You learned discipline and precision, but also learned to fear failure.", effects: { wits: 2, agility: 1, stress: 1 } },
+            { id: 'first_love', text: "There was someone once—a first love, a promise made, a promise broken. Whether by war, by family, or by your own choices, it ended. The memory of what was lost makes you careful with new bonds.", effects: { charisma: -1, wits: 1, morale: 1 } }
+        ];
+        
+        const selectedBackground = gameState.selectedBackground;
+        
+        return '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+            '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 4 — Choose Your Past</h3>' +
+            '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Choose one background that shaped you before the war. This will affect your starting attributes. <em style="color: #d4af37;">(Required)</em></p>' +
+            '<button onclick="console.log(\'Test button clicked\')" style="margin-bottom: 15px; padding: 10px; background: #8b6914; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer;">Test Click Handler</button>' +
+            '<div style="display: grid; grid-template-columns: 1fr; gap: 15px;">' +
+                backgroundQuestions.map(function(q) {
+                    const isSelected = selectedBackground === q.id;
+                    const effectText = Object.entries(q.effects).map(function([stat, val]) {
+                        const sign = val > 0 ? '+' : '';
+                        const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+                        return sign + val + ' ' + statName;
+                    }).join(', ');
+                    
+                    return '<div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (isSelected ? '#d4af37' : '#555') + '; cursor: pointer;" onclick="window.selectBackground(\'' + q.id + '\')">' +
+                        '<div style="color: #d4af37; font-style: italic; margin-bottom: 10px; line-height: 1.6;">"' + q.text + '"</div>' +
+                        '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">Attribute changes: ' + effectText + '</div>' +
+                        (isSelected ? 
+                            '<div style="color: #0f0; font-size: 12px; margin-top: 8px;">✓ Chosen Background</div>' :
+                            '') +
+                    '</div>';
+                }).join('') +
+            '</div>' +
+            (selectedBackground ? 
+                '<div style="margin-top: 20px; text-align: center;">' +
+                    '<button onclick="window.characterCreationNext()" style="padding: 10px 20px; background: #8b6914; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 14px;">Continue to Next Step</button>' +
+                '</div>' :
+                '<div style="margin-top: 20px; text-align: center; color: #888; font-size: 14px;">Please select a background to continue</div>'
+            ) +
+        '</div>';
+    }
+    
+    // Make the function globally available
+    window.renderCharacterCreationStep4 = renderCharacterCreationStep4;
+    
+    // Define handleBackgroundClick globally
+    window.handleBackgroundClick = function(id) {
+        console.log('handleBackgroundClick called with:', id);
+        if (window.selectCharacterBackground) {
+            console.log('Calling window.selectCharacterBackground');
+            window.selectCharacterBackground(id);
+        } else {
+            console.error('window.selectCharacterBackground not available yet');
+        }
+    };
+    
     Object.assign(window.scenes, {
         character_creation: {
         title: "Character Creation",
@@ -43,7 +101,48 @@
                     stepContent = renderCharacterCreationStep3();
                     break;
                 case 4:
-                    stepContent = renderCharacterCreationStep4();
+                    // Inline the background selection HTML to avoid function scope issues
+                    const backgroundQuestions = [
+                        { id: 'hard_father', text: "Your father was a hard, cruel man. Your entire life you have woken before the dawn to break hard Earth, scratching a living out of the frozen soil to appease him. You learned hard lessons from those days, but each day in that house is a stain of black misery in your memories.", effects: { strength: 1, endurance: 1, charisma: -1 } },
+                        { id: 'mangled_hand', text: "Your hand was mangled as a youth. It wasn't ruined, but it bears the twisted scars of that old trauma and has never been quite the same. Your hand excused you from some of the chores that would have been assigned to a healthy boy. Instead, you often helped in the homestead with women's work, and learned to read at the local Abbey.", effects: { agility: -1, endurance: -1, wits: 3 } },
+                        { id: 'lost_sibling', text: "You had a sibling who died young—fever, accident, or the simple cruelty of a world that takes children. Their absence shaped you. You learned to be careful, to watch for danger, but also to value what remains.", effects: { wits: 1, endurance: 1, morale: -1 } },
+                        { id: 'village_hero', text: "When bandits came to your village, you stood with the others. You weren't the strongest or the fastest, but you were there when it mattered. The respect you earned that day still follows you.", effects: { charisma: 1, reputation: 2, strength: -1 } },
+                        { id: 'apprentice_master', text: "Your master was a harsh teacher, but fair. Every mistake was a lesson, every success earned a nod. You learned discipline and precision, but also learned to fear failure.", effects: { wits: 2, agility: 1, stress: 1 } },
+                        { id: 'first_love', text: "There was someone once—a first love, a promise made, a promise broken. Whether by war, by family, or by your own choices, it ended. The memory of what was lost makes you careful with new bonds.", effects: { charisma: -1, wits: 1, morale: 1 } }
+                    ];
+                    
+                    const selectedBackground = window.gameState.selectedBackground;
+                    console.log('selectedBackground in HTML generation:', selectedBackground);
+                    
+                    stepContent = '<div style="margin-bottom: 30px; padding: 20px; background: rgba(212, 175, 55, 0.15); border: 2px solid #d4af37; border-radius: 8px;">' +
+                        '<h3 style="color: #f4d03f; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px;">Step 4 — Choose Your Past</h3>' +
+                        '<p style="color: #888; font-size: 14px; margin-bottom: 20px;">Choose one background that shaped you before the war. This will affect your starting attributes. <em style="color: #d4af37;">(Required)</em></p>' +
+                        '<button onclick="console.log(\'Test button clicked\'); console.log(\'selectBackground exists:\', typeof window.selectBackground);" style="margin-bottom: 15px; padding: 10px; background: #8b6914; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer;">Test Click Handler</button>' +
+                        '<div style="display: grid; grid-template-columns: 1fr; gap: 15px;">' +
+                            backgroundQuestions.map(function(q) {
+                                const isSelected = selectedBackground === q.id;
+                                const effectText = Object.entries(q.effects).map(function([stat, val]) {
+                                    const sign = val > 0 ? '+' : '';
+                                    const statName = stat.charAt(0).toUpperCase() + stat.slice(1);
+                                    return sign + val + ' ' + statName;
+                                }).join(', ');
+                                
+                                return '<button style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px; border: 2px solid ' + (isSelected ? '#d4af37' : '#555') + '; cursor: pointer; width: 100%; text-align: left; font-family: inherit; color: inherit;" onclick="window.handleBackgroundClick(\'' + q.id + '\')">' +
+                                    '<div style="color: #d4af37; font-style: italic; margin-bottom: 10px; line-height: 1.6;">"' + q.text + '"</div>' +
+                                    '<div style="color: #888; font-size: 12px; margin-top: 8px; font-style: italic;">Attribute changes: ' + effectText + '</div>' +
+                                    (isSelected ? 
+                                        '<div style="color: #0f0; font-size: 12px; margin-top: 8px;">✓ Chosen Background</div>' :
+                                        '') +
+                                '</button>';
+                            }).join('') +
+                        '</div>' +
+                        (selectedBackground ? 
+                            '<div style="margin-top: 20px; text-align: center;">' +
+                                '<button onclick="window.nextCharacterCreationStep()" style="padding: 10px 20px; background: #8b6914; border: 1px solid #d4af37; color: #d4af37; border-radius: 3px; cursor: pointer; font-size: 14px;">Continue to Next Step</button>' +
+                            '</div>' :
+                            '<div style="margin-top: 20px; text-align: center; color: #888; font-size: 14px;">Please select a background to continue</div>'
+                        ) +
+                    '</div>';
                     break;
                 case 5:
                     stepContent = renderCharacterCreationStep5();
@@ -75,6 +174,12 @@
                     // Only allow if on final step
                     if (gameState.characterCreationStep !== 6) {
                         showNotification('Character Creation', 'Please complete all steps before beginning your journey.');
+                        return false;
+                    }
+                    
+                    // Validate background is selected
+                    if (!gameState.selectedBackground) {
+                        showNotification('Character Creation', 'Please select a background before continuing.');
                         return false;
                     }
                     
@@ -231,4 +336,5 @@
         ]
     }
     });
+
 })();

@@ -212,28 +212,13 @@ export function normalizeSlot(slot) {
  */
 export function hasShieldEquipped() {
   if (!window.gameState?.equipment) return false;
-  
-  // Check offhand slot
-  const offhandSlot = window.gameState.equipment.offhand;
-  if (offhandSlot) {
-    const itemId = offhandSlot.item?.id || offhandSlot.primary?.id || offhandSlot.secondary?.id;
-    if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) return true;
+
+  // Check weapon offhand layer for shields
+  const offhandItem = window.gameState.equipment.weapon?.offhand;
+  if (offhandItem?.id && (offhandItem.id.includes('shield') || offhandItem.id.includes('buckler'))) {
+    return true;
   }
-  
-  // Legacy accessory slot
-  const accessorySlot = window.gameState.equipment.accessory;
-  if (accessorySlot) {
-    const itemId = accessorySlot.item?.id || accessorySlot.primary?.id;
-    if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) return true;
-  }
-  
-  // Legacy weapon secondary
-  const weaponSlot = window.gameState.equipment.weapon;
-  if (weaponSlot?.secondary?.id) {
-    const itemId = weaponSlot.secondary.id;
-    if (itemId && (itemId.includes('shield') || itemId.includes('buckler'))) return true;
-  }
-  
+
   return false;
 }
 

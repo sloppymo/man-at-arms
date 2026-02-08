@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A Man-at-Arms' Life - 100 Years War</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    
     <!-- Vite will process this CSS -->
     <link rel="stylesheet" href="./styles.css">
     
-    <!-- Ink.js CDN - keeping as script tag for now (vendored later) -->
-    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.0.0/dist/ink.js"></script>
-    
     <!-- Main entry point - Vite module -->
     <script type="module" src="./main.js"></script>
+    
+    <!-- Smoke tests (temporary for Phase 2 verification) -->
+    <script src="./smoke-suite.js"></script>
+
 </head>
 <body>
     <div class="game-container">
@@ -70,6 +74,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- Phaser Overworld Container (Phase 4) -->
+    <div id="phaser-root"></div>
     
     <!-- Equipment Screen -->
     <div id="equipment-screen" class="equipment-screen hidden">
