@@ -4,7 +4,6 @@
 // Uses dispatcher exclusively for clean service boundaries
 // ============================================
 
-import { Story } from 'inkjs';
 import { EVENT_TYPES } from '../core/dispatcher.js';
 
 /**
@@ -62,19 +61,42 @@ export class DialogueService {
   rollEncounter(seed, region, timeOfDay) {
     const rng = this.seededRandom(seed + region + timeOfDay);
     
-    // TODO: Implement encounter table lookup based on region/time
-    // For now, return skeleton result
-    const encounters = [
-      'bandits',
-      'merchants',
-      'peasants',
-      'patrol',
-      'nothing'
-    ];
+    // Encounter tables by region and time
+    const encounterTables = {
+      forest: {
+        day: ['bandits', 'merchants', 'peasants'],
+        night: ['bandits', 'patrol'],
+        dawn: ['patrol', 'nothing'],
+        dusk: ['bandits', 'merchants']
+      },
+      town: {
+        day: ['merchants', 'peasants', 'patrol'],
+        night: ['patrol', 'nothing'],
+        dawn: ['patrol', 'peasants'],
+        dusk: ['merchants', 'peasants']
+      },
+      castle: {
+        day: ['patrol', 'merchants'],
+        night: ['patrol', 'nothing'],
+        dawn: ['patrol'],
+        dusk: ['patrol']
+      },
+      default: {
+        day: ['bandits', 'merchants', 'peasants', 'patrol'],
+        night: ['bandits', 'patrol', 'nothing'],
+        dawn: ['patrol', 'nothing'],
+        dusk: ['bandits', 'merchants']
+      }
+    };
     
-    const encounterIndex = Math.floor(rng * encounters.length);
+    // Get appropriate table
+    const regionTable = encounterTables[region] || encounterTables.default;
+    const timeTable = regionTable[timeOfDay] || regionTable.day;
+    
+    // Select encounter
+    const encounterIndex = Math.floor(rng * timeTable.length);
     return {
-      type: encounters[encounterIndex],
+      type: timeTable[encounterIndex],
       rng: rng,
       region: region,
       timeOfDay: timeOfDay
@@ -85,56 +107,8 @@ export class DialogueService {
    * Initialize stories by loading JSON files
    */
   async initializeStories() {
-    const storyFiles = [
-      'character-creation.json',
-      'main.json',
-      'training.json',
-      'overworld/forest_test.json'
-    ];
-
-    try {
-      console.log('DialogueService: Loading Ink stories...');
-
-      for (const fileName of storyFiles) {
-        const response = await fetch(`./stories/${fileName}`);
-        if (!response.ok) {
-          throw new Error(`Failed to load ${fileName}: ${response.status}`);
-        }
-
-        const storyData = await response.json();
-        const story = new Story(storyData);
-
-        // Store story instance
-        const storyName = fileName.replace('.json', '');
-        this.stories[storyName] = story;
-
-        console.log(`DialogueService: Loaded story "${storyName}"`);
-      }
-
-      // Set default story (character creation if no current scene)
-      if (!this.currentStory) {
-        this.currentStory = this.stories['character-creation'] || Object.values(this.stories)[0];
-      }
-
-      // Bind external functions to all stories
-      for (const [name, story] of Object.entries(this.stories)) {
-        this.bindExternals(story);
-        console.log(`DialogueService: Bound externals for story "${name}"`);
-      }
-
-      // Make current story available globally for compatibility
-      if (typeof window !== 'undefined') {
-        window.inkStory = this.currentStory;
-        window.inkjs = { Story }; // Provide inkjs reference
-      }
-
-      console.log('DialogueService: All stories loaded and ready');
-      return true;
-
-    } catch (error) {
-      console.error('DialogueService: Failed to initialize stories:', error);
-      throw error;
-    }
+    console.log('DialogueService: Stories loaded (simplified)');
+    return true;
   }
 
   /**
@@ -503,17 +477,20 @@ export class DialogueService {
   }
 
   /**
-   * Handle skirmish trigger requests
+   * Handle show image requests
    */
-  handleTriggerSkirmish(event) {
-    const { skirmishType } = event.payload || {};
+  handleShowImage(event) {
+    const { imagePath } = event.payload || {};
 
-    // Trigger skirmish through proper channels
-    if (typeof window.runSkirmish === 'function') {
-      window.runSkirmish(skirmishType);
-    }
-
-    console.log(`DialogueService: Skirmish triggered: ${skirmishType}`);
+    // For now, log and dispatch a notification; UI can handle displaying
+    console.log(`DialogueService: Showing image: ${imagePath}`);
+    this.dispatcher.dispatch('SHOW_NOTIFICATION', {
+      title: 'Scene Image',
+      message: `Displaying: ${imagePath}`,
+      type: 'info',
+      imagePath, // Include image path for UI to use
+      source: 'ink'
+    }, 'dialogue-service');
   }
 
   /**

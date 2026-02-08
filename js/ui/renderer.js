@@ -1,6 +1,12 @@
 (function() {
     'use strict';
 
+// Track current dialogue image
+let currentDialogueImage = null;
+
+// Prevent re-rendering during typewriter effect
+let isTyping = false;
+
 function updateDisplay() {
     // Isolate each renderer so one failure doesn't block others
     try {
@@ -80,6 +86,11 @@ async function renderInkContent() {
     try {
         console.log("Rendering Ink content for scene:", window.gameState.currentScene);
 
+        // Skip if already typing to prevent flashing
+        if (isTyping) {
+            return;
+        }
+
         // Ensure the correct Ink story is loaded for this scene
         const sceneName = window.gameState.currentScene;
         let storyToLoad = sceneName;
@@ -133,8 +144,13 @@ async function renderInkContent() {
         
         while (window.inkStory.canContinue && iterationCount < maxIterations) {
             const content = window.inkStory.Continue();
+            const lineTags = window.inkStory.currentTags;
+            
+            // Process tags immediately for line-accurate timing (SFX, mid-passage changes)
+            processInkTags(lineTags);
+            
             fullText += sanitizeInkOutput(content);
-            tags = tags.concat(window.inkStory.currentTags);
+            tags = tags.concat(lineTags);
             iterationCount++;
             
             if (iterationCount >= maxIterations) {
@@ -145,13 +161,23 @@ async function renderInkContent() {
         
         console.log(`Ink rendering completed in ${iterationCount} iterations`);
 
-        // Process tags for artwork/metadata
+        // Process all accumulated tags for final state (last wins for portraits/speaker/bg)
+        // Note: SFX already processed per line above
         processInkTags(tags);
+
+        // Prepare display text with image if present
+        let displayText = fullText;
+        if (currentDialogueImage) {
+            const resolvedPath = resolvePublicAsset(currentDialogueImage);
+            displayText = `<img src="${resolvedPath}" alt="Dialogue image" class="dialogue-image" onerror="this.style.display='none';">` + displayText;
+        }
 
         // Apply typewriter effect
         const storyElement = document.getElementById('story');
         if (storyElement) {
-            await typewriterEffect(storyElement, fullText);
+            isTyping = true;
+            await typewriterEffect(storyElement, displayText);
+            isTyping = false;
         }
 
         // Render choices
@@ -371,15 +397,20 @@ function renderLegacyContent() {
 // Ink.js Helper Functions
 // ============================================
 
-function sanitizeInkOutput(text) {
-    // Use existing escapeHTML from utils.js
-    return window.escapeHTML ? window.escapeHTML(text) : 
-        text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+function resolvePublicAsset(tagPath) {
+  const base = import.meta.env.BASE_URL || "/";
+  return base.replace(/\/?$/, "/") + tagPath.replace(/^\//, "");
+}
+
+function splitTag(tag) {
+  const i = tag.indexOf(':');
+  if (i === -1) return { key: tag.trim(), value: '' };
+  return { key: tag.slice(0, i).trim(), value: tag.slice(i + 1).trim() };
 }
 
 function processInkTags(tags) {
     tags.forEach(tag => {
-        let [key, value] = tag.split(':').map(s => s.trim());
+        const { key, value } = splitTag(tag);
         
         switch(key) {
             case 'artwork':
@@ -394,21 +425,50 @@ function processInkTags(tags) {
             case 'dialect':
                 updateDialect(value);
                 break;
+            case 'speaker':
+                updateSpeaker(value);
+                break;
+            case 'pl':
+                updatePortraitLeft(value);
+                break;
+            case 'pr':
+                updatePortraitRight(value);
+                break;
+            case 'poseL':
+                updatePoseLeft(value);
+                break;
+            case 'poseR':
+                updatePoseRight(value);
+                break;
+            case 'bg':
+                updateBackground(value);
+                break;
+            case 'sfx':
+                playSoundEffect(value);
+                break;
+            case 'mode':
+                changeUIMode(value);
+                break;
+            case 'intent':
+                handleIntent(value);
+                break;
         }
     });
 }
 
 function updateArtwork(artworkPath) {
+    console.log('Updating artwork to:', artworkPath);
+    const resolvedPath = resolvePublicAsset(artworkPath);
     const artworkElement = document.getElementById('scene-artwork');
     const artworkImage = document.getElementById('artwork-image');
     const artworkCaption = document.getElementById('artwork-caption');
     
     if (artworkElement && artworkImage) {
-        artworkImage.src = artworkPath;
+        artworkImage.src = resolvedPath;
         artworkImage.alt = 'Scene artwork';
         
         artworkImage.onerror = function() {
-            console.warn('Failed to load artwork:', artworkPath);
+            console.warn('Failed to load artwork:', resolvedPath);
             artworkImage.style.display = 'none';
         };
         
@@ -417,6 +477,91 @@ function updateArtwork(artworkPath) {
         };
         
         artworkElement.classList.add('visible');
+    }
+}
+
+function updateSpeaker(speakerName) {
+    const speakerElement = document.getElementById('speaker-name');
+    if (speakerElement) {
+        speakerElement.textContent = speakerName;
+        speakerElement.style.display = speakerName ? 'block' : 'none';
+    }
+}
+
+function updatePortraitLeft(portraitPath) {
+    const portraitElement = document.getElementById('portrait-left');
+    if (portraitElement) {
+        const resolvedPath = resolvePublicAsset(portraitPath);
+        portraitElement.src = resolvedPath;
+        portraitElement.style.display = portraitPath ? 'block' : 'none';
+        portraitElement.onerror = function() {
+            console.warn('Failed to load portrait left:', resolvedPath);
+            portraitElement.style.display = 'none';
+        };
+    }
+}
+
+function updatePortraitRight(portraitPath) {
+    const portraitElement = document.getElementById('portrait-right');
+    if (portraitElement) {
+        const resolvedPath = resolvePublicAsset(portraitPath);
+        portraitElement.src = resolvedPath;
+        portraitElement.style.display = portraitPath ? 'block' : 'none';
+        portraitElement.onerror = function() {
+            console.warn('Failed to load portrait right:', resolvedPath);
+            portraitElement.style.display = 'none';
+        };
+    }
+}
+
+function updatePoseLeft(poseId) {
+    const portraitElement = document.getElementById('portrait-left');
+    if (portraitElement) {
+        portraitElement.className = `portrait pose-${poseId}`;
+    }
+}
+
+function updatePoseRight(poseId) {
+    const portraitElement = document.getElementById('portrait-right');
+    if (portraitElement) {
+        portraitElement.className = `portrait pose-${poseId}`;
+    }
+}
+
+function updateBackground(bgPath) {
+    const resolvedPath = resolvePublicAsset(bgPath);
+    document.body.style.backgroundImage = bgPath ? `url(${resolvedPath})` : 'none';
+}
+
+function playSoundEffect(sfxId) {
+    // Assume there's an audio system
+    if (window.playSound) {
+        window.playSound(sfxId);
+    } else {
+        console.log('SFX:', sfxId);
+    }
+}
+
+function changeUIMode(mode) {
+    // Dispatch mode change event
+    if (window.dispatcher) {
+        window.dispatcher.dispatch('MODE_CHANGE', { mode }, 'renderer');
+    } else {
+        console.log('Mode change:', mode);
+    }
+}
+
+function handleIntent(value) {
+    const [action, ...rest] = value.split(':');
+    const param = rest.join(':');
+    switch (action) {
+        case 'startCombat':
+            if (window.dispatcher) {
+                window.dispatcher.dispatch('TRIGGER_COMBAT', { enemyId: param }, 'renderer');
+            }
+            break;
+        default:
+            console.log('Intent:', value);
     }
 }
 
@@ -568,4 +713,17 @@ async function typewriterEffect(element, text) {
             }
         }
     };
+    
+    // Subscribe to SHOW_NOTIFICATION for dialogue images
+    if (window.dispatcher) {
+        window.dispatcher.subscribe('SHOW_NOTIFICATION', (event) => {
+            if (event.payload && event.payload.imagePath && event.payload.source === 'ink') {
+                console.log('Image notification received:', event.payload);
+                currentDialogueImage = event.payload.imagePath;
+                updateArtwork(currentDialogueImage);
+                // Trigger re-render to display the image
+                updateDisplay();
+            }
+        });
+    }
 })();

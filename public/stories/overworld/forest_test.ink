@@ -3,8 +3,6 @@ EXTERNAL getSupplies()
 EXTERNAL consumeSupply(type, amount)
 EXTERNAL showImage(imagePath)
 
-== start
-
 {showImage("artwork/test.png")}
 
 You venture into the dense forest. The trees tower above you, and the path ahead is uncertain.

@@ -3,7 +3,7 @@
 // ES module implementation with event integration
 // ============================================
 
-import { gameState, hydrateLoadedState } from '../core/gameState.js';
+import { gameState, hydrateLoadedState, recalculateFromPriorities, normalizeRegion } from '../core/gameState.js';
 import { dispatcher, EVENT_TYPES } from '../core/dispatcher.js';
 import { getErrorHandler } from '../core/error-handler.js';
 import { SAVE_SCHEMA_VERSION } from '../core/constants.js';

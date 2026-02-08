@@ -50,13 +50,6 @@ import { saveGame, loadGame } from './systems/save-load.js';
 import { toggleEffectsPreview, initializeEffectsPreview } from './ui/effects-preview.js';
 import { updateDisplay, showNotification, resetGame } from './ui/ui-functions.js';
 
-console.log('Assigning UI functions to window...');
-console.log('showStats function:', typeof showStats);
-console.log('saveGame function:', typeof saveGame);
-console.log('loadGame function:', typeof loadGame);
-console.log('openEquipmentScreen function:', typeof openEquipmentScreen);
-console.log('toggleEffectsPreview function:', typeof toggleEffectsPreview);
-
 window.showStats = showStats;
 window.openEquipmentScreen = openEquipmentScreen;
 window.saveGame = saveGame;
@@ -69,14 +62,6 @@ window.updateDisplay = updateDisplay;
 window.showNotification = showNotification;
 window.resetGame = resetGame;
 
-console.log('Window assignments complete');
-console.log('window.EQUIPMENT_DATABASE:', typeof window.EQUIPMENT_DATABASE, !!window.EQUIPMENT_DATABASE);
-console.log('window.EquipmentManager:', typeof window.EquipmentManager);
-console.log('window.inkReady:', typeof window.inkReady, window.inkReady instanceof Promise);
-console.log('window.updateDisplay:', typeof window.updateDisplay);
-console.log('window.showNotification:', typeof window.showNotification);
-console.log('window.resetGame:', typeof window.resetGame);
-
 // ============================================
 // Boot sequence
 // ============================================
@@ -87,8 +72,6 @@ function bootGame() {
   // Check Ink.js availability
   if (typeof window.inkjs === 'undefined') {
     console.warn('Ink.js not loaded - narrative system unavailable');
-  } else {
-    console.log('Ink.js detected:', window.inkjs.Story ? 'v2.0+' : 'legacy');
   }
   
   // Initialize UI (placeholder - Phase 7 error handling and debug tools active)
@@ -130,15 +113,12 @@ function bootGame() {
   initializeEffectsPreview();
 
   // Initialize dialogue service (loads Ink stories and binds externals)
-  console.log('Initializing dialogue service...');
   createDialogueService(dispatcher, gameState, window.EquipmentManager);
 
   // Initialize validation suite (dev-only)
-  console.log('Initializing validation suite...');
   createInkValidationSuite();
   
   // Initialize Phaser overworld (Phase 4) - feature flag controlled
-  console.log('Initializing Phaser overworld...');
   const enableOverworldPhaser = gameState.flags?.enableOverworldPhaser || false;
   // TEMPORARY: Force enable for Phase 4 testing
   const enableOverworldPhaser_TEST = true;
@@ -153,36 +133,15 @@ function bootGame() {
   // Subscribe to mode changes for Phaser scene management
   if (overworldGame) {
     dispatcher.subscribe('MODE_CHANGE', (event) => {
-      console.log('Phaser mode change event received:', event);
       const newMode = event.payload?.to;
-      console.log(`Mode changed to: ${newMode}`);
       
       if (newMode === 'overworld') {
-        console.log('Resuming Phaser overworld scene');
         overworldGame.resume();
       } else {
-        console.log('Pausing Phaser overworld scene');
         overworldGame.pause();
       }
     });
-    
-    console.log('Phaser overworld initialized and mode subscription active');
-  } else {
-    console.log('Phaser overworld disabled or failed to initialize');
   }
-  
-  // Verify globals are set after boot (backward compatibility)
-  console.log('Window globals after boot:', {
-    gameState: !!window.gameState,
-    CHAPTERS: !!window.CHAPTERS,
-    PATRONS: !!window.PATRONS,
-    clampStat: !!window.clampStat,
-    showStats: !!window.showStats,
-    saveGame: !!window.saveGame,
-    loadGame: !!window.loadGame,
-    openEquipmentScreen: !!window.openEquipmentScreen,
-    toggleEffectsPreview: !!window.toggleEffectsPreview
-  });
   
   console.log('Boot complete. Ready for Phase 2+ integration.');
 }

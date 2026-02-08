@@ -79,7 +79,7 @@
                 heat: 0,            // 0-100 pursuit level
                 fatigue: 0,         // 0-100 fatigue level
                 position: { q: 0, r: 0 },  // axial hex coordinates
-                discovered: new Set(),      // discovered hexes as "q,r" strings
+                discovered: [],      // discovered hexes as "q|r" strings (array for JSON safety)
                 encounterSeed: Math.random().toString(36).substring(2), // random seed string
                 supplies: {
                     food: 3,          // days worth
@@ -90,7 +90,58 @@
         };
     }
     
+    // Placeholder functions (to be implemented)
+    function calculateLevel(state) {
+        // Placeholder - will be implemented in Phase 2+
+        return Math.max(1, Math.floor((state.stats?.experience || 0) / 100) + 1);
+    }
+    
+    function recalculateFromPriorities(state) {
+        // Placeholder - will be implemented in Phase 2+
+        // For now, just reset stats to base values
+    }
+    
+    function clampStat(key, value) {
+        // Import from utils if available
+        if (typeof window !== 'undefined' && window.clampStat) {
+            return window.clampStat(key, value);
+        }
+        return value;
+    }
+    
+    function normalizeRegion(location) {
+        // Import from utils if available
+        if (typeof window !== 'undefined' && window.normalizeRegion) {
+            return window.normalizeRegion(location);
+        }
+        return 'England';
+    }
+    
+    function createEmptyEquipment() {
+        // Import from schema if available
+        if (typeof window !== 'undefined' && window.createEmptyEquipment) {
+            return window.createEmptyEquipment();
+        }
+        
+        // Fallback empty structure
+        return {
+            head: { base: null, padding: null, mail: null, plate: null },
+            torso: { base: null, padding: null, mail: null, plate: null, surcoat: null },
+            arms: { base: null, padding: null, mail: null, plate: null },
+            legs: { base: null, padding: null, mail: null, plate: null },
+            weapon: { main: null, offhand: null },
+            missile: { main: null },
+            accessory: { primary: null },
+            bag: []
+        };
+    }
+    
     // Initialize gameState globally
     window.gameState = makeDefaultGameState();
     window.makeDefaultGameState = makeDefaultGameState;
+    window.calculateLevel = calculateLevel;
+    window.recalculateFromPriorities = recalculateFromPriorities;
+    window.clampStat = clampStat;
+    window.normalizeRegion = normalizeRegion;
+    window.createEmptyEquipment = createEmptyEquipment;
 })();

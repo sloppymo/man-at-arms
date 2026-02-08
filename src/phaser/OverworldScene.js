@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { setMode, GameMode } from '../core/game-modes.js';
+import { OverworldHUD } from './OverworldHUD.js';
 
 /**
  * Phaser scene for the overworld map exploration
@@ -16,6 +17,7 @@ export class OverworldScene extends Phaser.Scene {
         this.cursors = null;
         this.mapImage = null;
         this.hotspots = [];
+        this.hudScene = null;
 
         // Movement state
         this.targetPosition = null;
@@ -205,6 +207,19 @@ export class OverworldScene extends Phaser.Scene {
         });
 
         console.log('Overworld scene created successfully');
+
+        // Launch HUD overlay (parallel scene)
+        this.hudScene = this.scene.get('OverworldHUD') || 
+            this.scene.add('OverworldHUD', OverworldHUD, true, {
+                dispatch: this.dispatch,
+                getGameState: this.getGameState
+            });
+        if (!this.hudScene.active) {
+            this.scene.launch('OverworldHUD');
+        }
+        
+        // Ensure HUD renders above overworld
+        this.scene.bringToTop('OverworldHUD');
     }
 
     /**
@@ -237,12 +252,12 @@ export class OverworldScene extends Phaser.Scene {
             });
 
             // Trigger encounter on specific hex
-            if (newHex.q === 1 && newHex.r === 0) {
-                this.dispatch({
-                    type: 'TRIGGER_ENCOUNTER',
-                    story: 'forest_test'
-                });
-            }
+            // if (newHex.q === 1 && newHex.r === 0) {
+            //     this.dispatch({
+            //         type: 'TRIGGER_ENCOUNTER',
+            //         story: 'forest_test'
+            //     });
+            // }
         }
     }
 
@@ -362,7 +377,11 @@ export class OverworldScene extends Phaser.Scene {
                 setMode(gameState, GameMode.ENCOUNTER);
                 break;
             case 'forest-entrance':
-                setMode(gameState, GameMode.DIALOGUE);
+                // Dispatch encounter trigger for forest_test story
+                this.dispatch({
+                    type: 'TRIGGER_ENCOUNTER',
+                    story: 'forest_test'
+                });
                 break;
             default:
                 console.warn(`Unknown hotspot: ${hotspot.id}`);
@@ -378,5 +397,15 @@ export class OverworldScene extends Phaser.Scene {
     resumeFromMode() {
         console.log('Resuming overworld scene');
         this.scene.resume();
+    }
+
+    /**
+     * Shut down HUD when scene stops
+     */
+    stop() {
+        if (this.hudScene) {
+            this.scene.stop('OverworldHUD');
+            this.hudScene = null;
+        }
     }
 }

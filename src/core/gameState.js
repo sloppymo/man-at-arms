@@ -443,5 +443,8 @@ function createEmptyEquipment() {
   };
 }
 
+// Export placeholder functions for use in other modules
+export { calculateLevel, recalculateFromPriorities, clampStat, normalizeRegion, createEmptyEquipment };
+
 // Export default for convenience
 export default gameState;

@@ -9,6 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,23 @@ function compileStory(inkPath, jsonPath) {
   try {
     const inkContent = fs.readFileSync(inkPath, 'utf8');
 
+    // Try to use inklecate if available
+    try {
+      console.log(`Compiling with inklecate: ${inkPath}`);
+      execSync(`inklecate -o "${jsonPath}" "${inkPath}"`, { stdio: 'inherit' });
+      console.log(`✅ Compiled with inklecate: ${inkPath} -> ${jsonPath}`);
+      return true;
+    } catch (inklecateError) {
+      // Fallback: basic processing (dev-only, warn loudly)
+      console.warn('⚠️  WARNING: Using fallback Ink processing. Install inklecate for proper compilation!');
+      console.warn('⚠️  Hand-structured Ink JSON is fragile and may break as stories grow.');
+      console.warn('⚠️  Install: npm install -g inklecate (or download from https://github.com/inkle/ink/releases)');
+      console.warn('Falling back to basic processing...');
+    }
+
+    // Fallback: basic processing
+    console.log(`Compiling with custom processor: ${inkPath}`);
+
     // Basic processing: remove knot declarations, keep text and externals
     let processedContent = inkContent
       .replace(/^== .+$/gm, '') // Remove knot lines
@@ -54,10 +72,10 @@ function compileStory(inkPath, jsonPath) {
     const storyJSON = createStoryJSON(processedContent);
     fs.writeFileSync(jsonPath, JSON.stringify(storyJSON, null, 2));
 
-    console.log(`Compiled: ${inkPath} -> ${jsonPath}`);
+    console.log(`✅ Compiled with custom processor: ${inkPath} -> ${jsonPath}`);
     return true;
   } catch (error) {
-    console.error(`Failed to compile ${inkPath}:`, error.message);
+    console.error(`❌ Failed to compile ${inkPath}:`, error.message);
     return false;
   }
 }

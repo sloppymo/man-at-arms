@@ -1751,7 +1751,7 @@ class EquipmentManager {
         
         // Determine layer if not provided
         if (!layer) {
-            layer = item.layer || (normalizedSlot === 'weapon' ? 'primary' : LAYER_TYPES.PLATE);
+            layer = item.layer || (normalizedSlot === 'weapon' ? (item.subSlot === 'secondary' ? 'offhand' : 'main') : LAYER_TYPES.PLATE);
         }
         
         // Check availability - always derive region from current location for accuracy
@@ -2071,7 +2071,7 @@ class EquipmentManager {
     // Get weapon stats for combat
     getWeaponStats() {
         const weaponSlot = this.gameState.equipment.weapon || {};
-        const primary = weaponSlot.primary;
+        const primary = weaponSlot.main;
         
         if (!primary || !primary.id) {
             return { quality: 0, type: 'none', properties: [] };
