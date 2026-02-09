@@ -40,13 +40,13 @@ Click "Start Quest" to begin your adventure!
 </div>
 
 <script>
-let location='Town Square';
+let gameLocation='Town Square';
 let quest='Not Started';
 let inventory=[];
 let hasScroll=false;
 
 function updateDisplay(){
-document.getElementById('location').textContent=location;
+document.getElementById('location').textContent=gameLocation;
 document.getElementById('quest').textContent=quest;
 document.getElementById('inventory').textContent=inventory.length>0?inventory.join(', '):'Empty';
 }
@@ -62,13 +62,13 @@ document.getElementById('message').innerHTML='✅ Quest started! You received a 
 }
 
 function goToCastle(){
-location='Castle Gate';
+gameLocation='Castle Gate';
 updateDisplay();
 document.getElementById('message').innerHTML='🏰 You arrived at the castle gate. The guard is waiting.';
 }
 
 function deliverMessage(){
-if(hasScroll&&location==='Castle Gate'){
+if(hasScroll&&gameLocation==='Castle Gate'){
 quest='Message Delivered';
 inventory=[];
 hasScroll=false;
@@ -91,7 +91,7 @@ document.getElementById('message').innerHTML='❌ You need to deliver the messag
 }
 
 function resetGame(){
-location='Town Square';
+gameLocation='Town Square';
 quest='Not Started';
 inventory=[];
 hasScroll=false;
