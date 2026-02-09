@@ -1,0 +1,1 @@
+{"inkVersion": 19, "root": [["=== forest_test ===\n\nYou venture into the dense forest. The trees tower above you, and the path ahead is uncertain.\n\n* Continue deeper\n    You push forward through the thick undergrowth.\n    -> END\n\n* Turn back\n    You decide this forest is too dangerous.\n    -> END\n\n=== END ===\nThe forest journey ends.", null]]}

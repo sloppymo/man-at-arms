@@ -10,7 +10,7 @@
 class EventDispatcher {
   constructor() {
     this._listeners = new Map();
-    this._debug = false; // Set to true for development logging
+    this._debug = true; // Set to true for development logging
   }
 
   /**

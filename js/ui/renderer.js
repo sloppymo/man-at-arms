@@ -313,7 +313,7 @@ function renderLegacyContent() {
     const artworkImage = document.getElementById('artwork-image');
     const artworkCaption = document.getElementById('artwork-caption');
     
-    if (scene.artwork && artworkElement && artworkImage) {
+    if (scene.artwork && artworkElement && artworkImage && !document.body.classList.contains('overworld-mode')) {
         // Scene has artwork - display it
         artworkImage.src = scene.artwork;
         artworkImage.alt = scene.artworkCaption || (typeof scene.title === 'function' ? scene.title() : scene.title) || 'Scene artwork';
@@ -342,7 +342,7 @@ function renderLegacyContent() {
         }
         artworkElement.classList.add('visible');
     } else if (artworkElement) {
-        // No artwork for this scene - hide it
+        // No artwork for this scene or in overworld mode - hide it
         artworkElement.classList.remove('visible');
     }
     
@@ -458,6 +458,13 @@ function processInkTags(tags) {
 
 function updateArtwork(artworkPath) {
     console.log('Updating artwork to:', artworkPath);
+    
+    // Don't display artwork in overworld mode
+    if (document.body.classList.contains('overworld-mode')) {
+        console.log('Skipping artwork display in overworld mode');
+        return;
+    }
+    
     const resolvedPath = resolvePublicAsset(artworkPath);
     const artworkElement = document.getElementById('scene-artwork');
     const artworkImage = document.getElementById('artwork-image');
@@ -529,6 +536,12 @@ function updatePoseRight(poseId) {
 }
 
 function updateBackground(bgPath) {
+    // Don't display background images in overworld mode
+    if (document.body.classList.contains('overworld-mode')) {
+        console.log('Skipping background update in overworld mode');
+        return;
+    }
+    
     const resolvedPath = resolvePublicAsset(bgPath);
     document.body.style.backgroundImage = bgPath ? `url(${resolvedPath})` : 'none';
 }

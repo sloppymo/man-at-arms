@@ -18,6 +18,8 @@ export class OverworldScene extends Phaser.Scene {
         this.mapImage = null;
         this.hotspots = [];
         this.hudScene = null;
+        this.activeHotspots = new Set(); // Track active hotspots to prevent repeated calls
+        this.hotspotCooldown = new Set(); // Prevent immediate re-triggering after dialog
 
         // Movement state
         this.targetPosition = null;
@@ -33,8 +35,8 @@ export class OverworldScene extends Phaser.Scene {
      */
     pixelToHex(x, y) {
         const hexSize = 50;
-        const q = Math.floor(x / (hexSize * Math.sqrt(3)));
-        const r = Math.floor((y / (hexSize * 1.5)) - (q / 2));
+        const q = Math.round((Math.sqrt(3)/3 * x - 1/3 * y) / hexSize);
+        const r = Math.round((2/3 * y) / hexSize);
         return { q, r };
     }
 
@@ -106,21 +108,19 @@ export class OverworldScene extends Phaser.Scene {
      * Load game assets
      */
     preload() {
-        // Load overworld assets
         console.log('Loading overworld assets...');
         
-        // Try to load map image
-        this.load.image('overworld-map', '/man-at-arms/overworld/map.png');
+        // Load map image from public folder - use the hexagonal forest map
+        this.load.image('overworld-map', '/maps/hex_forest_region.png');
         
-        // Try to load player token
-        this.load.image('player-token', '/man-at-arms/overworld/token.png');
+        // Player token will be created programmatically to avoid missing file errors
         
         this.load.on('filecomplete', (key) => {
             console.log(`Loaded asset: ${key}`);
         });
         
-        this.load.on('filecomplete-failed', (key) => {
-            console.error(`Failed to load asset: ${key}`);
+        this.load.on('filecomplete-failed', (key, file) => {
+            console.error(`Failed to load asset: ${key}`, file);
         });
     }
 
@@ -130,49 +130,57 @@ export class OverworldScene extends Phaser.Scene {
     create() {
         console.log('Creating overworld scene...');
 
-        // Add the map background
-        this.mapImage = this.add.image(0, 0, 'overworld-map').setOrigin(0, 0);
-
-        // If map didn't load, create a fallback colored rectangle
-        if (!this.mapImage.texture.key.includes('overworld-map')) {
-            console.warn('Map image failed to load, using fallback');
-            this.mapImage = this.add.rectangle(0, 0, 1024, 768, 0x2a4d2a).setOrigin(0, 0);
+        // Add the map background - directly load the map without temporary background
+        console.log('Creating map background...');
+        
+        // Try to use the Phaser-loaded map image immediately
+        console.log('Available textures:', this.textures.list);
+        if (this.textures.exists('overworld-map')) {
+            console.log('Using Phaser-loaded map texture');
+            this.mapImage = this.add.image(0, 0, 'overworld-map').setOrigin(0, 0);
+            this.mapImage.setDepth(-100); // Very low depth to ensure it's behind everything
+            console.log('Successfully created map from Phaser texture');
+        } else {
+            console.log('Phaser map texture not available, creating minimal placeholder');
+            console.log('Looking for any loaded textures...');
+            const textureKeys = this.textures.getTextureKeys();
+            console.log('Loaded texture keys:', textureKeys);
+            
+            // Create minimal placeholder
+            this.mapImage = this.add.graphics();
+            this.mapImage.fillStyle(0x000000, 1); // Black background
+            this.mapImage.fillRect(0, 0, 1024, 1024);
+            this.mapImage.setDepth(-100);
         }
+
+        console.log('Final map object:', this.mapImage, 'position:', this.mapImage.x, this.mapImage.y, 'size:', this.mapImage.width, this.mapImage.height);
 
         // Set physics world bounds to match map dimensions
         const mapWidth = this.mapImage.width;
         const mapHeight = this.mapImage.height;
         this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
 
-        // Create player token sprite
-        this.player = this.physics.add.sprite(100, 100, 'player-token');
+        // Create player as a simple colored rectangle (skip the problematic player-token)
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0xffd700, 1); // Gold color
+        graphics.fillRect(0, 0, 16, 16);
+        graphics.generateTexture('simple-player', 16, 16);
+        graphics.destroy();
+        
+        this.player = this.add.sprite(200, 200, 'simple-player');
+        this.player.setDepth(10);
 
-        // If token didn't load, use a fallback colored rectangle
-        if (!this.player.texture.key.includes('player-token')) {
-            console.warn('Player token failed to load, using fallback');
-            // Remove the failed sprite and create a proper fallback
-            this.player.destroy();
-            this.player = this.physics.add.sprite(100, 100, null);
-            
-            // Create a simple colored rectangle as fallback
-            const graphics = this.add.graphics();
-            graphics.fillStyle(0xffd700, 1); // Gold color
-            graphics.fillRect(-8, -8, 16, 16); // 16x16 rectangle centered
-            graphics.generateTexture('fallback-player', 16, 16);
-            graphics.destroy();
-            
-            // Now create the sprite with the generated texture
-            this.player = this.physics.add.sprite(100, 100, 'fallback-player');
-        }
-
-        // Configure player physics
-        this.player.setCollideWorldBounds(true);
-        this.player.setBounce(0);
-        this.player.setDrag(800, 800); // Friction to stop sliding
-
-        // Setup camera to follow player
+        // Setup camera to follow player (disabled to test shaking)
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1); // Smooth follow
+        // Temporarily disable camera following to stop shaking
+        // this.cameras.main.startFollow(this.player, false, 0.15, 0.15);
+
+        console.log('Input setup complete:', {
+            cursors: !!this.cursors,
+            wasdKeys: !!this.wasdKeys,
+            input: !!this.input,
+            keyboard: !!this.input.keyboard
+        });
 
         // Setup input
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -193,41 +201,75 @@ export class OverworldScene extends Phaser.Scene {
             setMode(gameState, GameMode.OVERWORLD);
         });
 
+        // Add debug key to teleport to town-square
+        this.input.keyboard.on('keydown-T', () => {
+            console.log('Debug: Teleporting to town-square');
+            this.player.x = 200;
+            this.player.y = 200;
+            this.activeHotspots.clear();
+            this.hotspotCooldown.clear();
+        });
+
         // Define hotspots (example: simple circular areas)
         this.hotspots = [
-            { id: 'town-square', x: 300, y: 200, radius: 50 },
+            { id: 'town-square', x: 200, y: 200, radius: 60 }, // Town area in more accessible location
             { id: 'castle-gate', x: 172, y: 884, radius: 40 },
             { id: 'forest-entrance', x: 800, y: 150, radius: 35 }
         ];
 
-        // Add visual indicators for hotspots (always visible for testing)
-        this.hotspots.forEach(hotspot => {
-            const circle = this.add.circle(hotspot.x, hotspot.y, hotspot.radius, 0xff0000, 0.2);
-            circle.setStrokeStyle(2, 0xff0000, 0.5);
-        });
+        // Add visual indicators for hotspots (only when debugging)
+        const DEBUG_HOTSPOTS = true; // Set to true to see hotspot circles
+        
+        if (DEBUG_HOTSPOTS) {
+            this.hotspots.forEach(hotspot => {
+                const circle = this.add.circle(hotspot.x, hotspot.y, hotspot.radius, 0xff0000, 0.2);
+                circle.setStrokeStyle(2, 0xff0000, 0.5);
+            });
+        }
 
         console.log('Overworld scene created successfully');
-
-        // Launch HUD overlay (parallel scene)
-        this.hudScene = this.scene.get('OverworldHUD') || 
-            this.scene.add('OverworldHUD', OverworldHUD, true, {
-                dispatch: this.dispatch,
-                getGameState: this.getGameState
+        
+        // Debug: Log all game objects in the scene
+        console.log('=== SCENE OBJECTS DEBUG ===');
+        const allChildren = this.children.list;
+        console.log('Total objects in scene:', allChildren.length);
+        allChildren.forEach((child, index) => {
+            console.log(`Object ${index}:`, {
+                type: child.type,
+                name: child.name || 'unnamed',
+                depth: child.depth,
+                visible: child.visible,
+                x: child.x,
+                y: child.y,
+                width: child.width || 'N/A',
+                height: child.height || 'N/A',
+                texture: child.texture ? child.texture.key : 'none'
             });
-        if (!this.hudScene.active) {
-            this.scene.launch('OverworldHUD');
-        }
+        });
+        console.log('=== END SCENE DEBUG ===');
+
+        // Launch HUD overlay (parallel scene) - TEMPORARILY DISABLED FOR DEBUGGING
+        // this.hudScene = this.scene.get('OverworldHUD') || 
+        //     this.scene.add('OverworldHUD', OverworldHUD, true, {
+        //         dispatch: this.dispatch,
+        //         getGameState: this.getGameState
+        //     });
+        // if (!this.hudScene.active) {
+        //     this.scene.launch('OverworldHUD');
+        // }
         
         // Ensure HUD renders above overworld
-        this.scene.bringToTop('OverworldHUD');
+        // this.scene.bringToTop('OverworldHUD');
     }
 
     /**
      * Main game loop
      */
     update(time, delta) {
-        if (!this.player) return;
-
+        if (!this.player) {
+            return;
+        }
+        
         // Handle keyboard movement
         this.handleKeyboardMovement();
 
@@ -240,6 +282,7 @@ export class OverworldScene extends Phaser.Scene {
         // Check for hex entry
         const newHex = this.pixelToHex(this.player.x, this.player.y);
         if (newHex.q !== this.currentHex.q || newHex.r !== this.currentHex.r) {
+            console.log(`Entering hex: (${newHex.q}, ${newHex.r}) at position (${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)})`);
             this.currentHex = newHex;
 
             // Dispatch hex entry event
@@ -250,14 +293,6 @@ export class OverworldScene extends Phaser.Scene {
                 x: this.player.x,
                 y: this.player.y
             });
-
-            // Trigger encounter on specific hex
-            // if (newHex.q === 1 && newHex.r === 0) {
-            //     this.dispatch({
-            //         type: 'TRIGGER_ENCOUNTER',
-            //         story: 'forest_test'
-            //     });
-            // }
         }
     }
 
@@ -265,26 +300,56 @@ export class OverworldScene extends Phaser.Scene {
      * Handle WASD/Arrow key movement
      */
     handleKeyboardMovement() {
-        const speed = this.moveSpeed;
-        let velocityX = 0;
-        let velocityY = 0;
+        // Debug: Check if input is working
+        if (!this.cursors || !this.wasdKeys) {
+            console.log('ERROR: cursors or wasdKeys not available');
+            return;
+        }
+        
+        const speed = 200; // pixels per second
+        let deltaX = 0;
+        let deltaY = 0;
 
-        // Horizontal movement
-        if (this.cursors.left.isDown || this.wasdKeys.A.isDown) {
-            velocityX = -speed;
-        } else if (this.cursors.right.isDown || this.wasdKeys.D.isDown) {
-            velocityX = speed;
+        // Prevent conflicting inputs
+        const leftPressed = this.cursors.left.isDown || this.wasdKeys.A.isDown;
+        const rightPressed = this.cursors.right.isDown || this.wasdKeys.D.isDown;
+        const upPressed = this.cursors.up.isDown || this.wasdKeys.W.isDown;
+        const downPressed = this.cursors.down.isDown || this.wasdKeys.S.isDown;
+
+        // Calculate movement delta
+        if (leftPressed && !rightPressed) {
+            deltaX = -speed * (this.game.loop.delta / 1000);
+        } else if (rightPressed && !leftPressed) {
+            deltaX = speed * (this.game.loop.delta / 1000);
         }
 
-        // Vertical movement
-        if (this.cursors.up.isDown || this.wasdKeys.W.isDown) {
-            velocityY = -speed;
-        } else if (this.cursors.down.isDown || this.wasdKeys.S.isDown) {
-            velocityY = speed;
+        if (upPressed && !downPressed) {
+            deltaY = -speed * (this.game.loop.delta / 1000);
+        } else if (downPressed && !upPressed) {
+            deltaY = speed * (this.game.loop.delta / 1000);
         }
 
-        // Apply velocity (diagonal movement is allowed)
-        this.player.setVelocity(velocityX, velocityY);
+        // Debug: Log input state every frame
+        if (leftPressed || rightPressed || upPressed || downPressed) {
+            console.log('Movement input detected:', { leftPressed, rightPressed, upPressed, downPressed });
+        }
+
+        // Apply movement directly to position instead of velocity
+        if (deltaX !== 0 || deltaY !== 0) {
+            const oldX = this.player.x;
+            const oldY = this.player.y;
+            
+            this.player.x += deltaX;
+            this.player.y += deltaY;
+            
+            // Keep player in bounds
+            this.player.x = Phaser.Math.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
+            this.player.y = Phaser.Math.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
+            
+            console.log(`Player moved: (${oldX.toFixed(1)}, ${oldY.toFixed(1)}) -> (${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)})`);
+        } else if (leftPressed || rightPressed || upPressed || downPressed) {
+            console.log('Input detected but no movement calculated');
+        }
     }
 
     /**
@@ -314,21 +379,28 @@ export class OverworldScene extends Phaser.Scene {
 
         // If close enough to target, stop moving
         if (distance < 10) {
-            this.player.setVelocity(0, 0);
+            // No velocity to reset for non-physics sprite
             this.targetPosition = null;
             return;
         }
 
-        // Move toward target
+        // Move toward target using direct position updates
         const angle = Phaser.Math.Angle.Between(
             this.player.x, this.player.y,
             this.targetPosition.x, this.targetPosition.y
         );
 
-        this.player.setVelocity(
-            Math.cos(angle) * this.moveSpeed,
-            Math.sin(angle) * this.moveSpeed
-        );
+        // Calculate movement delta for this frame
+        const deltaX = Math.cos(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
+        const deltaY = Math.sin(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
+
+        // Apply direct position update
+        this.player.x += deltaX;
+        this.player.y += deltaY;
+
+        // Keep player in bounds
+        this.player.x = Phaser.Math.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
+        this.player.y = Phaser.Math.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
     }
 
     /**
@@ -337,19 +409,30 @@ export class OverworldScene extends Phaser.Scene {
     checkHotspotOverlaps() {
         if (!this.player) return;
 
-        // Debug: Log current player position
-        console.log(`Checking hotspots at player position: (${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)})`);
-
         this.hotspots.forEach(hotspot => {
             const distance = Phaser.Math.Distance.Between(
                 this.player.x, this.player.y,
                 hotspot.x, hotspot.y
             );
 
-            console.log(`Distance to ${hotspot.id}: ${distance.toFixed(1)} (radius: ${hotspot.radius})`);
+            const isInRange = distance <= hotspot.radius;
+            const wasActive = this.activeHotspots.has(hotspot.id);
+            const isOnCooldown = this.hotspotCooldown.has(hotspot.id);
 
-            if (distance <= hotspot.radius) {
+            if (isInRange && !wasActive && !isOnCooldown) {
+                // Entering hotspot for first time
+                this.activeHotspots.add(hotspot.id);
                 this.enterHotspot(hotspot);
+            } else if (!isInRange && wasActive) {
+                // Leaving hotspot
+                this.activeHotspots.delete(hotspot.id);
+                // Add cooldown when leaving to prevent immediate re-entry
+                this.hotspotCooldown.add(hotspot.id);
+                setTimeout(() => {
+                    this.hotspotCooldown.delete(hotspot.id);
+                    console.log(`Cooldown ended for hotspot: ${hotspot.id}`);
+                }, 2000); // 2 second cooldown
+                this.exitHotspot(hotspot);
             }
         });
     }
@@ -360,35 +443,49 @@ export class OverworldScene extends Phaser.Scene {
     enterHotspot(hotspot) {
         console.log(`Player entered hotspot: ${hotspot.id}`);
 
+        // Handle different hotspot types
+        const gameState = this.getGameState();
+        switch (hotspot.id) {
+            case 'town-square':
+                // Force simple quest story for testing
+                const storyName = 'overworld/town_square_quest_simple';
+                
+                console.log(`Entering town square - triggering: ${storyName}`);
+                this.dispatch({
+                    type: 'TRIGGER_ENCOUNTER',
+                    story: storyName
+                });
+                break;
+            case 'castle-gate':
+                console.log('Entering castle gate - triggering delivery encounter');
+                this.dispatch({
+                    type: 'TRIGGER_ENCOUNTER',
+                    story: 'overworld/castle_gate_delivery'
+                });
+                break;
+            case 'forest-entrance':
+                // Dispatch encounter trigger for forest_test story
+                this.dispatch({
+                    type: 'TRIGGER_ENCOUNTER',
+                    story: 'overworld/forest_test'
+                });
+                break;
+        }
+
         // Dispatch event to game state
         this.dispatch({
             type: 'OVERWORLD_NODE_ENTER',
             nodeId: hotspot.id,
             timestamp: Date.now()
         });
+    }
 
-        // Change game mode based on hotspot type
-        const gameState = this.getGameState();
-        switch (hotspot.id) {
-            case 'town-square':
-                setMode(gameState, GameMode.DIALOGUE);
-                break;
-            case 'castle-gate':
-                setMode(gameState, GameMode.ENCOUNTER);
-                break;
-            case 'forest-entrance':
-                // Dispatch encounter trigger for forest_test story
-                this.dispatch({
-                    type: 'TRIGGER_ENCOUNTER',
-                    story: 'forest_test'
-                });
-                break;
-            default:
-                console.warn(`Unknown hotspot: ${hotspot.id}`);
-        }
-
-        // Pause this scene when entering hotspots
-        this.scene.pause();
+    /**
+     * Handle exiting a hotspot area
+     */
+    exitHotspot(hotspot) {
+        console.log(`Player exited hotspot: ${hotspot.id}`);
+        // Could add exit logic here if needed
     }
 
     /**
@@ -397,6 +494,25 @@ export class OverworldScene extends Phaser.Scene {
     resumeFromMode() {
         console.log('Resuming overworld scene');
         this.scene.resume();
+        
+        // Re-enable input systems
+        if (this.input && this.input.keyboard) {
+            console.log('Re-enabling keyboard input');
+            // Re-add keyboard listeners if needed
+            if (!this.cursors) {
+                this.cursors = this.input.keyboard.createCursorKeys();
+            }
+            if (!this.wasdKeys) {
+                this.wasdKeys = this.input.keyboard.addKeys({
+                    W: Phaser.Input.Keyboard.KeyCodes.W,
+                    A: Phaser.Input.Keyboard.KeyCodes.A,
+                    S: Phaser.Input.Keyboard.KeyCodes.S,
+                    D: Phaser.Input.Keyboard.KeyCodes.D
+                });
+            }
+        }
+        
+        console.log('Overworld scene resumed successfully');
     }
 
     /**

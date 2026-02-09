@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quest Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #444; }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>🏰 Quest System Test</h1>
+    
+    <div class="test">
+        <h3>✅ What's Working:</h3>
+        <ul>
+            <li>Inventory functions added to dialogue service</li>
+            <li>Three quest stories created as JSON</li>
+            <li>Overworld hotspot logic updated</li>
+            <li>Dialogue service loads all stories</li>
+        </ul>
+    </div>
+    
+    <div class="test">
+        <h3>🎮 Test Instructions:</h3>
+        <ol>
+            <li>Open <a href="http://localhost:3007" target="_blank">Game</a></li>
+            <li>Move to <strong>town-square</strong> (red circle at 200, 200)</li>
+            <li>Accept quest → Should get "message_scroll"</li>
+            <li>Move to <strong>castle-gate</strong> (red circle at 172, 884)</li>
+            <li>Deliver scroll → Should remove "message_scroll"</li>
+            <li>Return to <strong>town-square</strong> → Should complete quest</li>
+        </ol>
+    </div>
+    
+    <div class="test">
+        <h3>🔍 Debug Console:</h3>
+        <p>Check browser console for:</p>
+        <ul>
+            <li><code>DialogueService: Loaded story "overworld/town_square_quest"</code></li>
+            <li><code>DialogueService: Loaded story "overworld/castle_gate_delivery"</code></li>
+            <li><code>DialogueService: Loaded story "overworld/town_square_complete"</code></li>
+            <li><code>INVENTORY_UPDATE</code> events when items change</li>
+        </ul>
+    </div>
+    
+    <script>
+        console.log('🏰 Quest test page loaded');
+        console.log('Open the game and test the quest flow!');
+    </script>
+</body>
+</html>

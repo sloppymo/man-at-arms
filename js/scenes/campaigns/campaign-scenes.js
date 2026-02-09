@@ -244,7 +244,7 @@
         year: 1344,
         age: function() { return window.gameState.age; },
         location: "At Sea / England",
-        artwork: "artwork/naval-battle-2.png",
+        artwork: null,
         artworkCaption: "The crossing - rough seas and white cliffs ahead",
         noCampfire: true,
         text: function() {
@@ -1492,7 +1492,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "English Channel",
-        artwork: "artwork/naval-battle-1.jpg", // Naval battle scene with ships
+        artwork: "artwork/campfire.jpg",
         artworkCaption: "The crossing to France",
         text: `<p><strong>Early July 1346 — At sea</strong></p>
                <p>Men retch over the gunwale until there's nothing left to give. Horses scream when the deck shifts. The ship's bilge stinks. Someone drops a bow-case into seawater; someone else pretends not to see.</p>`,
@@ -1528,7 +1528,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "English Channel",
-        artwork: "artwork/BattleofSluys.jpeg",
+        artwork: "artwork/campfire.jpg",
         artworkCaption: "Tending the horses through the night - the crossing continues",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -1602,7 +1602,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "English Channel",
-        artwork: "artwork/naval-battle-1.jpg",
+        artwork: "artwork/campfire.jpg",
         artworkCaption: "Helping the sick and keeping order on the crossing",
         text: function() {
             const result = window.gameState.lastResolution;
@@ -1638,7 +1638,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Saint-Vaast-la-Hougue, Normandy",
-        artwork: "artwork/naval-battle-2.png", // Naval battle with ships and coastal city
+        artwork: "artwork/campfire.png",
         artworkCaption: "Landing at Saint-Vaast-la-Hougue",
         text: `<p><strong>12 July 1346 — Saint-Vaast-la-Hougue / Cotentin</strong></p>
                <p>The shoreline looks quiet until you notice how many doors are barred. Men spill out and form ranks. The order is simple: move inland, take what can be taken, and keep moving.</p>`,
@@ -1711,7 +1711,7 @@
         year: 1346,
         age: function() { return window.gameState.age; },
         location: "Normandy",
-        artwork: "artwork/naval-battle-3.png", // Another naval battle scene
+        artwork: "artwork/battle-scene-2.jpg",
         artworkCaption: "The first raid on French soil",
         text: function() {
             const result = window.gameState.lastResolution;

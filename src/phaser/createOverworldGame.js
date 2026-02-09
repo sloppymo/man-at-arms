@@ -35,8 +35,14 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
             physics: {
                 default: 'arcade',
                 arcade: {
-                    debug: false, // Set to true for development physics debugging
-                    gravity: { x: 0, y: 0 } // Top-down, no gravity
+                    gravity: { x: 0, y: 0 },
+                    debug: false,
+                    fps: 60,
+                    fixedStep: false, // Allow variable timestep for smoother movement
+                    // Reduce physics timestep precision and add damping to prevent shaking
+                    timeStep: 1 / 60,
+                    maxStep: 1 / 60,
+                    velocityDecay: 0.99
                 }
             },
             scale: {
@@ -51,6 +57,32 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
         // Create the Phaser game instance
         const game = new Phaser.Game(config);
 
+        // DEBUG: Check canvas visibility after game creation
+        setTimeout(() => {
+            const canvas = game.canvas;
+            if (canvas) {
+                console.log('Phaser canvas found:', canvas);
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+                console.log('Canvas visible in DOM:', canvas.offsetWidth > 0 && canvas.offsetHeight > 0);
+                console.log('Canvas position:', canvas.offsetLeft, canvas.offsetTop);
+                console.log('Canvas style display:', canvas.style.display);
+                console.log('Canvas style visibility:', canvas.style.visibility);
+                console.log('Canvas parent:', canvas.parentElement);
+                
+                // Make sure canvas is visible
+                canvas.style.display = 'block';
+                canvas.style.visibility = 'visible';
+                canvas.style.position = 'absolute';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                canvas.style.zIndex = '10';
+                
+                console.log('Applied visibility fixes to canvas');
+            } else {
+                console.error('Phaser canvas not found!');
+            }
+        }, 1000);
+
         // Handle window resize for responsive scaling
         const resizeHandler = () => {
             if (game.scale) {
@@ -61,15 +93,21 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
 
         // Add global debug key to return to overworld mode (works even when scene is paused)
         const debugKeyHandler = (event) => {
+            console.log('Global key handler called:', event.key);
             if (event.key === 'r' || event.key === 'R') {
-                console.log('Debug: Returning to overworld mode');
+                console.log('Global R key detected - returning to overworld mode');
                 // Get gameState from window since scene might be paused
                 if (window.gameState) {
                     const { setMode, GameMode } = window;
                     if (setMode && GameMode) {
+                        console.log('Calling setMode with OVERWORLD...');
                         // Use force option to allow invalid transitions for debugging
                         setMode(window.gameState, GameMode.OVERWORLD, { force: true });
+                    } else {
+                        console.log('ERROR: setMode or GameMode not available');
                     }
+                } else {
+                    console.log('ERROR: window.gameState not available');
                 }
             }
         };
@@ -100,15 +138,39 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
             },
 
             /**
-             * Resume the Phaser game
+             * Resume Phaser game
              */
             resume: () => {
-                if (game.scene && game.scene.isPaused('OverworldScene')) {
+                console.log('=== RESUME DEBUG START ===');
+                console.log('game.scene exists:', !!game.scene);
+                console.log('OverworldScene exists:', !!game.scene.getScene('OverworldScene'));
+                console.log('Scene isPaused:', game.scene.isPaused('OverworldScene'));
+                console.log('Scene isActive:', game.scene.isActive('OverworldScene'));
+                
+                if (game.scene && game.scene.getScene('OverworldScene')) {
                     // Position player before resuming to avoid hotspot triggers on first update frame
                     const scene = game.scene.getScene('OverworldScene');
                     console.log('Resume: scene found:', !!scene);
                     if (scene) {
                         console.log('Resume: scene.player exists:', !!scene.player);
+                        console.log('Resume: scene isPaused:', game.scene.isPaused('OverworldScene'));
+                        console.log('Resume: scene isActive:', game.scene.isActive('OverworldScene'));
+                        console.log('Resume: scene.input enabled:', scene.input?.enabled);
+                        
+                        // Re-enable input if disabled
+                        if (scene.input && !scene.input.enabled) {
+                            scene.input.enabled = true;
+                            console.log('Re-enabled scene input');
+                        }
+                        
+                        // Check keyboard input status
+                        if (scene.input && scene.input.keyboard) {
+                            console.log('Keyboard input status:', scene.input.keyboard.enabled);
+                            if (!scene.input.keyboard.enabled) {
+                                scene.input.keyboard.enabled = true;
+                                console.log('Re-enabled keyboard input');
+                            }
+                        }
                     }
                     if (scene && scene.player) {
                         // Find all hotspots and move player to a safe location
@@ -116,59 +178,69 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                         let needsMove = false;
                         
                         // Check if player is near any hotspot
+                        console.log('Checking hotspot distances for repositioning...');
                         for (const hotspot of hotspots) {
                             const distance = Phaser.Math.Distance.Between(
                                 scene.player.x, scene.player.y,
                                 hotspot.x, hotspot.y
                             );
-                            if (distance <= hotspot.radius + 30) { // Increased buffer
+                            console.log(`Distance to ${hotspot.id}: ${distance.toFixed(1)} (radius: ${hotspot.radius})`);
+                            
+                            // Only move if player is actually INSIDE the hotspot, not just near it
+                            if (distance <= hotspot.radius) {
+                                console.log(`Player is inside hotspot ${hotspot.id}, needs to move`);
                                 needsMove = true;
                                 break;
                             }
                         }
                         
                         if (needsMove) {
-                            // Move to a safe default position (center of map, away from hotspots)
-                            const mapWidth = scene.mapImage ? scene.mapImage.width : 1024;
-                            const mapHeight = scene.mapImage ? scene.mapImage.height : 768;
+                            console.log('Moving player to safe position outside hotspot...');
                             
-                            // Place player in center area, avoiding hotspot locations
-                            scene.player.x = mapWidth / 2;
-                            scene.player.y = mapHeight / 2;
-                            
-                            // Stop player movement to prevent momentum
-                            scene.player.setVelocity(0, 0);
-                            
-                            // Ensure not too close to any hotspot
+                            // Instead of moving to center, move player just outside hotspot
+                            // Find the hotspot we're inside
                             for (const hotspot of hotspots) {
                                 const distance = Phaser.Math.Distance.Between(
                                     scene.player.x, scene.player.y,
                                     hotspot.x, hotspot.y
                                 );
-                                if (distance <= hotspot.radius + 50) {
-                                    // Move to a different safe spot
-                                    scene.player.x = 100;
-                                    scene.player.y = 100;
+                                if (distance <= hotspot.radius) {
+                                    // Calculate direction from hotspot center to player
+                                    const angle = Math.atan2(
+                                        scene.player.y - hotspot.y,
+                                        scene.player.x - hotspot.x
+                                    );
+                                    
+                                    // Move player just outside hotspot radius
+                                    const safeDistance = hotspot.radius + 20; // 20 pixels outside for safety
+                                    scene.player.x = hotspot.x + Math.cos(angle) * safeDistance;
+                                    scene.player.y = hotspot.y + Math.sin(angle) * safeDistance;
+                                    
+                                    console.log(`Moved player to safe position (${scene.player.x.toFixed(1)}, ${scene.player.y.toFixed(1)}) outside ${hotspot.id}`);
+                                    
+                                    // Clear any ongoing movement to prevent immediate re-entry
+                                    if (scene.targetPosition) {
+                                        scene.targetPosition = null;
+                                        console.log('Cleared target position to prevent hotspot re-entry');
+                                    }
                                     break;
                                 }
                             }
-                            
-                            console.log(`Moved player to safe position (${scene.player.x}, ${scene.player.y}) and stopped velocity to prevent hotspot re-triggering`);
-                            
-                            // Debug: Check distances to all hotspots
-                            hotspots.forEach(hotspot => {
-                                const distance = Phaser.Math.Distance.Between(
-                                    scene.player.x, scene.player.y,
-                                    hotspot.x, hotspot.y
-                                );
-                                console.log(`Distance to ${hotspot.id}: ${distance.toFixed(1)} (radius: ${hotspot.radius})`);
-                            });
+                        } else {
+                            console.log('Player is not inside any hotspot, no repositioning needed');
                         }
                     }
                     
+                    // Always attempt to resume, regardless of what isPaused says
+                    console.log('Attempting to resume scene...');
                     game.scene.resume('OverworldScene');
+                    console.log('Resume called, checking if scene is now active:', game.scene.isActive('OverworldScene'));
+                    console.log('Resume called, checking if scene is now paused:', game.scene.isPaused('OverworldScene'));
                     console.log('Resumed Phaser overworld');
+                } else {
+                    console.log('Cannot resume: OverworldScene not found');
                 }
+                console.log('=== RESUME DEBUG END ===');
             }
         };
 

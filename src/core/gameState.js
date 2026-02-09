@@ -38,7 +38,7 @@ export function makeDefaultGameState() {
     region: "England", // Normalized region for equipment availability
     
     // Game flow mode (Phase 3)
-    mode: "title", // Current UI/game mode
+    mode: "overworld", // Current UI/game mode
     
     // Progression
     level: 1,
@@ -166,7 +166,20 @@ export function makeDefaultGameState() {
     // Skirmish system state
     exertion: 0,
     wear: 0,
-    lastSkirmish: null
+    lastSkirmish: null,
+
+    // Overworld state for Chevauchée mechanics
+    overworld: {
+      time: 480, // 8:00 AM in minutes since midnight
+      heat: 0,   // Notoriety level (0-100)
+      supplies: {
+        food: 10,
+        water: 10,
+        forage: 5
+      },
+      discovered: [], // Discovered hexes as "q,r" strings
+      position: { q: 0, r: 0 } // Current hex position
+    }
   };
 }
 
@@ -331,7 +344,7 @@ export function hydrateLoadedState(loaded) {
 
   // Ensure mode is set and valid
   if (!base.mode || (typeof window !== 'undefined' && window.isValidMode && !window.isValidMode(base.mode))) {
-    base.mode = "title"; // Default fallback
+    base.mode = "overworld"; // Default fallback
   }
 
   // Ensure strings
@@ -353,13 +366,13 @@ export function hydrateLoadedState(loaded) {
   base.overworld.heat = Math.max(0, Math.min(100, Number(base.overworld.heat) || 0));
   base.overworld.fatigue = Math.max(0, Math.min(100, Number(base.overworld.fatigue) || 0));
   base.overworld.position = base.overworld.position && typeof base.overworld.position === "object" ? base.overworld.position : { q: 0, r: 0 };
-  base.overworld.discovered = base.overworld.discovered instanceof Set ? base.overworld.discovered : new Set(Array.isArray(base.overworld.discovered) ? base.overworld.discovered : []);
+  base.overworld.discovered = Array.isArray(base.overworld.discovered) ? base.overworld.discovered : [];
   base.overworld.encounterSeed = typeof base.overworld.encounterSeed === "string" ? base.overworld.encounterSeed : Math.random().toString(36).substring(2);
   base.overworld.supplies = base.overworld.supplies && typeof base.overworld.supplies === "object" ? {
     food: Math.max(0, Number(base.overworld.supplies.food) || 0),
-    arrows: Math.max(0, Number(base.overworld.supplies.arrows) || 0),
-    coin: Math.max(0, Number(base.overworld.supplies.coin) || 0)
-  } : { food: 3, arrows: 20, coin: 0 };
+    water: Math.max(0, Number(base.overworld.supplies.water) || 0),
+    forage: Math.max(0, Number(base.overworld.supplies.forage) || 0)
+  } : { food: 10, water: 10, forage: 5 };
 
   return base;
 }

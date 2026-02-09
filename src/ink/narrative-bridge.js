@@ -143,6 +143,7 @@ class NarrativeBridge {
         if (this.inkStory.variablesState[stat] === undefined) {
           try {
             this.inkStory.variablesState[stat] = this.gameState.stats[stat] || 0;
+            console.log(`Declared variable '${stat}' in Ink story`);
           } catch (e) {
             console.warn(`Could not declare variable '${stat}' in Ink story:`, e.message);
           }

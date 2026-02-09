@@ -1008,8 +1008,35 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 1; /* Below DOM UI overlays (equipment screen: 2000, combat: 2500) */
+    z-index: 5; /* Above main game content but below DOM UI overlays */
     pointer-events: none; /* Allow clicks to pass through to DOM UI */
+}
+
+/* Hide all background images and generated content in overworld mode */
+body.overworld-mode,
+body.overworld-mode * {
+    background-image: none !important;
+}
+
+body.overworld-mode *::before,
+body.overworld-mode *::after {
+    content: none !important;
+}
+
+/* Specifically hide scene artwork when in overworld mode */
+body.overworld-mode #scene-artwork,
+body.overworld-mode #artwork-image {
+    display: none !important;
+}
+
+/* Ensure Phaser canvas is above DOM container in overworld mode */
+body.overworld-mode #phaser-root {
+    z-index: 10 !important;
+}
+
+/* But allow Phaser canvas to have its background */
+body.overworld-mode #phaser-root canvas {
+    background: unset !important;
 }
 
 /* Enable pointer events for Phaser canvas specifically when needed */

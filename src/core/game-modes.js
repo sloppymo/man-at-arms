@@ -88,47 +88,56 @@ export function isValidMode(mode) {
  * @returns {boolean} True if mode was changed
  */
 export function setMode(gameState, newMode, options = {}) {
+  console.log('=== SETMODE DEBUG START ===');
+  console.log('setMode called with:', { gameState: !!gameState, newMode, options });
+  
   if (!gameState) {
     console.error('setMode: gameState is required');
     return false;
   }
 
   if (!isValidMode(newMode)) {
-    console.error(`setMode: Invalid mode '${newMode}'`);
+    console.error('setMode: Invalid mode:', newMode);
     return false;
   }
 
   const currentMode = gameState.mode || GameMode.TITLE;
+  console.log('Current mode:', currentMode);
+  console.log('Target mode:', newMode);
 
   if (currentMode === newMode) {
     // Already in this mode
+    console.log('Already in target mode, no change needed');
     return true;
   }
 
-  if (!isValidTransition(currentMode, newMode)) {
-    console.warn(`setMode: Invalid transition from '${currentMode}' to '${newMode}'`);
-
-    // Allow anyway if force option is set (for debugging/emergencies)
-    if (!options.force) {
-      return false;
-    }
+  // Check if transition is valid (unless forced)
+  if (!options.force && !isValidTransition(currentMode, newMode)) {
+    console.error(`setMode: Invalid transition from '${currentMode}' to '${newMode}'`);
+    console.error('Valid transitions from', currentMode, ':', getValidTransitions(currentMode));
+    return false;
   }
 
+  console.log('Transition is valid, proceeding...');
   const oldMode = gameState.mode;
   gameState.mode = newMode;
+  console.log('Mode updated in gameState:', gameState.mode);
 
   // Dispatch mode change event if dispatcher is available
   if (typeof window !== 'undefined' && window.dispatcher) {
+    console.log('Dispatcher available, dispatching MODE_CHANGE event...');
     window.dispatcher.dispatch('MODE_CHANGE', {
       from: oldMode,
       to: newMode,
       forced: options.force || false
     }, 'game-modes');
+    console.log('MODE_CHANGE event dispatched');
+  } else {
+    console.log('No dispatcher available, skipping event dispatch');
   }
 
-  if (options.debug || (typeof window !== 'undefined' && window.dispatcher && window.dispatcher._debug)) {
-    console.log(`🎮 Mode changed: ${oldMode} → ${newMode}`);
-  }
+  console.log('=== SETMODE DEBUG END ===');
+  console.log(`🎮 Mode changed: ${oldMode} → ${newMode}`);
 
   return true;
 }
