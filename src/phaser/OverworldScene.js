@@ -110,8 +110,8 @@ export class OverworldScene extends Phaser.Scene {
     preload() {
         console.log('Loading overworld assets...');
         
-        // Load map image from public folder - use the hexagonal forest map
-        this.load.image('overworld-map', '/maps/hex_forest_region.png');
+        // Load map image from public folder - use the overworld map
+        this.load.image('overworld-map', '/overworld/map.png');
         
         // Player token will be created programmatically to avoid missing file errors
         
