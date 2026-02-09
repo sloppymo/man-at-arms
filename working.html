@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏰 Man-at-Arms Quest Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #e74c3c;
+        }
+        
+        .header h1 {
+            color: #e74c3c;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            margin: 0;
+        }
+        
+        .game-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .left-panel {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #3498db;
+        }
+        
+        .right-panel {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #f39c12;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            border-left: 4px solid #2ecc71;
+        }
+        
+        .section h3 {
+            color: #2ecc71;
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+        
+        .status {
+            font-size: 1.1em;
+            margin: 5px 0;
+        }
+        
+        .quest-text {
+            background: rgba(52, 152, 219, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            line-height: 1.4;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 8px 4px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .button:hover {
+            background: #27ae60;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        
+        .button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        
+        .inventory-item {
+            background: rgba(243, 156, 18, 0.2);
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 3px;
+            display: inline-block;
+            border: 1px solid #f39c12;
+            font-size: 12px;
+        }
+        
+        .quest-complete {
+            background: linear-gradient(45deg, #f1c40f, #e67e22);
+            color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .map-area {
+            background: rgba(46, 204, 113, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .location-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 0 10px;
+        }
+        
+        .current-location {
+            background: #e74c3c;
+            box-shadow: 0 0 10px #e74c3c;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏰 MAN-AT-ARMS' LIFE</h1>
+        <div>📜 Medieval Quest Adventure</div>
+    </div>
+    
+    <div class="game-container">
+        <div class="left-panel">
+            <div class="section">
+                <h3>🗺️ OVERWORLD MAP</h3>
+                <div class="map-area">
+                    <div style="margin-bottom: 15px;">
+                        <span class="location-dot current-location"></span> Town Square
+                        <span class="location-dot"></span> Castle Gate
+                        <span class="location-dot"></span> Forest
+                    </div>
+                    <div style="font-size: 14px; color: #bdc3c7;">
+                        📍 Current: <strong id="current-location">Town Square</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🎮 ACTIONS</h3>
+                <div class="button-group">
+                    <button class="button" onclick="acceptQuest()">✅ Accept Quest</button>
+                    <button class="button" onclick="goToCastle()">🏰 Go to Castle</button>
+                    <button class="button" onclick="deliverMessage()">📜 Deliver Message</button>
+                    <button class="button" onclick="returnToMerchant()">💬 Return to Merchant</button>
+                    <button class="button" onclick="resetGame()">🔄 Reset Game</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="section">
+                <h3>📋 QUEST STATUS</h3>
+                <div class="status">📍 Location: <strong id="location-display">Town Square</strong></div>
+                <div class="status">📜 Stage: <strong id="quest-stage">Not Started</strong></div>
+                <div class="status">🎒 Items: <strong id="inventory-count">0</strong></div>
+            </div>
+            
+            <div class="section">
+                <h3>🎒 INVENTORY</h3>
+                <div id="inventory-display" style="min-height: 40px;">
+                    <em style="color: #7f8c8d;">Empty</em>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>📜 QUEST LOG</h3>
+                <div id="quest-log" class="quest-text">
+                    <p><strong>MERCHANT:</strong> "Greetings, brave soldier! I have an urgent message that must be delivered to the castle gate immediately. Can you help me with this important task?"</p>
+                </div>
+            </div>
+            
+            <div id="quest-complete" class="quest-complete" style="display: none;">
+                <h3>🎉 QUEST COMPLETE!</h3>
+                <p>You have successfully delivered the message and completed your quest!</p>
+                <p>Rewards: 5 silver pieces, +1 reputation</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            location: 'Town Square',
+            questStage: 'not_started',
+            inventory: [],
+            hasMessageScroll: false
+        };
+        
+        // Update all displays
+        function updateDisplay() {
+            document.getElementById('current-location').textContent = gameState.location;
+            document.getElementById('location-display').textContent = gameState.location;
+            document.getElementById('quest-stage').textContent = getQuestStageText();
+            document.getElementById('inventory-count').textContent = gameState.inventory.length;
+            updateInventoryDisplay();
+            updateLocationDots();
+            updateButtons();
+            updateQuestLog();
+        }
+        
+        function getQuestStageText() {
+            switch(gameState.questStage) {
+                case 'not_started': return 'Not Started';
+                case 'quest_accepted': return 'Quest Accepted';
+                case 'message_delivered': return 'Message Delivered';
+                case 'quest_complete': return '✅ Complete';
+                default: return 'Unknown';
+            }
+        }
+        
+        function updateInventoryDisplay() {
+            const display = document.getElementById('inventory-display');
+            if (gameState.inventory.length === 0) {
+                display.innerHTML = '<em style="color: #7f8c8d;">Empty</em>';
+            } else {
+                display.innerHTML = gameState.inventory.map(item => 
+                    `<span class="inventory-item">${item}</span>`
+                ).join(' ');
+            }
+        }
+        
+        function updateLocationDots() {
+            const dots = document.querySelectorAll('.location-dot');
+            dots.forEach(dot => dot.classList.remove('current-location'));
+            
+            if (gameState.location === 'Town Square') dots[0].classList.add('current-location');
+            if (gameState.location === 'Castle Gate') dots[1].classList.add('current-location');
+            if (gameState.location === 'Forest') dots[2].classList.add('current-location');
+        }
+        
+        function updateButtons() {
+            const buttons = document.querySelectorAll('.button');
+            buttons.forEach(btn => btn.disabled = false);
+            
+            // Disable based on game state
+            if (gameState.questStage === 'not_started') {
+                document.querySelector('[onclick="deliverMessage()"]').disabled = true;
+                document.querySelector('[onclick="returnToMerchant()"]').disabled = true;
+            }
+            if (gameState.questStage === 'quest_accepted') {
+                document.querySelector('[onclick="acceptQuest()"]').disabled = true;
+            }
+            if (gameState.questStage === 'message_delivered') {
+                document.querySelector('[onclick="acceptQuest()"]').disabled = true;
+                document.querySelector('[onclick="deliverMessage()"]').disabled = true;
+            }
+            if (gameState.questStage === 'quest_complete') {
+                buttons.forEach(btn => btn.disabled = true);
+            }
+        }
+        
+        function updateQuestLog() {
+            const log = document.getElementById('quest-log');
+            
+            switch(gameState.questStage) {
+                case 'not_started':
+                    log.innerHTML = '<p><strong>MERCHANT:</strong> "Greetings, brave soldier! I have an urgent message that must be delivered to the castle gate immediately. Can you help me with this important task?"</p>';
+                    break;
+                case 'quest_accepted':
+                    log.innerHTML = '<p><strong>MERCHANT:</strong> "Thank you for accepting! Here is the message scroll. Deliver it to the guard at the castle gate immediately!"</p>';
+                    break;
+                case 'message_delivered':
+                    log.innerHTML = '<p><strong>MERCHANT:</strong> "Excellent work! You have delivered the message successfully. Here is your reward as promised!"</p>';
+                    break;
+                case 'quest_complete':
+                    document.getElementById('quest-complete').style.display = 'block';
+                    log.style.display = 'none';
+                    break;
+            }
+        }
+        
+        // Game actions
+        function acceptQuest() {
+            gameState.questStage = 'quest_accepted';
+            gameState.inventory.push('📜 Message Scroll');
+            gameState.hasMessageScroll = true;
+            updateDisplay();
+        }
+        
+        function goToCastle() {
+            gameState.location = 'Castle Gate';
+            updateDisplay();
+        }
+        
+        function deliverMessage() {
+            if (gameState.hasMessageScroll && gameState.location === 'Castle Gate') {
+                gameState.questStage = 'message_delivered';
+                gameState.inventory = gameState.inventory.filter(item => !item.includes('Message Scroll'));
+                gameState.hasMessageScroll = false;
+                updateDisplay();
+            } else if (!gameState.hasMessageScroll) {
+                alert('❌ You need to accept the quest first!');
+            } else {
+                alert('❌ You need to go to the castle gate first!');
+            }
+        }
+        
+        function returnToMerchant() {
+            gameState.location = 'Town Square';
+            updateDisplay();
+        }
+        
+        function resetGame() {
+            gameState = {
+                location: 'Town Square',
+                questStage: 'not_started',
+                inventory: [],
+                hasMessageScroll: false
+            };
+            document.getElementById('quest-complete').style.display = 'none';
+            document.getElementById('quest-log').style.display = 'block';
+            updateDisplay();
+        }
+        
+        // Initialize game
+        updateDisplay();
+    </script>
+</body>
+</html>
