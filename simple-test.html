@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Man-at-Arms - Simple Test</title>
+</head>
+<body style="background: #1a1a1a; color: white; font-family: Arial;">
+    <h1>🏰 Man-at-Arms Quest Test</h1>
+    <p>This is a simple test to verify basic functionality.</p>
+    
+    <h2>📜 Quest Status</h2>
+    <p>Current Stage: <span id="quest-stage">Not Started</span></p>
+    
+    <h2>🎒 Inventory</h2>
+    <p>Items: <span id="inventory">Empty</span></p>
+    
+    <h2>🎮 Actions</h2>
+    <button onclick="startQuest()" style="background: #4CAF50; color: white; padding: 10px; margin: 5px; cursor: pointer;">Start Quest</button>
+    <button onclick="addItem()" style="background: #2196F3; color: white; padding: 10px; margin: 5px; cursor: pointer;">Add Message Scroll</button>
+    <button onclick="removeItem()" style="background: #f44336; color: white; padding: 10px; margin: 5px; cursor: pointer;">Remove Message Scroll</button>
+    
+    <script>
+        let questStage = 'Not Started';
+        let inventory = [];
+        
+        function updateDisplay() {
+            document.getElementById('quest-stage').textContent = questStage;
+            document.getElementById('inventory').textContent = inventory.length > 0 ? inventory.join(', ') : 'Empty';
+        }
+        
+        function startQuest() {
+            questStage = 'Merchant Quest Accepted';
+            updateDisplay();
+            alert('📜 Quest started! Talk to the merchant in town square.');
+        }
+        
+        function addItem() {
+            if (!inventory.includes('message_scroll')) {
+                inventory.push('message_scroll');
+                questStage = 'Deliver to Castle';
+                updateDisplay();
+                alert('📜 Message scroll added to inventory!');
+            }
+        }
+        
+        function removeItem() {
+            const index = inventory.indexOf('message_scroll');
+            if (index > -1) {
+                inventory.splice(index, 1);
+                questStage = 'Return to Merchant';
+                updateDisplay();
+                alert('✅ Message scroll delivered! Return to merchant for reward.');
+            }
+        }
+    </script>
+</body>
+</html>
