@@ -1,137 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; img-src 'self' data: https://*.githubusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; media-src 'self' data:; object-src 'none'; frame-src 'none';">
-    <title>A Man-at-Arms' Life - 100 Years War</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    
-    <!-- Vite will process this CSS -->
-    
-    <!-- Ink.js CDN for narrative engine -->
-    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
-    
-    <!-- Main entry point - Vite module -->
-
-  <script type="module" crossorigin src="./assets/index-BmUc23Sw.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Cbboxdd9.css">
+<meta charset="UTF-8">
+<title>Man-at-Arms Game</title>
+<style>
+body{background:#1a1a1a;color:#fff;font-family:Arial;margin:0;padding:20px}
+.container{max-width:800px;margin:0 auto}
+.header{text-align:center;margin-bottom:30px}
+.button{background:#4CAF50;color:white;border:none;padding:15px 25px;margin:10px;cursor:pointer;border-radius:5px;font-size:16px}
+.button:hover{background:#45a049}
+.button:disabled{background:#666;cursor:not-allowed}
+.status{background:rgba(0,0,0,0.3);padding:15px;margin:10px 0;border-radius:5px}
+</style>
 </head>
 <body>
-    <div class="game-container">
-        <div class="header">
-            <h1>A MAN-AT-ARMS' LIFE</h1>
-            <div id="version-display">v2.0.0-vite</div>
-        </div>
+<div class="container">
+<div class="header">
+<h1>🏰 Man-at-Arms Quest</h1>
+<p>Medieval Adventure Game</p>
+</div>
 
-        <div class="main-layout">
-            <div class="main-content">
-                <div class="scene-artwork" id="scene-artwork">
-                    <img id="artwork-image" src="" alt="Scene artwork">
-                    <div class="artwork-caption" id="artwork-caption"></div>
-                </div>
-                <div class="story-text" id="story">
-                    <p id="loading-message" style="display: none;">Loading...</p>
-                </div>
+<div class="status">
+<div>📍 Location: <strong id="location">Town Square</strong></div>
+<div>📜 Quest: <strong id="quest">Not Started</strong></div>
+<div>🎒 Inventory: <strong id="inventory">Empty</strong></div>
+</div>
 
-                <div class="choices">
-                    <div class="choices-title">What do you do?</div>
-                    <div id="choices-container">
-                        <!-- Choices will be populated by JavaScript -->
-                    </div>
-                </div>
+<div style="margin:20px 0;">
+<button class="button" onclick="startQuest()">Start Quest</button>
+<button class="button" onclick="goToCastle()">Go to Castle</button>
+<button class="button" onclick="deliverMessage()">Deliver Message</button>
+<button class="button" onclick="completeQuest()">Complete Quest</button>
+<button class="button" onclick="resetGame()">Reset Game</button>
+</div>
 
-                <div class="controls">
-                    <button class="control-button" onclick="saveGame()">💾 Save Game</button>
-                    <button class="control-button" onclick="loadGame()">📂 Load Game</button>
-                    <button class="control-button" onclick="showStats()">📊 Full Stats</button>
-                    <button class="control-button" onclick="openEquipmentScreen()">🛡️ Equipment</button>
-                    <button class="control-button" onclick="toggleEffectsPreview()">👁️ <span id="effects-toggle">Show</span> Effects</button>
-                    <button class="control-button" onclick="forceSkirmishUI()" id="debug-skirmish-btn" style="display: none;">⚔️ Force Skirmish</button>
-                    <button class="control-button" onclick="startTempoStrikeDemo()" id="debug-tempo-btn" style="display: none;">🎯 Timing Demo</button>
-                </div>
-            </div>
+<div id="message" style="background:rgba(255,255,255,0.1);padding:15px;margin:20px 0;border-radius:5px;">
+Click "Start Quest" to begin your adventure!
+</div>
+</div>
 
-            <div class="sidebar" id="sidebar">
-                <div class="status-bar" id="status-bar">
-                    <div class="status-item">
-                        <span>📅</span>
-                        <span>Year: <strong id="year">1337</strong></span>
-                    </div>
-                    <div class="status-item">
-                        <span>👤</span>
-                        <span>Age: <strong id="age">18</strong></span>
-                    </div>
-                    <div class="status-item">
-                        <span>📍</span>
-                        <span>Location: <strong id="location">England</strong></span>
-                    </div>
-                </div>
-                <div class="stats-panel" id="stats">
-                    <!-- Stats will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Phaser Overworld Container (Phase 4) -->
-    <div id="phaser-root"></div>
-    
-    <!-- Equipment Screen -->
-    <div id="equipment-screen" class="equipment-screen hidden">
-        <div class="equipment-screen-content">
-            <div class="equipment-header">
-                <h2>Equipment & Inventory</h2>
-                <button class="close-button" onclick="closeEquipmentScreen()" aria-label="Close equipment screen">×</button>
-            </div>
-            <div class="equipment-layout">
-                <div class="equipment-left">
-                    <div id="inventory-container"></div>
-                </div>
-                <div class="equipment-center">
-                    <div id="paper-doll-container"></div>
-                </div>
-                <div class="equipment-right">
-                    <div id="kit-stats-container"></div>
-                </div>
-            </div>
-        </div>
-        <div id="equipment-aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-    </div>
-    
-    <div id="notification" class="notification hidden"></div>
-    
-    <!-- Combat Overlay -->
-    <div id="minigame-overlay">
-        <div id="minigame-content">
-            <h3 id="minigame-title"></h3>
-            <div id="minigame-subtitle"></div>
-            <div class="health-bars">
-                <div class="health-bar-container">
-                    <div class="health-bar-label">Your Health</div>
-                    <div class="health-bar">
-                        <div class="health-fill" id="player-health-bar" style="width: 100%;">100</div>
-                    </div>
-                </div>
-                <div class="health-bar-container">
-                    <div class="health-bar-label">Enemy Health</div>
-                    <div class="health-bar">
-                        <div class="health-fill" id="enemy-health-bar" style="width: 100%;">100</div>
-                    </div>
-                </div>
-            </div>
-            <div class="combat-progress" id="combat-progress"></div>
-            <div id="minigame-display"></div>
-            <div id="minigame-instructions"></div>
-            <div class="combat-log" id="combat-log" style="margin-top: 20px; max-height: 200px; overflow-y: auto;">
-                <h3 style="color: #f4d03f; margin-bottom: 10px; font-size: 16px;">Combat Log</h3>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Phaser Map Container (hidden initially, for Phase 4) -->
-    <div id="map-container" class="map-container hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: none;"></div>
+<script>
+let location='Town Square';
+let quest='Not Started';
+let inventory=[];
+let hasScroll=false;
+
+function updateDisplay(){
+document.getElementById('location').textContent=location;
+document.getElementById('quest').textContent=quest;
+document.getElementById('inventory').textContent=inventory.length>0?inventory.join(', '):'Empty';
+}
+
+function startQuest(){
+if(quest==='Not Started'){
+quest='Quest Accepted';
+inventory.push('Message Scroll');
+hasScroll=true;
+updateDisplay();
+document.getElementById('message').innerHTML='✅ Quest started! You received a message scroll. Deliver it to the castle gate.';
+}
+}
+
+function goToCastle(){
+location='Castle Gate';
+updateDisplay();
+document.getElementById('message').innerHTML='🏰 You arrived at the castle gate. The guard is waiting.';
+}
+
+function deliverMessage(){
+if(hasScroll&&location==='Castle Gate'){
+quest='Message Delivered';
+inventory=[];
+hasScroll=false;
+updateDisplay();
+document.getElementById('message').innerHTML='📜 Message delivered successfully! Return to the merchant for your reward.';
+}else{
+document.getElementById('message').innerHTML='❌ You need to be at the castle gate with the message scroll!';
+}
+}
+
+function completeQuest(){
+if(quest==='Message Delivered'){
+quest='Quest Complete';
+inventory.push('5 silver pieces','reputation +1');
+updateDisplay();
+document.getElementById('message').innerHTML='🎉 Quest complete! You received your reward!';
+}else{
+document.getElementById('message').innerHTML='❌ You need to deliver the message first!';
+}
+}
+
+function resetGame(){
+location='Town Square';
+quest='Not Started';
+inventory=[];
+hasScroll=false;
+updateDisplay();
+document.getElementById('message').innerHTML='Click "Start Quest" to begin your adventure!';
+}
+
+updateDisplay();
+</script>
 </body>
 </html>
