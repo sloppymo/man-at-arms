@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Man-at-Arms' Life - Working Version</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #map-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        #ui-overlay {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="map-container">
+            <canvas id="game-canvas"></canvas>
+        </div>
+        <div id="ui-overlay">
+            <h3>🏰 Man-at-Arms Quest</h3>
+            <p><strong>Location:</strong> <span id="location">Town Square</span></p>
+            <p><strong>Quest:</strong> <span id="quest">Talk to Merchant</span></p>
+            <p><strong>Inventory:</strong> <span id="inventory">Empty</span></p>
+            <button class="button" onclick="teleportToCastle()">🏰 Go to Castle</button>
+            <button class="button" onclick="talkToMerchant()">💬 Talk to Merchant</button>
+            <button class="button" onclick="acceptQuest()">✅ Accept Quest</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <script>
+        // Simple Phaser game without complex modules
+        class SimpleGame {
+            constructor() {
+                this.game = null;
+                this.mapImage = null;
+                this.player = null;
+                this.inventory = [];
+                this.questStage = 'start';
+            }
+            
+            init() {
+                const config = {
+                    type: Phaser.AUTO,
+                    width: 800,
+                    height: 600,
+                    parent: 'map-container',
+                    canvas: 'game-canvas',
+                    scene: {
+                        preload: this.preload.bind(this),
+                        create: this.create.bind(this)
+                    }
+                };
+                
+                this.game = new Phaser.Game(config);
+            }
+            
+            preload() {
+                console.log('Loading map...');
+                this.load.image('overworld-map', 'https://raw.githubusercontent.com/sloppymo/man-at-arms/pages/overworld/map.png');
+                this.load.image('player', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABHNCSVQIDAAABJRU5ErkJggg==');
+            }
+            
+            create() {
+                console.log('Creating game world...');
+                
+                // Add map
+                if (this.textures.exists('overworld-map')) {
+                    this.mapImage = this.add.image(0, 0, 'overworld-map').setOrigin(0, 0);
+                    console.log('Map loaded successfully!');
+                } else {
+                    console.error('Map failed to load');
+                }
+                
+                // Add player
+                if (this.textures.exists('player')) {
+                    this.player = this.add.rectangle(200, 200, 16, 16, 0xffd700);
+                    console.log('Player created at town square');
+                }
+                
+                // Setup input
+                this.input.on('pointerdown', (pointer) => {
+                    const x = pointer.x;
+                    const y = pointer.y;
+                    console.log(`Clicked at: ${x}, ${y}`);
+                    this.handleClick(x, y);
+                });
+            }
+            
+            handleClick(x, y) {
+                // Check if clicking on player (simple quest interaction)
+                if (Math.abs(x - 200) < 50 && Math.abs(y - 200) < 50) {
+                    this.talkToMerchant();
+                }
+            }
+            
+            talkToMerchant() {
+                if (this.questStage === 'start') {
+                    this.questStage = 'accepted';
+                    this.inventory.push('message_scroll');
+                    this.updateUI();
+                    alert('📜 Merchant: "Deliver this message scroll to the castle gate immediately! Here is your reward."');
+                } else if (this.questStage === 'accepted') {
+                    alert('📜 Merchant: "Thank you for delivering the scroll! Here is your reward - 5 silver pieces!"');
+                    this.questStage = 'completed';
+                    this.inventory = [];
+                    this.updateUI();
+                }
+            }
+            
+            teleportToCastle() {
+                if (this.player) {
+                    this.player.x = 172;
+                    this.player.y = 884;
+                    document.getElementById('location').textContent = 'Castle Gate';
+                    document.getElementById('quest').textContent = 'Deliver Message';
+                }
+            }
+            
+            acceptQuest() {
+                if (this.questStage === 'start') {
+                    this.talkToMerchant();
+                }
+            }
+            
+            updateUI() {
+                document.getElementById('inventory').textContent = this.inventory.length > 0 ? this.inventory.join(', ') : 'Empty';
+                document.getElementById('quest').textContent = 
+                    this.questStage === 'start' ? 'Talk to Merchant' :
+                    this.questStage === 'accepted' ? 'Deliver Message' :
+                    'Quest Complete!';
+            }
+        }
+        
+        start() {
+            this.init();
+        }
+    }
+        
+        // Start the game
+        window.addEventListener('load', () => {
+            console.log('Starting Man-at-Arms game...');
+            const game = new SimpleGame();
+            game.start();
+        });
+    </script>
+</body>
+</html>
