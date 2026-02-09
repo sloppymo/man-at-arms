@@ -1,0 +1,30 @@
+name: Force Deploy to GitHub Pages
+on:
+  workflow_dispatch:
+  inputs:
+    reason:
+      description: 'Reason for manual deployment'
+      required: false
+      default: 'Manual deployment'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: pages
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
