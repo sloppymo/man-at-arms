@@ -17,7 +17,7 @@ class InkStoryValidator {
     this.errors = [];
     this.warnings = [];
     this.storiesValidated = 0;
-    this.storiesPath = path.join(__dirname, '../public/stories');
+    this.storiesPath = path.join(__dirname, '../stories');
   }
 
   /**

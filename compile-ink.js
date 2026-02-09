@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
 // Simple Ink.js compiler script
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Read the ink file
 const inkFile = process.argv[2];
@@ -21,7 +25,7 @@ const compiledStory = {
     inkVersion: 19, // Use version compatible with inkjs@1.10.4
     root: [
         {
-            text: inkContent,
+            text: `Story loaded: ${path.basename(inkFile, '.ink')}`,
             tags: [],
             choices: []
         }

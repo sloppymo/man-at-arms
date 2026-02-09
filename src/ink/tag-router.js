@@ -196,9 +196,23 @@ export class TagRouter {
         handler(tagValue);
       } catch (error) {
         console.error(`Error handling tag #${tagName}:${tagValue}:`, error);
+
+        // Dispatch error event for UI feedback
+        this.dispatcher.dispatch('TAG_PROCESSING_ERROR', {
+          tag: `#${tagName}:${tagValue}`,
+          error: error.message,
+          source: 'tag-router'
+        });
       }
     } else {
       console.warn(`Unknown tag: #${tagName}:${tagValue}`);
+
+      // Dispatch warning for unknown tags
+      this.dispatcher.dispatch('TAG_PROCESSING_ERROR', {
+        tag: `#${tagName}:${tagValue}`,
+        error: `Unknown tag handler`,
+        source: 'tag-router'
+      });
     }
   }
 

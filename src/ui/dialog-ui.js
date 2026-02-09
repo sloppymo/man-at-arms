@@ -667,14 +667,20 @@ export class DialogUI {
     if (this.typewriterTimeout) {
       clearTimeout(this.typewriterTimeout);
     }
-    
+
     this.currentText = text;
     this.isTypewriterActive = true;
     this.dialogTextElement.textContent = '';
-    
+
+    // Enable skip button during typewriter animation
+    if (this.skipButton) {
+      this.skipButton.disabled = false;
+      this.skipButton.style.opacity = '1';
+    }
+
     let currentIndex = 0;
     const typeSpeed = 20; // ms per character
-    
+
     const typeNextChar = () => {
       if (currentIndex < text.length) {
         this.dialogTextElement.textContent += text[currentIndex];
@@ -682,9 +688,14 @@ export class DialogUI {
         this.typewriterTimeout = setTimeout(typeNextChar, typeSpeed);
       } else {
         this.isTypewriterActive = false;
+        // Disable skip button when animation completes
+        if (this.skipButton) {
+          this.skipButton.disabled = true;
+          this.skipButton.style.opacity = '0.5';
+        }
       }
     };
-    
+
     typeNextChar();
   }
 
@@ -700,6 +711,11 @@ export class DialogUI {
     
     this.dialogTextElement.textContent = this.currentText;
     this.isTypewriterActive = false;
+    // Disable skip button when animation completes
+    if (this.skipButton) {
+      this.skipButton.disabled = true;
+      this.skipButton.style.opacity = '0.5';
+    }
   }
 
   /**

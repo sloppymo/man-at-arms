@@ -47,9 +47,11 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
             },
             scale: {
                 mode: Phaser.Scale.RESIZE, // Responsive scaling for mobile/desktop
-                autoCenter: Phaser.Scale.NO_CENTER, // Let CSS handle centering
+                autoCenter: Phaser.Scale.CENTER_BOTH, // Center the game canvas
                 width: window.innerWidth,
-                height: window.innerHeight
+                height: window.innerHeight,
+                parent: parentElement, // Use the parent element for proper containment
+                expandParent: false // Don't expand parent, let CSS handle layout
             },
             scene: [new OverworldScene({ dispatch, getGameState, setMode })]
         };
@@ -57,37 +59,15 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
         // Create the Phaser game instance
         const game = new Phaser.Game(config);
 
-        // DEBUG: Check canvas visibility after game creation
-        setTimeout(() => {
-            const canvas = game.canvas;
-            if (canvas) {
-                console.log('Phaser canvas found:', canvas);
-                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
-                console.log('Canvas visible in DOM:', canvas.offsetWidth > 0 && canvas.offsetHeight > 0);
-                console.log('Canvas position:', canvas.offsetLeft, canvas.offsetTop);
-                console.log('Canvas style display:', canvas.style.display);
-                console.log('Canvas style visibility:', canvas.style.visibility);
-                console.log('Canvas parent:', canvas.parentElement);
-                
-                // Make sure canvas is visible
-                canvas.style.display = 'block';
-                canvas.style.visibility = 'visible';
-                canvas.style.position = 'absolute';
-                canvas.style.top = '0';
-                canvas.style.left = '0';
-                canvas.style.zIndex = '10';
-                
-                console.log('Applied visibility fixes to canvas');
-            } else {
-                console.error('Phaser canvas not found!');
-            }
-        }, 1000);
-
-        // Handle window resize for responsive scaling
+        // Handle window resize for responsive scaling (debounced)
+        let resizeTimeout;
         const resizeHandler = () => {
-            if (game.scale) {
-                game.scale.resize(window.innerWidth, window.innerHeight);
-            }
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (game.scale) {
+                    game.scale.resize(window.innerWidth, window.innerHeight);
+                }
+            }, 100); // Debounce for 100ms
         };
         window.addEventListener('resize', resizeHandler);
 

@@ -1,0 +1,18 @@
+{
+  "inkVersion": 19,
+  "root": [
+    "^You venture into the dense forest. The trees tower above you, and the path ahead is uncertain.",
+    "\n",
+    "^An hour passes as you traverse the undergrowth.",
+    "\n",
+    "^Current supplies:",
+    "\n",
+    [
+      "done",
+      {
+        "#n": "g-0"
+      }
+    ],
+    null
+  ]
+}
