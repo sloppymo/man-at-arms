@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialog System Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-panel { 
+            position: fixed; 
+            top: 10px; 
+            right: 10px; 
+            background: #333; 
+            color: white; 
+            padding: 10px; 
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        .debug-button { 
+            background: #555; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            margin: 2px; 
+            border-radius: 3px; 
+            cursor: pointer;
+        }
+        .dialog-container { 
+            margin-top: 20px; 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            border-radius: 5px;
+            display: none;
+        }
+        .portrait { 
+            width: 100px; 
+            height: 100px; 
+            border: 2px solid #333; 
+            margin-right: 15px;
+        }
+        .dialog-text { 
+            margin: 10px 0; 
+            font-size: 16px;
+        }
+        .choices { 
+            margin-top: 15px;
+        }
+        .choice-button { 
+            display: block; 
+            width: 100%; 
+            margin: 5px 0; 
+            padding: 10px; 
+            background: #f0f0f0; 
+            border: 1px solid #ccc; 
+            border-radius: 3px; 
+            cursor: pointer;
+        }
+        .choice-button:hover { 
+            background: #e0e0e0; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Dialog System Test</h1>
+    
+    <div class="debug-panel">
+        <div>Debug Controls</div>
+        <button class="debug-button" onclick="testMerchantDialog()">Test Merchant</button>
+        <button class="debug-button" onclick="testBanditDialog()">Test Bandit</button>
+        <button class="debug-button" onclick="testForestStory()">Test Forest</button>
+        <button class="debug-button" onclick="clearDialog()">Clear</button>
+    </div>
+
+    <div class="dialog-container" id="dialog-container">
+        <div style="display: flex;">
+            <img class="portrait" id="character-portrait" src="" alt="Character">
+            <div>
+                <div id="speaker-name" style="font-weight: bold; margin-bottom: 10px;"></div>
+                <div class="dialog-text" id="dialog-text"></div>
+            </div>
+        </div>
+        <div class="choices" id="choices-container"></div>
+    </div>
+
+    <script type="module">
+        // Mock dispatcher for testing
+        class MockDispatcher {
+            constructor() {
+                this.listeners = {};
+            }
+            
+            subscribe(event, callback) {
+                if (!this.listeners[event]) {
+                    this.listeners[event] = [];
+                }
+                this.listeners[event].push(callback);
+            }
+            
+            dispatch(event, data, source) {
+                console.log('Dispatch:', event, data, source);
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback({ payload: data, source }));
+                }
+            }
+        }
+
+        // Mock game state
+        const mockGameState = {
+            stats: { wealth: 100, wits: 8, reputation: 20 },
+            overworld: { time: 600, heat: 10, supplies: { food: 5 } },
+            conditions: []
+        };
+
+        // Import dialog components
+        import { CHARACTERS } from './src/data/characters.js';
+        import { DialogueService } from './src/systems/dialogue-service.js';
+
+        // Initialize dialog system
+        const dispatcher = new MockDispatcher();
+        const dialogueService = new DialogueService(dispatcher, mockGameState, null);
+
+        // Test functions
+        window.testMerchantDialog = async function() {
+            console.log('Testing merchant dialog...');
+            showDialog('merchant', 'neutral', 'Hello traveler! What can I get for you today?', [
+                { text: 'Show me your wares', action: () => console.log('Show wares') },
+                { text: 'Just passing through', action: () => console.log('Leave') }
+            ]);
+        };
+
+        window.testBanditDialog = async function() {
+            console.log('Testing bandit dialog...');
+            showDialog('bandit_leader', 'neutral', 'Your money or your life!', [
+                { text: 'Fight back!', action: () => console.log('Combat') },
+                { text: 'Take my money', action: () => console.log('Comply') }
+            ]);
+        };
+
+        window.testForestStory = async function() {
+            console.log('Testing forest story...');
+            if (dialogueService.switchStory('overworld/forest_test')) {
+                // Try to continue the story
+                if (window.inkStory) {
+                    try {
+                        const text = window.inkStory.Continue();
+                        console.log('Story text:', text);
+                        showDialog('peasant', 'neutral', text, []);
+                    } catch (error) {
+                        console.error('Story error:', error);
+                    }
+                }
+            } else {
+                console.error('Failed to load forest story');
+            }
+        };
+
+        window.clearDialog = function() {
+            document.getElementById('dialog-container').style.display = 'none';
+        };
+
+        function showDialog(characterId, emotion, text, choices) {
+            const character = CHARACTERS[characterId];
+            if (!character) {
+                console.error('Character not found:', characterId);
+                return;
+            }
+
+            const container = document.getElementById('dialog-container');
+            const portrait = document.getElementById('character-portrait');
+            const speakerName = document.getElementById('speaker-name');
+            const dialogText = document.getElementById('dialog-text');
+            const choicesContainer = document.getElementById('choices-container');
+
+            // Set portrait
+            const emotionPath = character.portrait.emotions[emotion] || character.portrait.emotions.neutral;
+            portrait.src = character.portrait.basePath + '/' + emotionPath;
+            portrait.onerror = () => {
+                console.log('Portrait failed to load:', portrait.src);
+                portrait.style.display = 'none';
+            };
+
+            // Set text
+            speakerName.textContent = character.name;
+            dialogText.textContent = text;
+
+            // Set choices
+            choicesContainer.innerHTML = '';
+            choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.onclick = choice.action;
+                choicesContainer.appendChild(button);
+            });
+
+            // Show dialog
+            container.style.display = 'block';
+        }
+
+        // Wait for initialization
+        setTimeout(() => {
+            console.log('Dialog test ready');
+            console.log('Available characters:', Object.keys(CHARACTERS));
+            console.log('Available stories:', Object.keys(dialogueService.stories));
+        }, 1000);
+    </script>
+</body>
+</html>

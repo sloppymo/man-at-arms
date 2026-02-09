@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Ink.js Versions</title>
+</head>
+<body>
+    <h1>Test Different Ink.js Versions</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+        
+        // Test different Ink.js versions
+        const versions = [
+            'https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js',
+            'https://cdn.jsdelivr.net/npm/inkjs@2.0.0/dist/ink.js',
+            'https://cdn.jsdelivr.net/npm/inkjs@2.1.0/dist/ink.js',
+            'https://cdn.jsdelivr.net/npm/inkjs@latest/dist/ink.js'
+        ];
+        
+        let currentVersion = 0;
+        
+        function testVersion(versionUrl) {
+            return new Promise((resolve, reject) => {
+                // Remove existing script
+                const existingScript = document.querySelector('script[data-ink-test]');
+                if (existingScript) {
+                    existingScript.remove();
+                }
+                
+                // Create new script
+                const script = document.createElement('script');
+                script.src = versionUrl;
+                script.setAttribute('data-ink-test', 'true');
+                
+                script.onload = () => {
+                    log('=== Testing ' + versionUrl + ' ===');
+                    
+                    try {
+                        if (typeof inkjs !== 'undefined') {
+                            log('✅ Ink.js loaded');
+                            
+                            if (typeof inkjs.Story !== 'undefined') {
+                                log('✅ Story class available');
+                                
+                                // Test different approaches
+                                testStoryCreation(versionUrl).then(resolve).catch(reject);
+                            } else {
+                                log('❌ Story class not available');
+                                reject('No Story class');
+                            }
+                        } else {
+                            log('❌ Ink.js not loaded');
+                            reject('Ink.js not loaded');
+                        }
+                    } catch (e) {
+                        log('❌ Error: ' + e.message);
+                        reject(e.message);
+                    }
+                };
+                
+                script.onerror = () => {
+                    log('❌ Failed to load ' + versionUrl);
+                    reject('Failed to load');
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+        
+        async function testStoryCreation(versionUrl) {
+            const testInk = `=== test ===
+Hello world!
+* [Continue] -> DONE`;
+            
+            // Test 1: Raw ink content
+            try {
+                log('Testing raw ink content...');
+                const story1 = new inkjs.Story(testInk);
+                log('✅ Raw ink works: ' + story1.Continue());
+            } catch (e1) {
+                log('❌ Raw ink failed: ' + e1.message);
+                
+                // Test 2: Try to find compiler
+                try {
+                    log('Looking for compiler...');
+                    if (inkjs.Compiler) {
+                        log('✅ Found compiler');
+                        const compiled = inkjs.Compiler.compile(testInk);
+                        const story2 = new inkjs.Story(compiled.toJson());
+                        log('✅ Compiler approach works: ' + story2.Continue());
+                    } else {
+                        log('❌ No compiler found');
+                    }
+                } catch (e2) {
+                    log('❌ Compiler approach failed: ' + e2.message);
+                }
+            }
+            
+            log('--- Version test complete ---');
+        }
+        
+        async function testAllVersions() {
+            for (const version of versions) {
+                try {
+                    await testVersion(version);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (e) {
+                    log('Version failed: ' + e);
+                }
+            }
+        }
+        
+        // Auto-test all versions
+        testAllVersions();
+    </script>
+</body>
+</html>

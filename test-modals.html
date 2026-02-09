@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Modals Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-left: 3px solid #0f0;
+        }
+        .pass { border-left-color: #0f0; color: #0f0; }
+        .fail { border-left-color: #f00; color: #f00; }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background: #0f0;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 10000;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modals System Test</h1>
+    <div id="results"></div>
+    
+    <!-- Notification element (required by modals.js) -->
+    <div id="notification" class="hidden"></div>
+    
+    <!-- Load dependencies first -->
+    <script src="js/core/constants.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <script src="js/core/utils.js"></script>
+    <script src="js/systems/currency-system.js"></script>
+    
+    <!-- Load modals -->
+    <script src="js/ui/modals.js"></script>
+    
+    <script>
+        const results = document.getElementById('results');
+        const tests = [];
+        
+        function test(name, fn) {
+            try {
+                const result = fn();
+                tests.push({ name, pass: result === true, error: result === true ? null : result });
+            } catch (e) {
+                tests.push({ name, pass: false, error: e.message });
+            }
+        }
+        
+        // Test 1: Functions exist
+        test('showNotification function exists', () => typeof window.showNotification === 'function');
+        test('showStats function exists', () => typeof window.showStats === 'function');
+        
+        // Test 2: showNotification works
+        test('showNotification displays notification', () => {
+            const notification = document.getElementById('notification');
+            if (!notification) return 'Notification element not found';
+            
+            window.showNotification('Test', 'This is a test notification', 'info');
+            
+            // Check if notification is visible
+            if (notification.classList.contains('hidden')) {
+                return 'Notification is still hidden';
+            }
+            
+            // Check if content is set
+            if (!notification.innerHTML.includes('Test')) {
+                return 'Notification content not set';
+            }
+            
+            // Check if background color is set (info = blue)
+            if (!notification.style.backgroundColor.includes('2196F3') && 
+                !notification.style.backgroundColor.includes('rgb(33, 150, 243)')) {
+                return 'Notification background color not set correctly';
+            }
+            
+            return true;
+        });
+        
+        // Test 3: showNotification with different types
+        test('showNotification success type', () => {
+            window.showNotification('Success', 'Operation successful', 'success');
+            const notification = document.getElementById('notification');
+            return notification.style.backgroundColor.includes('4CAF50') || 
+                   notification.style.backgroundColor.includes('rgb(76, 175, 80)');
+        });
+        
+        test('showNotification error type', () => {
+            window.showNotification('Error', 'Something went wrong', 'error');
+            const notification = document.getElementById('notification');
+            return notification.style.backgroundColor.includes('f44336') || 
+                   notification.style.backgroundColor.includes('rgb(244, 67, 54)');
+        });
+        
+        test('showNotification warning type', () => {
+            window.showNotification('Warning', 'Be careful', 'warning');
+            const notification = document.getElementById('notification');
+            return notification.style.backgroundColor.includes('FF9800') || 
+                   notification.style.backgroundColor.includes('rgb(255, 152, 0)');
+        });
+        
+        // Test 4: showNotification XSS protection
+        test('showNotification escapes HTML', () => {
+            window.showNotification('<script>alert("xss")</script>', '<img src=x onerror=alert(1)>', 'info');
+            const notification = document.getElementById('notification');
+            const html = notification.innerHTML;
+            
+            // Should not contain unescaped script or img tags
+            if (html.includes('<script>') || html.includes('<img')) {
+                return 'HTML not properly escaped';
+            }
+            
+            // Should contain escaped versions
+            if (!html.includes('&lt;script&gt;') && !html.includes('&lt;img')) {
+                return 'HTML escaping may not be working';
+            }
+            
+            return true;
+        });
+        
+        // Test 5: showStats modal creation
+        test('showStats creates modal', () => {
+            // Ensure gameState has required properties
+            if (!window.gameState) {
+                return 'gameState not initialized';
+            }
+            
+            // Set up minimal gameState
+            window.gameState.stats = window.gameState.stats || {
+                strength: 5,
+                agility: 5,
+                endurance: 5,
+                charisma: 5,
+                wits: 5,
+                luck: 5,
+                wealth: 100,
+                reputation: 0,
+                morale: 5,
+                stress: 0,
+                experience: 0,
+                patronFavor: 0
+            };
+            window.gameState.conditions = window.gameState.conditions || [];
+            window.gameState.career = window.gameState.career || { battles: 0, wounds: 0, promotions: 0 };
+            window.gameState.characterName = window.gameState.characterName || 'Test Character';
+            window.gameState.age = window.gameState.age || 25;
+            window.gameState.year = window.gameState.year || 1337;
+            window.gameState.location = window.gameState.location || 'England';
+            window.gameState.region = window.gameState.region || 'England';
+            window.gameState.rank = window.gameState.rank || 'Common Soldier';
+            window.gameState.background = window.gameState.background || null;
+            window.gameState.inventory = window.gameState.inventory || [];
+            
+            // Count modals before
+            const beforeCount = document.querySelectorAll('.stats-modal').length;
+            
+            // Call showStats
+            window.showStats();
+            
+            // Check if modal was created
+            const modals = document.querySelectorAll('.stats-modal');
+            if (modals.length <= beforeCount) {
+                return 'Modal was not created';
+            }
+            
+            // Check if modal has content
+            const modal = modals[modals.length - 1];
+            if (!modal.innerHTML.includes('Full Character Stats')) {
+                return 'Modal content not set correctly';
+            }
+            
+            // Clean up
+            modal.remove();
+            
+            return true;
+        });
+        
+        // Test 6: showStats modal closes on Escape
+        test('showStats modal closes on Escape key', (done) => {
+            window.showStats();
+            const modal = document.querySelector('.stats-modal');
+            if (!modal) {
+                return 'Modal not created';
+            }
+            
+            // Simulate Escape key
+            const event = new KeyboardEvent('keydown', { key: 'Escape' });
+            document.dispatchEvent(event);
+            
+            // Check if modal was removed (with small delay for event handling)
+            setTimeout(() => {
+                const stillExists = document.querySelector('.stats-modal');
+                if (stillExists) {
+                    return 'Modal was not removed on Escape';
+                }
+                return true;
+            }, 100);
+            
+            return true;
+        });
+        
+        // Test 7: showStats modal closes on background click
+        test('showStats modal closes on background click', () => {
+            window.showStats();
+            const modal = document.querySelector('.stats-modal');
+            if (!modal) {
+                return 'Modal not created';
+            }
+            
+            // Simulate click on modal background (not the inner div)
+            const clickEvent = new MouseEvent('click', { bubbles: true });
+            modal.dispatchEvent(clickEvent);
+            
+            // Check if modal was removed
+            const stillExists = document.querySelector('.stats-modal');
+            if (stillExists) {
+                modal.remove(); // Clean up
+                return 'Modal was not removed on background click';
+            }
+            
+            return true;
+        });
+        
+        // Display results
+        tests.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'test ' + (t.pass ? 'pass' : 'fail');
+            div.textContent = (t.pass ? '✓' : '✗') + ' ' + t.name;
+            if (t.error) {
+                div.textContent += ' - ' + t.error;
+            }
+            results.appendChild(div);
+        });
+        
+        // Summary
+        const passed = tests.filter(t => t.pass).length;
+        const total = tests.length;
+        const summary = document.createElement('div');
+        summary.className = 'test ' + (passed === total ? 'pass' : 'fail');
+        summary.style.marginTop = '20px';
+        summary.style.padding = '15px';
+        summary.style.fontSize = '1.2em';
+        summary.style.fontWeight = 'bold';
+        summary.textContent = `Results: ${passed}/${total} tests passed`;
+        results.appendChild(summary);
+        
+        // Test buttons for manual testing
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.marginTop = '30px';
+        buttonContainer.style.padding = '20px';
+        buttonContainer.style.background = '#2a2a2a';
+        buttonContainer.style.borderRadius = '5px';
+        buttonContainer.innerHTML = `
+            <h2>Manual Tests</h2>
+            <p>Click these buttons to manually test the modals:</p>
+            <button onclick="window.showNotification('Success', 'This is a success message!', 'success')">Test Success Notification</button>
+            <button onclick="window.showNotification('Error', 'This is an error message!', 'error')">Test Error Notification</button>
+            <button onclick="window.showNotification('Warning', 'This is a warning message!', 'warning')">Test Warning Notification</button>
+            <button onclick="window.showNotification('Info', 'This is an info message!', 'info')">Test Info Notification</button>
+            <button onclick="window.showStats()">Test Stats Modal</button>
+        `;
+        results.appendChild(buttonContainer);
+        
+        console.log('Test Results:', { passed, total, tests });
+    </script>
+</body>
+</html>

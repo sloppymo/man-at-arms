@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Handling Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { margin: 5px; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Error Handling & Resilience Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button class="btn-primary" onclick="testNormalLoading()">✅ Test Normal Loading</button>
+        <button class="btn-warning" onclick="testMissingStory()">❌ Test Missing Story</button>
+        <button class="btn-danger" onclick="testCorruptStory()">🔥 Test Corrupt Story</button>
+        <button class="btn-primary" onclick="testImageError()">🖼️ Test Image Error</button>
+        <button class="btn-warning" onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div class="debug" id="debug"></div>
+
+    <script type="module">
+        // Mock dispatcher for testing
+        class MockDispatcher {
+            constructor() {
+                this.listeners = {};
+                this.eventLog = [];
+            }
+            
+            subscribe(event, callback) {
+                if (!this.listeners[event]) {
+                    this.listeners[event] = [];
+                }
+                this.listeners[event].push(callback);
+            }
+            
+            dispatch(event, data, source) {
+                const eventData = { payload: data, source };
+                this.eventLog.push({ event, data, source, timestamp: Date.now() });
+                console.log('Dispatch:', event, data, source);
+                
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(eventData));
+                }
+            }
+            
+            getEventLog() {
+                return this.eventLog;
+            }
+        }
+
+        // Mock game state
+        const mockGameState = {
+            stats: { wealth: 100, wits: 8, reputation: 20 },
+            overworld: { time: 600, heat: 10, supplies: { food: 5 } },
+            conditions: []
+        };
+
+        // Import dialog components
+        import { DialogueService } from './src/systems/dialogue-service.js';
+
+        // Initialize dialog system
+        const dispatcher = new MockDispatcher();
+        const dialogueService = new DialogueService(dispatcher, mockGameState, null);
+
+        const results = document.getElementById('results');
+        const debug = document.getElementById('debug');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function debugLog(message) {
+            debug.textContent += message + '\n';
+            debug.scrollTop = debug.scrollHeight;
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+            debug.textContent = '';
+            dispatcher.eventLog = [];
+        }
+
+        async function testNormalLoading() {
+            log('🧪 Testing normal story loading...', 'info');
+            debugLog('=== NORMAL LOADING TEST ===');
+            
+            try {
+                // Reinitialize stories
+                const success = await dialogueService.initializeStories();
+                
+                if (success) {
+                    log('✅ Stories loaded successfully', 'success');
+                    debugLog('Available stories: ' + Object.keys(dialogueService.stories).join(', '));
+                    
+                    // Test switching to story
+                    if (dialogueService.switchStory('overworld/forest_test')) {
+                        log('✅ Story switch successful', 'success');
+                        
+                        // Test story execution
+                        if (window.inkStory) {
+                            try {
+                                const text = window.inkStory.Continue();
+                                log(`📝 Story text: "${text.trim()}"`, 'success');
+                                debugLog('Story execution successful');
+                            } catch (e) {
+                                log(`❌ Story execution failed: ${e.message}`, 'error');
+                                debugLog('Execution error: ' + e.stack);
+                            }
+                        } else {
+                            log('❌ No window.inkStory available', 'error');
+                        }
+                    } else {
+                        log('❌ Failed to switch to story', 'error');
+                    }
+                } else {
+                    log('❌ Story initialization failed', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testMissingStory() {
+            log('🧪 Testing missing story handling...', 'warning');
+            debugLog('=== MISSING STORY TEST ===');
+            
+            try {
+                // Try to switch to non-existent story
+                const result = dialogueService.switchStory('nonexistent/story');
+                
+                if (!result) {
+                    log('✅ Correctly handled missing story', 'success');
+                    debugLog('Missing story was properly rejected');
+                } else {
+                    log('❌ Should have failed for missing story', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Unexpected error: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testCorruptStory() {
+            log('🧪 Testing corrupt JSON handling...', 'warning');
+            debugLog('=== CORRUPT STORY TEST ===');
+            
+            try {
+                // Create a corrupt JSON file
+                const corruptJson = '{"inkVersion": 21, "root": "invalid structure"';
+                
+                // Try to create story with corrupt JSON
+                try {
+                    const story = new inkjs.Story(JSON.parse(corruptJson));
+                    log('❌ Should have failed for corrupt JSON', 'error');
+                } catch (parseError) {
+                    log('✅ Correctly handled corrupt JSON', 'success');
+                    debugLog('Corrupt JSON was properly rejected: ' + parseError.message);
+                }
+                
+            } catch (error) {
+                log(`💥 Unexpected error: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testImageError() {
+            log('🧪 Testing image error handling...', 'warning');
+            debugLog('=== IMAGE ERROR TEST ===');
+            
+            try {
+                // Load the story
+                if (dialogueService.switchStory('overworld/forest_test')) {
+                    if (window.inkStory) {
+                        // Bind a mock showImage that simulates error
+                        window.inkStory.BindExternalFunction('showImage', (imagePath) => {
+                            debugLog(`showImage called with: ${imagePath}`);
+                            
+                            // Simulate image not found error
+                            if (imagePath === 'nonexistent/image.png') {
+                                throw new Error('Image not found: ' + imagePath);
+                            }
+                            
+                            debugLog(`Image would be displayed: ${imagePath}`);
+                        });
+                        
+                        // Continue story to trigger showImage
+                        const text = window.inkStory.Continue();
+                        log(`📝 Story text: "${text.trim()}"`, 'info');
+                        
+                        // Check event log for error handling
+                        const errorEvents = dispatcher.getEventLog().filter(e => e.event === 'SHOW_NOTIFICATION');
+                        if (errorEvents.length > 0) {
+                            log('✅ Error handling events dispatched', 'success');
+                            debugLog('Error events: ' + errorEvents.length);
+                        }
+                        
+                    } else {
+                        log('❌ No window.inkStory available', 'error');
+                    }
+                } else {
+                    log('❌ Failed to switch to story', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        // Setup event listeners for error handling
+        dispatcher.subscribe('STORIES_INITIALIZED', (event) => {
+            const { total, loaded, failed, available } = event.payload;
+            log(`📊 Stories initialized: ${total} total, ${loaded} loaded, ${failed} failed`, 'info');
+            debugLog('Available stories: ' + available.join(', '));
+        });
+
+        dispatcher.subscribe('STORY_ERROR', (event) => {
+            const { storyName, error } = event.payload;
+            log(`⚠️ Story error in "${storyName}": ${error}`, 'warning');
+            debugLog('Story error event received');
+        });
+
+        dispatcher.subscribe('SHOW_NOTIFICATION', (event) => {
+            const { title, message, type } = event.payload;
+            log(`🔔 Notification (${type}): ${title} - ${message}`, type === 'warning' ? 'warning' : 'info');
+            debugLog(`Notification: ${title} - ${message}`);
+        });
+
+        // Make functions global
+        window.testNormalLoading = testNormalLoading;
+        window.testMissingStory = testMissingStory;
+        window.testCorruptStory = testCorruptStory;
+        window.testImageError = testImageError;
+        window.clearResults = clearResults;
+
+        // Initial setup
+        log('🛡️ Error handling test ready', 'success');
+        debugLog('Test environment initialized');
+        debugLog('Available tests: Normal Loading, Missing Story, Corrupt Story, Image Error');
+    </script>
+</body>
+</html>

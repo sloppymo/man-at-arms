@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Complete System Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-left: 3px solid #0f0;
+        }
+        .pass { border-left-color: #0f0; color: #0f0; }
+        .fail { border-left-color: #f00; color: #f00; }
+        .section { margin-top: 30px; border-top: 2px solid #444; padding-top: 20px; }
+        h1, h2 { color: #fff; }
+        .summary { margin-top: 30px; padding: 20px; background: #2a2a2a; border: 2px solid #0f0; }
+    </style>
+</head>
+<body>
+    <h1>Complete System Test - Phases 1-5</h1>
+    <div id="results"></div>
+    
+    <!-- Load all systems in order -->
+    <script src="js/core/constants.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <script src="js/core/utils.js"></script>
+    <script src="js/systems/condition-system.js"></script>
+    <script src="js/systems/currency-system.js"></script>
+    <script src="js/systems/chapter-system.js"></script>
+    <script src="js/systems/campfire-system.js"></script>
+    <script src="js/systems/skirmish-system.js"></script>
+    <script src="js/systems/roguelike-system.js"></script>
+    <script src="js/scenes/campfire/vignettes.js"></script>
+    <script src="js/scenes/character-creation.js"></script>
+    <script src="js/scenes/training/training-scenes.js"></script>
+    <script src="js/scenes/battles/battle-scenes.js"></script>
+    <script src="js/scenes/campaigns/campaign-scenes.js"></script>
+    <script src="js/scenes/transitions/transition-scenes.js"></script>
+    <script src="js/scenes/encounters/encounter-scenes.js"></script>
+    
+    <script>
+        const results = document.getElementById('results');
+        const tests = [];
+        let sectionTests = {};
+        
+        function test(section, name, fn) {
+            try {
+                const result = fn();
+                tests.push({ section, name, pass: result === true, error: result === true ? null : result });
+                if (!sectionTests[section]) sectionTests[section] = { pass: 0, fail: 0 };
+                if (result === true) sectionTests[section].pass++;
+                else sectionTests[section].fail++;
+            } catch (e) {
+                tests.push({ section, name, pass: false, error: e.message });
+                if (!sectionTests[section]) sectionTests[section] = { pass: 0, fail: 0 };
+                sectionTests[section].fail++;
+            }
+        }
+        
+        // ===== PHASE 3: CORE SYSTEMS =====
+        test('Core Systems', 'CHAPTERS constant exists', () => typeof window.CHAPTERS !== 'undefined');
+        test('Core Systems', 'PATRONS constant exists', () => typeof window.PATRONS !== 'undefined');
+        test('Core Systems', 'KIT_TIER_MAP constant exists', () => typeof window.KIT_TIER_MAP !== 'undefined');
+        test('Core Systems', 'statLimits constant exists', () => typeof window.statLimits !== 'undefined');
+        test('Core Systems', 'gameState exists', () => typeof window.gameState !== 'undefined');
+        test('Core Systems', 'gameState has stats', () => window.gameState && typeof window.gameState.stats === 'object');
+        test('Core Systems', 'makeDefaultGameState function exists', () => typeof window.makeDefaultGameState === 'function');
+        test('Core Systems', 'clampStat function exists', () => typeof window.clampStat === 'function');
+        test('Core Systems', 'applyStatChange function exists', () => typeof window.applyStatChange === 'function');
+        test('Core Systems', 'escapeHTML function exists', () => typeof window.escapeHTML === 'function');
+        test('Core Systems', 'rollDice function exists', () => typeof window.rollDice === 'function');
+        test('Core Systems', 'resolveAction function exists', () => typeof window.resolveAction === 'function');
+        
+        // ===== PHASE 4: GAME SYSTEMS =====
+        test('Game Systems', 'formatCurrency function exists', () => typeof window.formatCurrency === 'function');
+        test('Game Systems', 'parseCurrency function exists', () => typeof window.parseCurrency === 'function');
+        test('Game Systems', 'getFormattedWealth function exists', () => typeof window.getFormattedWealth === 'function');
+        test('Game Systems', 'addCondition function exists', () => typeof window.addCondition === 'function');
+        test('Game Systems', 'removeCondition function exists', () => typeof window.removeCondition === 'function');
+        test('Game Systems', 'hasCondition function exists', () => typeof window.hasCondition === 'function');
+        test('Game Systems', 'updateConditions function exists', () => typeof window.updateConditions === 'function');
+        test('Game Systems', 'getConditionEffects function exists', () => typeof window.getConditionEffects === 'function');
+        test('Game Systems', 'checkChapterTransition function exists', () => typeof window.checkChapterTransition === 'function');
+        test('Game Systems', 'getCurrentChapter function exists', () => typeof window.getCurrentChapter === 'function');
+        test('Game Systems', 'getChapterDeathModifier function exists', () => typeof window.getChapterDeathModifier === 'function');
+        test('Game Systems', 'clampRel function exists', () => typeof window.clampRel === 'function');
+        test('Game Systems', 'changeRel function exists', () => typeof window.changeRel === 'function');
+        test('Game Systems', 'getSceneIntensity function exists', () => typeof window.getSceneIntensity === 'function');
+        test('Game Systems', 'shouldInsertCampfire function exists', () => typeof window.shouldInsertCampfire === 'function');
+        test('Game Systems', 'maybeInsertCampfire function exists', () => typeof window.maybeInsertCampfire === 'function');
+        test('Game Systems', 'computeSkirmishModifiers function exists', () => typeof window.computeSkirmishModifiers === 'function');
+        test('Game Systems', 'computeSkirmishCosts function exists', () => typeof window.computeSkirmishCosts === 'function');
+        test('Game Systems', 'applySkirmishDeltas function exists', () => typeof window.applySkirmishDeltas === 'function');
+        test('Game Systems', 'calculateArmorProtection function exists', () => typeof window.calculateArmorProtection === 'function');
+        test('Game Systems', 'calculateBadOutcomeChance function exists', () => typeof window.calculateBadOutcomeChance === 'function');
+        test('Game Systems', 'selectBadOutcome function exists', () => typeof window.selectBadOutcome === 'function');
+        test('Game Systems', 'checkArbitraryDeath function exists', () => typeof window.checkArbitraryDeath === 'function');
+        test('Game Systems', 'ARBITRARY_DEATH_EVENTS exists', () => typeof window.ARBITRARY_DEATH_EVENTS !== 'undefined');
+        test('Game Systems', 'PSYCHOLOGICAL_DISORDERS exists', () => typeof window.PSYCHOLOGICAL_DISORDERS !== 'undefined');
+        
+        // ===== PHASE 5: SCENES =====
+        test('Scenes', 'CAMPFIRE_VIGNETTES exists', () => typeof window.CAMPFIRE_VIGNETTES !== 'undefined');
+        test('Scenes', 'CAMPFIRE_VIGNETTES is array', () => Array.isArray(window.CAMPFIRE_VIGNETTES));
+        test('Scenes', 'CAMPFIRE_VIGNETTES has items', () => window.CAMPFIRE_VIGNETTES && window.CAMPFIRE_VIGNETTES.length > 0);
+        test('Scenes', 'window.scenes exists', () => typeof window.scenes !== 'undefined');
+        test('Scenes', 'window.scenes is object', () => typeof window.scenes === 'object' && window.scenes !== null);
+        test('Scenes', 'character_creation scene exists', () => typeof window.scenes.character_creation !== 'undefined');
+        test('Scenes', 'quick_start_review scene exists', () => typeof window.scenes.quick_start_review !== 'undefined');
+        test('Scenes', 'start scene exists', () => typeof window.scenes.start !== 'undefined');
+        test('Scenes', 'winter_quarters scene exists', () => typeof window.scenes.winter_quarters !== 'undefined');
+        test('Scenes', 'first_battle_brave scene exists', () => typeof window.scenes.first_battle_brave !== 'undefined');
+        test('Scenes', 'march_through_normandy_1 scene exists', () => typeof window.scenes.march_through_normandy_1 !== 'undefined');
+        test('Scenes', 'between_years_1341 scene exists', () => typeof window.scenes.between_years_1341 !== 'undefined');
+        test('Scenes', 'marsh_crossing scene exists', () => typeof window.scenes.marsh_crossing !== 'undefined');
+        
+        // Count scenes
+        const sceneCount = Object.keys(window.scenes || {}).length;
+        test('Scenes', `Scene count: ${sceneCount}`, () => sceneCount > 200 && sceneCount < 300);
+        
+        // ===== FUNCTIONALITY TESTS =====
+        test('Functionality', 'clampStat works', () => {
+            const result = clampStat('strength', 15);
+            return result === 10;
+        });
+        test('Functionality', 'escapeHTML works', () => {
+            const result = escapeHTML('<script>alert("xss")</script>');
+            return result === '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;';
+        });
+        test('Functionality', 'formatCurrency works', () => {
+            const result = formatCurrency(240);
+            return result === '£1' || result === '1s' || result.includes('£');
+        });
+        test('Functionality', 'parseCurrency works', () => {
+            const result = parseCurrency('£1 5s 3d');
+            return result === 363; // 240 + 60 + 3
+        });
+        test('Functionality', 'addCondition works', () => {
+            const oldCount = gameState.conditions.length;
+            addCondition('Test Condition', 'negative', 1);
+            const newCount = gameState.conditions.length;
+            removeCondition('Test Condition');
+            return newCount === oldCount + 1;
+        });
+        test('Functionality', 'clampRel works', () => {
+            return clampRel(10) === 5 && clampRel(-10) === -5 && clampRel(3) === 3;
+        });
+        test('Functionality', 'getSceneIntensity works', () => {
+            const high = getSceneIntensity('battle_test');
+            const low = getSceneIntensity('march_test');
+            return high === 3 && low === 0;
+        });
+        test('Functionality', 'scene has required properties', () => {
+            const scene = window.scenes.character_creation;
+            return scene && typeof scene.title === 'string' && typeof scene.text === 'function';
+        });
+        
+        // Display results by section
+        const sections = ['Core Systems', 'Game Systems', 'Scenes', 'Functionality'];
+        sections.forEach(section => {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'section';
+            const h2 = document.createElement('h2');
+            h2.textContent = section;
+            sectionDiv.appendChild(h2);
+            
+            const sectionTests_list = tests.filter(t => t.section === section);
+            sectionTests_list.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'test ' + (t.pass ? 'pass' : 'fail');
+                div.textContent = (t.pass ? '✓' : '✗') + ' ' + t.name;
+                if (t.error) {
+                    div.textContent += ' - ' + t.error;
+                }
+                sectionDiv.appendChild(div);
+            });
+            
+            const stats = sectionTests[section] || { pass: 0, fail: 0 };
+            const total = stats.pass + stats.fail;
+            const summary = document.createElement('div');
+            summary.className = 'test ' + (stats.fail === 0 ? 'pass' : 'fail');
+            summary.textContent = `Section Summary: ${stats.pass}/${total} tests passed`;
+            sectionDiv.appendChild(summary);
+            
+            results.appendChild(sectionDiv);
+        });
+        
+        // Overall summary
+        const passed = tests.filter(t => t.pass).length;
+        const total = tests.length;
+        const summary = document.createElement('div');
+        summary.className = 'summary';
+        summary.innerHTML = `
+            <h2>Overall Test Results</h2>
+            <p style="font-size: 1.2em; font-weight: bold; color: ${passed === total ? '#0f0' : '#f00'};">
+                ${passed}/${total} tests passed
+            </p>
+            <p>Scene Count: ${sceneCount}</p>
+            <p>All systems loaded: ${passed === total ? '✓ YES' : '✗ NO'}</p>
+        `;
+        results.appendChild(summary);
+        
+        console.log('Test Results:', { passed, total, sceneCount, tests });
+    </script>
+</body>
+</html>

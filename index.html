@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Man-at-Arms' Life - 100 Years War</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    
+    <!-- Vite will process this CSS -->
+    
+    <!-- Ink.js CDN for narrative engine -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    
+    <!-- Main entry point - Vite module -->
+
+  <script type="module" crossorigin src="./assets/index-BmUc23Sw.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Cbboxdd9.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>A MAN-AT-ARMS' LIFE</h1>
+            <div id="version-display">v2.0.0-vite</div>
+        </div>
+
+        <div class="main-layout">
+            <div class="main-content">
+                <div class="scene-artwork" id="scene-artwork">
+                    <img id="artwork-image" src="" alt="Scene artwork">
+                    <div class="artwork-caption" id="artwork-caption"></div>
+                </div>
+                <div class="story-text" id="story">
+                    <p id="loading-message" style="display: none;">Loading...</p>
+                </div>
+
+                <div class="choices">
+                    <div class="choices-title">What do you do?</div>
+                    <div id="choices-container">
+                        <!-- Choices will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="control-button" onclick="saveGame()">💾 Save Game</button>
+                    <button class="control-button" onclick="loadGame()">📂 Load Game</button>
+                    <button class="control-button" onclick="showStats()">📊 Full Stats</button>
+                    <button class="control-button" onclick="openEquipmentScreen()">🛡️ Equipment</button>
+                    <button class="control-button" onclick="toggleEffectsPreview()">👁️ <span id="effects-toggle">Show</span> Effects</button>
+                    <button class="control-button" onclick="forceSkirmishUI()" id="debug-skirmish-btn" style="display: none;">⚔️ Force Skirmish</button>
+                    <button class="control-button" onclick="startTempoStrikeDemo()" id="debug-tempo-btn" style="display: none;">🎯 Timing Demo</button>
+                </div>
+            </div>
+
+            <div class="sidebar" id="sidebar">
+                <div class="status-bar" id="status-bar">
+                    <div class="status-item">
+                        <span>📅</span>
+                        <span>Year: <strong id="year">1337</strong></span>
+                    </div>
+                    <div class="status-item">
+                        <span>👤</span>
+                        <span>Age: <strong id="age">18</strong></span>
+                    </div>
+                    <div class="status-item">
+                        <span>📍</span>
+                        <span>Location: <strong id="location">England</strong></span>
+                    </div>
+                </div>
+                <div class="stats-panel" id="stats">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phaser Overworld Container (Phase 4) -->
+    <div id="phaser-root"></div>
+    
+    <!-- Equipment Screen -->
+    <div id="equipment-screen" class="equipment-screen hidden">
+        <div class="equipment-screen-content">
+            <div class="equipment-header">
+                <h2>Equipment & Inventory</h2>
+                <button class="close-button" onclick="closeEquipmentScreen()" aria-label="Close equipment screen">×</button>
+            </div>
+            <div class="equipment-layout">
+                <div class="equipment-left">
+                    <div id="inventory-container"></div>
+                </div>
+                <div class="equipment-center">
+                    <div id="paper-doll-container"></div>
+                </div>
+                <div class="equipment-right">
+                    <div id="kit-stats-container"></div>
+                </div>
+            </div>
+        </div>
+        <div id="equipment-aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    </div>
+    
+    <div id="notification" class="notification hidden"></div>
+    
+    <!-- Combat Overlay -->
+    <div id="minigame-overlay">
+        <div id="minigame-content">
+            <h3 id="minigame-title"></h3>
+            <div id="minigame-subtitle"></div>
+            <div class="health-bars">
+                <div class="health-bar-container">
+                    <div class="health-bar-label">Your Health</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="player-health-bar" style="width: 100%;">100</div>
+                    </div>
+                </div>
+                <div class="health-bar-container">
+                    <div class="health-bar-label">Enemy Health</div>
+                    <div class="health-bar">
+                        <div class="health-fill" id="enemy-health-bar" style="width: 100%;">100</div>
+                    </div>
+                </div>
+            </div>
+            <div class="combat-progress" id="combat-progress"></div>
+            <div id="minigame-display"></div>
+            <div id="minigame-instructions"></div>
+            <div class="combat-log" id="combat-log" style="margin-top: 20px; max-height: 200px; overflow-y: auto;">
+                <h3 style="color: #f4d03f; margin-bottom: 10px; font-size: 16px;">Combat Log</h3>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phaser Map Container (hidden initially, for Phase 4) -->
+    <div id="map-container" class="map-container hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: none;"></div>
+</body>
+</html>

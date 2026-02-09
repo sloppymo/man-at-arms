@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Real Dialog System</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        button { margin: 5px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Real Dialog System Implementation</h1>
+    
+    <div class="test-section">
+        <h2>Real Implementation Tests</h2>
+        <button onclick="testRealService()">Test Real DialogueService</button>
+        <button onclick="testStoryLoading()">Test Story Loading</button>
+        <button onclick="testExternalFunctions()">Test External Functions</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div class="debug" id="debug"></div>
+
+    <script type="module">
+        // Import the ACTUAL dialogue service from the main game
+        import('./src/systems/dialogue-service.js').then(module => {
+            const { DialogueService, createDialogueService } = module;
+            
+            console.log('🧪 TESTING REAL IMPLEMENTATION');
+            console.log('====================================');
+            
+            // Mock window and fetch for testing
+            if (typeof window === 'undefined') {
+                global.window = {
+                    inkjs: { Story: class MockStory {
+                        constructor(json) {
+                            console.log('Mock Story created with:', Object.keys(json)[0]);
+                            this.json = json;
+                        }
+                        Continue() {
+                            return 'Mock story text from ' + this.json.inkVersion;
+                        }
+                        get canContinue() { return false; }
+                        get currentChoices() { return []; }
+                        BindExternalFunction(name, fn) {
+                            console.log('Mock bound:', name);
+                        }
+                    }}
+                };
+                
+                global.fetch = async (url) => {
+                    console.log('Mock fetch:', url);
+                    if (url.includes('forest_test.json')) {
+                        return {
+                            ok: true,
+                            text: async () => JSON.stringify({
+                                inkVersion: 21,
+                                root: [["^You venture into the dense forest.", null]]
+                            })
+                        };
+                    }
+                    if (url.includes('test_errors.json')) {
+                        return {
+                            ok: true,
+                            text: async () => JSON.stringify({
+                                inkVersion: 21,
+                                root: [["^Error test story.", null]]
+                            })
+                        };
+                    }
+                    return { ok: false, status: 404 };
+                };
+            }
+            
+            const results = document.getElementById('results');
+            const debug = document.getElementById('debug');
+            
+            function log(message, type = 'info') {
+                console.log(message);
+                const div = document.createElement('div');
+                div.className = `result ${type}`;
+                div.textContent = message;
+                results.appendChild(div);
+            }
+            
+            function debugLog(message) {
+                debug.textContent += message + '\n';
+                debug.scrollTop = debug.scrollHeight;
+            }
+            
+            window.testRealService = function() {
+                log('🧪 Testing real DialogueService implementation...', 'info');
+                debugLog('=== REAL SERVICE TEST ===');
+                
+                try {
+                    // Create proper mock dispatcher
+                    const mockDispatcher = {
+                        listeners: {},
+                        subscribe(event, callback) {
+                            if (!this.listeners[event]) this.listeners[event] = [];
+                            this.listeners[event].push(callback);
+                        },
+                        dispatch(event, data, source) {
+                            debugLog(`Event: ${event} from ${source}`);
+                        }
+                    };
+                    
+                    const mockGameState = {
+                        stats: { wealth: 100, reputation: 20 },
+                        overworld: { time: 600, supplies: { food: 5 } }
+                    };
+                    
+                    // Create service
+                    const service = createDialogueService(mockDispatcher, mockGameState, null);
+                    log('✅ Service created successfully', 'success');
+                    
+                    // Test all methods exist
+                    const methods = ['initializeDialogSystem', 'startDialogEncounter', 'getDialogSystemStatus'];
+                    methods.forEach(method => {
+                        const exists = typeof service[method] === 'function';
+                        log(`${exists ? '✅' : '❌'} ${method}() exists`, exists ? 'success' : 'error');
+                    });
+                    
+                    // Test initializeDialogSystem
+                    service.initializeDialogSystem().then(result => {
+                        log(`initializeDialogSystem() result: ${result}`, result ? 'success' : 'warning');
+                    }).catch(err => {
+                        log(`initializeDialogSystem() error: ${err.message}`, 'error');
+                    });
+                    
+                    // Test startDialogEncounter
+                    const encounterResult = service.startDialogEncounter('merchant_encounter', 'merchant');
+                    log(`startDialogEncounter() result: ${encounterResult}`, encounterResult ? 'success' : 'error');
+                    
+                    // Test getDialogSystemStatus
+                    const status = service.getDialogSystemStatus();
+                    log(`System status: ${JSON.stringify(status, null, 2)}`, 'info');
+                    
+                } catch (error) {
+                    log(`💥 Real service test failed: ${error.message}`, 'error');
+                    debugLog('Full error: ' + error.stack);
+                }
+            };
+            
+            window.testStoryLoading = function() {
+                log('🧪 Testing real story loading...', 'info');
+                debugLog('=== STORY LOADING TEST ===');
+                
+                try {
+                    const mockDispatcher = { dispatch: () => {} };
+                    const mockGameState = { overworld: { supplies: { food: 5 } } };
+                    const service = createDialogueService(mockDispatcher, mockGameState, null);
+                    
+                    service.initializeStories().then(result => {
+                        log(`Story loading result: ${result}`, result ? 'success' : 'warning');
+                        
+                        const stories = service.stories || {};
+                        log(`Stories loaded: ${Object.keys(stories).length}`, 'info');
+                        log(`Available: ${Object.keys(stories).join(', ')}`, 'info');
+                        
+                        // Test switching to story
+                        if (service.switchStory) {
+                            const switchResult = service.switchStory('overworld/forest_test');
+                            log(`Switch story result: ${switchResult}`, switchResult ? 'success' : 'error');
+                            
+                            if (window.inkStory) {
+                                try {
+                                    const text = window.inkStory.Continue();
+                                    log(`Story text: "${text.trim()}"`, 'success');
+                                } catch (e) {
+                                    log(`Story continue error: ${e.message}`, 'error');
+                                }
+                            } else {
+                                log('No window.inkStory available', 'warning');
+                            }
+                        }
+                    });
+                    
+                } catch (error) {
+                    log(`💥 Story loading test failed: ${error.message}`, 'error');
+                }
+            };
+            
+            window.testExternalFunctions = function() {
+                log('🧪 Testing external function binding...', 'info');
+                debugLog('=== EXTERNAL FUNCTIONS TEST ===');
+                
+                try {
+                    const mockDispatcher = { dispatch: () => {} };
+                    const mockGameState = { 
+                        stats: { reputation: 20 },
+                        overworld: { time: 600, supplies: { food: 5 } }
+                    };
+                    const service = createDialogueService(mockDispatcher, mockGameState, null);
+                    
+                    service.initializeStories().then(() => {
+                        if (window.inkStory) {
+                            // Test external function binding
+                            let boundCount = 0;
+                            
+                            const testFunctions = [
+                                { name: 'advanceTime', test: () => window.inkStory.BindExternalFunction('advanceTime', (min) => { 
+                                    mockGameState.overworld.time += parseInt(min) || 0;
+                                    log(`advanceTime(${min}) -> time: ${mockGameState.overworld.time}`, 'success');
+                                })},
+                                { name: 'getSupplies', test: () => window.inkStory.BindExternalFunction('getSupplies', () => {
+                                    const supplies = JSON.stringify(mockGameState.overworld.supplies);
+                                    log(`getSupplies() -> ${supplies}`, 'success');
+                                    return supplies;
+                                })},
+                                { name: 'showImage', test: () => window.inkStory.BindExternalFunction('showImage', (path) => {
+                                    log(`showImage(${path})`, 'success');
+                                })}
+                            ];
+                            
+                            testFunctions.forEach(({ name, test }) => {
+                                try {
+                                    test();
+                                    boundCount++;
+                                    log(`✅ ${name} bound successfully`, 'success');
+                                } catch (e) {
+                                    log(`❌ ${name} binding failed: ${e.message}`, 'error');
+                                }
+                            });
+                            
+                            log(`External functions bound: ${boundCount}/3`, boundCount === 3 ? 'success' : 'warning');
+                            
+                            // Test story execution
+                            const text = window.inkStory.Continue();
+                            log(`Story execution: "${text.trim()}"`, 'info');
+                        }
+                    });
+                    
+                } catch (error) {
+                    log(`💥 External functions test failed: ${error.message}`, 'error');
+                }
+            };
+            
+            window.clearResults = function() {
+                results.innerHTML = '';
+                debug.textContent = '';
+            };
+            
+            // Initial test
+            log('🧪 Real dialog system test ready', 'success');
+            debugLog('Implementation loaded and ready for testing');
+            
+        }).catch(error => {
+            console.error('Failed to load dialogue service:', error);
+        });
+    </script>
+</body>
+</html>

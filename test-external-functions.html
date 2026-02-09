@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External Function Binding Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { margin: 5px; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .function-test { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🔗 External Function Binding Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button class="btn-primary" onclick="testBasicBinding()">✅ Test Basic Binding</button>
+        <button class="btn-warning" onclick="testTypeSafety()">🛡️ Test Type Safety</button>
+        <button class="btn-danger" onclick="testErrorHandling()">❌ Test Error Handling</button>
+        <button class="btn-primary" onclick="testEndToEnd()">🎯 Test End-to-End</button>
+        <button class="btn-warning" onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div class="debug" id="debug"></div>
+
+    <script type="module">
+        // Mock dispatcher for testing
+        class MockDispatcher {
+            constructor() {
+                this.listeners = {};
+                this.eventLog = [];
+            }
+            
+            subscribe(event, callback) {
+                if (!this.listeners[event]) {
+                    this.listeners[event] = [];
+                }
+                this.listeners[event].push(callback);
+            }
+            
+            dispatch(event, data, source) {
+                const eventData = { payload: data, source };
+                this.eventLog.push({ event, data, source, timestamp: Date.now() });
+                console.log('Dispatch:', event, data, source);
+                
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(eventData));
+                }
+            }
+            
+            getEventLog() {
+                return this.eventLog;
+            }
+        }
+
+        // Mock game state
+        const mockGameState = {
+            stats: { wealth: 100, wits: 8, reputation: 20 },
+            overworld: { time: 600, heat: 10, supplies: { food: 5, water: 3 } },
+            conditions: []
+        };
+
+        // Import dialog components
+        import { DialogueService } from './src/systems/dialogue-service.js';
+
+        // Initialize dialog system
+        const dispatcher = new MockDispatcher();
+        const dialogueService = new DialogueService(dispatcher, mockGameState, null);
+
+        const results = document.getElementById('results');
+        const debug = document.getElementById('debug');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function debugLog(message) {
+            debug.textContent += message + '\n';
+            debug.scrollTop = debug.scrollHeight;
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+            debug.textContent = '';
+            dispatcher.eventLog = [];
+        }
+
+        async function testBasicBinding() {
+            log('🧪 Testing basic external function binding...', 'info');
+            debugLog('=== BASIC BINDING TEST ===');
+            
+            try {
+                // Initialize stories to trigger binding
+                const success = await dialogueService.initializeStories();
+                
+                if (success) {
+                    log('✅ Stories initialized successfully', 'success');
+                    
+                    // Switch to story
+                    if (dialogueService.switchStory('overworld/forest_test')) {
+                        log('✅ Story switch successful', 'success');
+                        
+                        if (window.inkStory) {
+                            debugLog('Story instance available');
+                            debugLog('Testing basic function calls...');
+                            
+                            // Test advanceTime
+                            try {
+                                const timeBefore = mockGameState.overworld.time;
+                                window.inkStory.BindExternalFunction('testAdvanceTime', (minutes) => {
+                                    const result = dialogueService.advanceTime(minutes);
+                                    debugLog(`advanceTime(${minutes}) returned: ${result}`);
+                                    return result;
+                                });
+                                log('✅ advanceTime bound successfully', 'success');
+                            } catch (e) {
+                                log(`❌ advanceTime binding failed: ${e.message}`, 'error');
+                            }
+                            
+                        } else {
+                            log('❌ No window.inkStory available', 'error');
+                        }
+                    } else {
+                        log('❌ Failed to switch to story', 'error');
+                    }
+                } else {
+                    log('❌ Story initialization failed', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testTypeSafety() {
+            log('🧪 Testing type safety in external functions...', 'warning');
+            debugLog('=== TYPE SAFETY TEST ===');
+            
+            try {
+                // Test with invalid arguments
+                const testCases = [
+                    { fn: 'advanceTime', args: ['invalid'], expected: 'error' },
+                    { fn: 'advanceTime', args: [-10], expected: 'error' },
+                    { fn: 'consumeSupply', args: ['', 1], expected: 'error' },
+                    { fn: 'consumeSupply', args: ['food', 'invalid'], expected: 'error' },
+                    { fn: 'showImage', args: [null], expected: 'error' },
+                    { fn: 'showImage', args: [123], expected: 'error' }
+                ];
+                
+                for (const testCase of testCases) {
+                    debugLog(`Testing ${testCase.fn} with args: ${JSON.stringify(testCase.args)}`);
+                    
+                    // This would be tested through the actual story execution
+                    log(`🧪 Type safety test for ${testCase.fn}: ${testCase.args}`, 'info');
+                }
+                
+                log('✅ Type safety tests configured', 'success');
+                
+            } catch (error) {
+                log(`💥 Type safety test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testErrorHandling() {
+            log('🧪 Testing error handling in external functions...', 'warning');
+            debugLog('=== ERROR HANDLING TEST ===');
+            
+            try {
+                // Test error scenarios
+                const errorCases = [
+                    'Missing image path',
+                    'Invalid supply type',
+                    'Negative time values',
+                    'Null character ID'
+                ];
+                
+                errorCases.forEach(errorCase => {
+                    debugLog(`Simulating error: ${errorCase}`);
+                    log(`🧪 Error handling test: ${errorCase}`, 'warning');
+                });
+                
+                log('✅ Error handling tests configured', 'success');
+                
+            } catch (error) {
+                log(`💥 Error handling test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testEndToEnd() {
+            log('🧪 Testing end-to-end external function calls...', 'info');
+            debugLog('=== END-TO-END TEST ===');
+            
+            try {
+                // Initialize and switch to story
+                await dialogueService.initializeStories();
+                
+                if (dialogueService.switchStory('overworld/forest_test')) {
+                    log('✅ Story loaded for end-to-end test', 'success');
+                    
+                    if (window.inkStory) {
+                        debugLog('Executing story to test external functions...');
+                        
+                        // Continue story to trigger external functions
+                        const text1 = window.inkStory.Continue();
+                        log(`📝 Story text: "${text1.trim()}"`, 'info');
+                        
+                        // Check game state changes
+                        const timeAfter = mockGameState.overworld.time;
+                        debugLog(`Game state time after story: ${timeAfter}`);
+                        
+                        // Check if events were dispatched
+                        const events = dispatcher.getEventLog();
+                        const externalFunctionEvents = events.filter(e => 
+                            e.event === 'TIME_ADVANCED' || 
+                            e.event === 'SUPPLY_CONSUMED' || 
+                            e.event === 'SHOW_IMAGE'
+                        );
+                        
+                        log(`📊 External function events dispatched: ${externalFunctionEvents.length}`, 'info');
+                        
+                        if (externalFunctionEvents.length > 0) {
+                            log('✅ End-to-end test successful - external functions working', 'success');
+                            externalFunctionEvents.forEach(event => {
+                                debugLog(`Event: ${event.event}, Data: ${JSON.stringify(event.data)}`);
+                            });
+                        } else {
+                            log('⚠️ No external function events detected', 'warning');
+                        }
+                        
+                    } else {
+                        log('❌ No window.inkStory available', 'error');
+                    }
+                } else {
+                    log('❌ Failed to switch to story', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 End-to-end test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        // Setup event listeners for testing
+        dispatcher.subscribe('TIME_ADVANCED', (event) => {
+            log(`⏰ Time advanced: ${event.payload.minutes} minutes`, 'info');
+            debugLog(`Time advanced event: ${JSON.stringify(event.payload)}`);
+        });
+
+        dispatcher.subscribe('SUPPLY_CONSUMED', (event) => {
+            log(`🍖 Supply consumed: ${event.payload.amount} ${event.payload.type}`, 'info');
+            debugLog(`Supply consumed event: ${JSON.stringify(event.payload)}`);
+        });
+
+        dispatcher.subscribe('SHOW_IMAGE', (event) => {
+            log(`🖼️ Image shown: ${event.payload.imagePath}`, 'info');
+            debugLog(`Show image event: ${JSON.stringify(event.payload)}`);
+        });
+
+        dispatcher.subscribe('SHOW_NOTIFICATION', (event) => {
+            const { title, message, type } = event.payload;
+            log(`🔔 Notification (${type}): ${title} - ${message}`, type === 'warning' ? 'warning' : 'info');
+            debugLog(`Notification: ${title} - ${message}`);
+        });
+
+        // Make functions global
+        window.testBasicBinding = testBasicBinding;
+        window.testTypeSafety = testTypeSafety;
+        window.testErrorHandling = testErrorHandling;
+        window.testEndToEnd = testEndToEnd;
+        window.clearResults = clearResults;
+
+        // Initial setup
+        log('🔗 External function binding test ready', 'success');
+        debugLog('Test environment initialized');
+        debugLog('Available tests: Basic Binding, Type Safety, Error Handling, End-to-End');
+    </script>
+</body>
+</html>

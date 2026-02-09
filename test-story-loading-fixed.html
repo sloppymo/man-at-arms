@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Loading Test - Fixed</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        #results { margin-top: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Ink.js Story Loading Test (Fixed for .ink files)</h1>
+    
+    <div>
+        <button onclick="testStoryLoading()">Test All Stories</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <!-- Ink.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js"></script>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testStoryLoading() {
+            addResult('Starting story loading tests...', 'info');
+            
+            // Test 1: Ink.js loaded
+            if (typeof window.inkjs !== 'undefined') {
+                addResult('✅ Ink.js CDN loaded successfully', 'pass');
+            } else {
+                addResult('❌ Ink.js CDN failed to load', 'fail');
+                return;
+            }
+            
+            // Test 2-4: Load each story from .ink files
+            const stories = ['character-creation', 'main', 'training'];
+            
+            for (const storyName of stories) {
+                try {
+                    addResult(`Testing ${storyName}.ink...`, 'info');
+                    
+                    // Load the .ink file (raw text)
+                    const response = await fetch(`js/ink/ink-stories/${storyName}.ink`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const inkContent = await response.text();
+                    addResult(`✅ ${storyName}.ink loaded (${inkContent.length} chars)`, 'pass');
+                    
+                    // Test Ink.js parsing with raw text
+                    try {
+                        const story = new inkjs.Story(inkContent);
+                        addResult(`✅ ${storyName} parsed by Ink.js successfully`, 'pass');
+                        
+                        // Test basic story functionality
+                        if (story.canContinue) {
+                            const text = story.Continue();
+                            addResult(`✅ ${storyName} generated content: "${text.substring(0, 50)}..."`, 'pass');
+                        } else {
+                            addResult(`⚠️ ${storyName} cannot continue (may be at choice or end)`, 'info');
+                        }
+                        
+                        // Check for choices if available
+                        if (story.currentChoices && story.currentChoices.length > 0) {
+                            addResult(`✅ ${storyName} has ${story.currentChoices.length} choices`, 'pass');
+                        }
+                        
+                    } catch (inkError) {
+                        addResult(`❌ ${storyName} failed to parse: ${inkError.message}`, 'fail');
+                        console.error(`Ink.js parsing error for ${storyName}:`, inkError);
+                    }
+                    
+                } catch (error) {
+                    addResult(`❌ ${storyName}.ink failed to load: ${error.message}`, 'fail');
+                    console.error(`Loading error for ${storyName}:`, error);
+                }
+            }
+            
+            addResult('Story loading tests complete!', 'info');
+        }
+    </script>
+</body>
+</html>

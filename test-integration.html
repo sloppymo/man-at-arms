@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialog System Integration Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { margin: 5px; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .integration-status { margin: 10px 0; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🔗 Dialog System Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>Integration Tests</h2>
+        <button class="btn-primary" onclick="testStoryLoading()">📚 Test Story Loading</button>
+        <button class="btn-warning" onclick="testGameStateSync()">🔄 Test Game State Sync</button>
+        <button class="btn-danger" onclick="testModeSwitching()">🔄 Test Mode Switching</button>
+        <button class="btn-primary" onclick="testEventIntegration()">📡 Test Event Integration</button>
+        <button class="btn-warning" onclick="testErrorRecovery()">🛡️ Test Error Recovery</button>
+        <button class="btn-danger" onclick="testFullWorkflow()">🎯 Test Full Workflow</button>
+        <button class="btn-primary" onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div class="debug" id="debug"></div>
+
+    <script type="module">
+        // Mock game systems for integration testing
+        class MockDispatcher {
+            constructor() {
+                this.listeners = {};
+                this.eventLog = [];
+            }
+            
+            subscribe(event, callback) {
+                if (!this.listeners[event]) {
+                    this.listeners[event] = [];
+                }
+                this.listeners[event].push(callback);
+            }
+            
+            dispatch(event, data, source) {
+                const eventData = { payload: data, source };
+                this.eventLog.push({ event, data, source, timestamp: Date.now() });
+                console.log('📡 Event:', event, data, source);
+                
+                if (this.listeners[event]) {
+                    this.listeners[event].forEach(callback => callback(eventData));
+                }
+            }
+            
+            getEventLog() {
+                return this.eventLog;
+            }
+            
+            clearLog() {
+                this.eventLog = [];
+            }
+        }
+
+        // Mock game state matching the error log structure
+        const mockGameState = {
+            mode: "camp",
+            currentScene: "character_creation",
+            characterName: "",
+            level: 1,
+            schemaVersion: 2,
+            stats: {
+                strength: 5,
+                agility: 5,
+                endurance: 5,
+                charisma: 5,
+                luck: 5,
+                wits: 5,
+                wealth: 120,
+                reputation: 0,
+                morale: 5,
+                stress: 0,
+                experience: 0,
+                patronFavor: 0
+            },
+            location: "England",
+            year: 1337,
+            overworld: {
+                time: 600,
+                heat: 10,
+                supplies: { food: 5, water: 3 }
+            },
+            conditions: []
+        };
+
+        // Import dialog components
+        import { DialogueService } from './src/systems/dialogue-service.js';
+
+        // Initialize dialog system
+        const dispatcher = new MockDispatcher();
+        const dialogueService = new DialogueService(dispatcher, mockGameState, null);
+
+        const results = document.getElementById('results');
+        const debug = document.getElementById('debug');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function debugLog(message) {
+            debug.textContent += message + '\n';
+            debug.scrollTop = debug.scrollHeight;
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+            debug.textContent = '';
+            dispatcher.clearLog();
+        }
+
+        async function testStoryLoading() {
+            log('🧪 Testing story loading integration...', 'info');
+            debugLog('=== STORY LOADING INTEGRATION TEST ===');
+            
+            try {
+                // Test initialization with current game state
+                const success = await dialogueService.initializeStories();
+                
+                if (success) {
+                    log('✅ Stories initialized with game state', 'success');
+                    debugLog('Available stories: ' + Object.keys(dialogueService.stories).join(', '));
+                    
+                    // Test story switching
+                    if (dialogueService.switchStory('overworld/forest_test')) {
+                        log('✅ Story switch successful', 'success');
+                        debugLog('Current story: overworld/forest_test');
+                        
+                        // Test window.inkStory assignment
+                        if (window.inkStory) {
+                            log('✅ Global inkStory reference set', 'success');
+                            debugLog('window.inkStory type: ' + typeof window.inkStory);
+                        } else {
+                            log('❌ Global inkStory reference missing', 'error');
+                        }
+                    } else {
+                        log('❌ Story switch failed', 'error');
+                    }
+                } else {
+                    log('❌ Story initialization failed', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Story loading integration failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testGameStateSync() {
+            log('🧪 Testing game state synchronization...', 'warning');
+            debugLog('=== GAME STATE SYNC TEST ===');
+            
+            try {
+                // Initialize stories first
+                await dialogueService.initializeStories();
+                dialogueService.switchStory('overworld/forest_test');
+                
+                // Test initial game state
+                debugLog('Initial game state:');
+                debugLog('  Mode: ' + mockGameState.mode);
+                debugLog('  Stats: ' + JSON.stringify(mockGameState.stats));
+                debugLog('  Overworld: ' + JSON.stringify(mockGameState.overworld));
+                
+                // Execute story to modify game state
+                if (window.inkStory) {
+                    const text1 = window.inkStory.Continue();
+                    log('📝 Story executed: ' + text1.trim(), 'info');
+                    
+                    const text2 = window.inkStory.Continue();
+                    log('📝 Story executed: ' + text2.trim(), 'info');
+                    
+                    // Check game state changes
+                    debugLog('Game state after story execution:');
+                    debugLog('  Time: ' + mockGameState.overworld.time);
+                    debugLog('  Supplies: ' + JSON.stringify(mockGameState.overworld.supplies));
+                    
+                    // Verify state persistence
+                    const timeChanged = mockGameState.overworld.time !== 600;
+                    const suppliesChanged = JSON.stringify(mockGameState.overworld.supplies) !== JSON.stringify({ food: 5, water: 3 });
+                    
+                    if (timeChanged || suppliesChanged) {
+                        log('✅ Game state synchronized correctly', 'success');
+                    } else {
+                        log('⚠️ No game state changes detected', 'warning');
+                    }
+                } else {
+                    log('❌ No story available for state sync test', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Game state sync failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testModeSwitching() {
+            log('🧪 Testing mode switching integration...', 'warning');
+            debugLog('=== MODE SWITCHING TEST ===');
+            
+            try {
+                // Initialize stories
+                await dialogueService.initializeStories();
+                
+                // Test mode change events
+                let modeChangeCount = 0;
+                dispatcher.subscribe('MODE_CHANGE', (event) => {
+                    modeChangeCount++;
+                    debugLog('Mode change detected: ' + event.payload);
+                    log(`🔄 Mode changed to: ${event.payload}`, 'info');
+                });
+                
+                // Simulate mode switch to dialogue
+                dispatcher.dispatch('MODE_CHANGE', 'dialogue', 'test');
+                
+                // Simulate encounter trigger
+                dispatcher.dispatch('TRIGGER_ENCOUNTER', {
+                    story: 'overworld/forest_test',
+                    source: 'test'
+                }, 'test');
+                
+                // Wait a moment for events to process
+                setTimeout(() => {
+                    if (modeChangeCount > 0) {
+                        log('✅ Mode switching integration working', 'success');
+                        debugLog('Mode changes detected: ' + modeChangeCount);
+                    } else {
+                        log('❌ No mode changes detected', 'error');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                log(`💥 Mode switching test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testEventIntegration() {
+            log('🧪 Testing event integration...', 'info');
+            debugLog('=== EVENT INTEGRATION TEST ===');
+            
+            try {
+                await dialogueService.initializeStories();
+                dialogueService.switchStory('overworld/forest_test');
+                
+                // Track different event types
+                const eventTypes = {
+                    'TIME_ADVANCED': 0,
+                    'SUPPLY_CONSUMED': 0,
+                    'SHOW_IMAGE': 0,
+                    'SHOW_NOTIFICATION': 0,
+                    'STAT_CHANGE': 0
+                };
+                
+                // Subscribe to all event types
+                Object.keys(eventTypes).forEach(eventType => {
+                    dispatcher.subscribe(eventType, (event) => {
+                        eventTypes[eventType]++;
+                        debugLog(`Event ${eventType}: ${JSON.stringify(event.payload)}`);
+                    });
+                });
+                
+                // Execute story to trigger events
+                if (window.inkStory) {
+                    const text1 = window.inkStory.Continue();
+                    const text2 = window.inkStory.Continue();
+                    const text3 = window.inkStory.Continue();
+                    
+                    log('📝 Story execution completed', 'info');
+                    
+                    // Check which events were triggered
+                    const triggeredEvents = Object.entries(eventTypes)
+                        .filter(([type, count]) => count > 0)
+                        .map(([type, count]) => `${type} (${count})`);
+                    
+                    if (triggeredEvents.length > 0) {
+                        log(`✅ Events triggered: ${triggeredEvents.join(', ')}`, 'success');
+                    } else {
+                        log('⚠️ No events triggered', 'warning');
+                    }
+                } else {
+                    log('❌ No story available for event test', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Event integration test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testErrorRecovery() {
+            log('🧪 Testing error recovery integration...', 'warning');
+            debugLog('=== ERROR RECOVERY TEST ===');
+            
+            try {
+                // Test with error story
+                await dialogueService.initializeStories();
+                
+                // Switch to error test story
+                if (dialogueService.switchStory('overworld/test_errors')) {
+                    log('✅ Error test story loaded', 'success');
+                    
+                    // Track error notifications
+                    let errorCount = 0;
+                    dispatcher.subscribe('SHOW_NOTIFICATION', (event) => {
+                        if (event.payload.type === 'error' || event.payload.type === 'warning') {
+                            errorCount++;
+                            debugLog(`Error notification: ${event.payload.title} - ${event.payload.message}`);
+                        }
+                    });
+                    
+                    // Execute story with errors
+                    if (window.inkStory) {
+                        const text1 = window.inkStory.Continue();
+                        const text2 = window.inkStory.Continue();
+                        const text3 = window.inkStory.Continue();
+                        
+                        log('📝 Error story executed', 'info');
+                        
+                        // Check if errors were handled gracefully
+                        if (errorCount > 0) {
+                            log(`✅ Error recovery working: ${errorCount} errors handled`, 'success');
+                        } else {
+                            log('⚠️ No error notifications detected', 'warning');
+                        }
+                    }
+                } else {
+                    log('❌ Failed to load error test story', 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Error recovery test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        async function testFullWorkflow() {
+            log('🧪 Testing full integration workflow...', 'info');
+            debugLog('=== FULL WORKFLOW TEST ===');
+            
+            try {
+                // Step 1: Initialize system
+                log('📚 Step 1: Initializing dialog system...', 'info');
+                const initSuccess = await dialogueService.initializeStories();
+                if (!initSuccess) {
+                    throw new Error('Initialization failed');
+                }
+                log('✅ Dialog system initialized', 'success');
+                
+                // Step 2: Switch to overworld mode
+                log('🔄 Step 2: Switching to overworld mode...', 'info');
+                dispatcher.dispatch('MODE_CHANGE', 'overworld', 'test');
+                
+                // Step 3: Trigger encounter
+                log('⚔️ Step 3: Triggering encounter...', 'info');
+                dispatcher.dispatch('TRIGGER_ENCOUNTER', {
+                    story: 'overworld/forest_test',
+                    source: 'test'
+                }, 'test');
+                
+                // Step 4: Execute dialog
+                log('💬 Step 4: Executing dialog...', 'info');
+                if (window.inkStory) {
+                    const dialogText = window.inkStory.Continue();
+                    log(`📝 Dialog: ${dialogText.trim()}`, 'info');
+                    
+                    // Step 5: Check game state changes
+                    log('🔄 Step 5: Checking game state changes...', 'info');
+                    const finalTime = mockGameState.overworld.time;
+                    const finalSupplies = mockGameState.overworld.supplies;
+                    
+                    debugLog(`Final time: ${finalTime}`);
+                    debugLog(`Final supplies: ${JSON.stringify(finalSupplies)}`);
+                    
+                    // Step 6: Return to overworld
+                    log('🏠 Step 6: Returning to overworld...', 'info');
+                    dispatcher.dispatch('MODE_CHANGE', 'overworld', 'test');
+                    
+                    log('✅ Full workflow completed successfully', 'success');
+                    debugLog('All integration steps completed');
+                } else {
+                    throw new Error('No story available for workflow test');
+                }
+                
+            } catch (error) {
+                log(`💥 Full workflow test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+
+        // Make functions global
+        window.testStoryLoading = testStoryLoading;
+        window.testGameStateSync = testGameStateSync;
+        window.testModeSwitching = testModeSwitching;
+        window.testEventIntegration = testEventIntegration;
+        window.testErrorRecovery = testErrorRecovery;
+        window.testFullWorkflow = testFullWorkflow;
+        window.clearResults = clearResults;
+
+        // Initial setup
+        log('🔗 Dialog system integration test ready', 'success');
+        debugLog('Test environment initialized');
+        debugLog('Game state mode: ' + mockGameState.mode);
+        debugLog('Game state scene: ' + mockGameState.currentScene);
+        debugLog('Available tests: Story Loading, Game State Sync, Mode Switching, Event Integration, Error Recovery, Full Workflow');
+    </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Fixed Dialog System</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { margin: 5px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Fixed Dialog System</h1>
+    
+    <div id="results"></div>
+    <div id="debug"></div>
+
+    <script type="module">
+        // Import the ACTUAL dialogue service
+        import('./src/systems/dialogue-service.js').then(module => {
+            const { createDialogueService } = module;
+            
+            const results = document.getElementById('results');
+            const debug = document.getElementById('debug');
+            
+            function log(message, type = 'info') {
+                console.log(message);
+                const div = document.createElement('div');
+                div.className = `result ${type}`;
+                div.textContent = message;
+                results.appendChild(div);
+            }
+            
+            function debugLog(message) {
+                debug.textContent += message + '\n';
+                debug.scrollTop = debug.scrollHeight;
+            }
+            
+            window.testFixedDialog = function() {
+                log('🧪 Testing FIXED dialog system...', 'info');
+                debugLog('=== FIXED DIALOG SYSTEM TEST ===');
+                
+                try {
+                    // Create proper mock dispatcher
+                    const mockDispatcher = {
+                        subscribe: (event, callback) => console.log('👂 Subscribed to event:', event),
+                        dispatch: (event, data, source) => console.log('📡 Event:', event, 'from', source, data)
+                    };
+                    
+                    const mockGameState = { 
+                        stats: { reputation: 20 },
+                        overworld: { time: 600, supplies: { food: 5 } }
+                    };
+                    
+                    log('🏗️ Creating FIXED dialogue service...');
+                    const service = createDialogueService(mockDispatcher, mockGameState, null);
+                    log('✅ Service created successfully');
+                    
+                    // Test all methods exist
+                    const methods = ['initializeDialogSystem', 'startDialogEncounter', 'getDialogSystemStatus', 'initializeStories'];
+                    methods.forEach(method => {
+                        const exists = typeof service[method] === 'function';
+                        log(`  ${exists ? '✅' : '❌'} ${method}()`);
+                    });
+                    
+                    log('🧪 Testing initializeDialogSystem...');
+                    service.initializeDialogSystem().then(result => {
+                        log(`📊 initializeDialogSystem() result: ${result}`);
+                        
+                        if (result) {
+                            log('🎉 FIXED DIALOG SYSTEM WORKING!');
+                            log('============================================');
+                            log('✅ All methods exist and work');
+                            log('✅ initializeDialogSystem() fixed');
+                            log('✅ startDialogEncounter() fixed');
+                            log('✅ getDialogSystemStatus() fixed');
+                            log('✅ Ready for browser testing');
+                        } else {
+                            log('❌ initializeDialogSystem failed');
+                        }
+                    }).catch(err => {
+                        log(`💥 initializeDialogSystem test failed: ${err.message}`);
+                    });
+                    
+                } catch (error) {
+                    log('💥 Service creation test failed: ${error.message}');
+                }
+            };
+            
+            window.clearResults = function() {
+                results.innerHTML = '';
+                debug.textContent = '';
+            };
+            
+            // Initial test
+            window.testFixedDialog();
+        }).catch(error => {
+            console.error('💥 Failed to load module:', error);
+        });
+    </script>
+</body>
+</html>

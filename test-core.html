@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Core Systems Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-left: 3px solid #0f0;
+        }
+        .pass { border-left-color: #0f0; color: #0f0; }
+        .fail { border-left-color: #f00; color: #f00; }
+        h1 { color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>Core Systems Test</h1>
+    <div id="results"></div>
+    
+    <script src="js/core/constants.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <script src="js/core/utils.js"></script>
+    
+    <script>
+        const results = document.getElementById('results');
+        const tests = [];
+        
+        function test(name, fn) {
+            try {
+                const result = fn();
+                tests.push({ name, pass: result === true, error: result === true ? null : result });
+            } catch (e) {
+                tests.push({ name, pass: false, error: e.message });
+            }
+        }
+        
+        // Test 1: Constants loaded
+        test('CHAPTERS constant exists', () => {
+            return typeof window.CHAPTERS !== 'undefined';
+        });
+        
+        test('PATRONS constant exists', () => {
+            return typeof window.PATRONS !== 'undefined';
+        });
+        
+        test('KIT_TIER_MAP constant exists', () => {
+            return typeof window.KIT_TIER_MAP !== 'undefined';
+        });
+        
+        test('statLimits constant exists', () => {
+            return typeof window.statLimits !== 'undefined';
+        });
+        
+        // Test 2: Game State loaded
+        test('gameState exists', () => {
+            return typeof window.gameState !== 'undefined';
+        });
+        
+        test('gameState has stats', () => {
+            return window.gameState && typeof window.gameState.stats === 'object';
+        });
+        
+        test('makeDefaultGameState function exists', () => {
+            return typeof window.makeDefaultGameState === 'function';
+        });
+        
+        // Test 3: Utils loaded
+        test('clampStat function exists', () => {
+            return typeof window.clampStat === 'function';
+        });
+        
+        test('applyStatChange function exists', () => {
+            return typeof window.applyStatChange === 'function';
+        });
+        
+        test('escapeHTML function exists', () => {
+            return typeof window.escapeHTML === 'function';
+        });
+        
+        test('rollDice function exists', () => {
+            return typeof window.rollDice === 'function';
+        });
+        
+        test('resolveAction function exists', () => {
+            return typeof window.resolveAction === 'function';
+        });
+        
+        // Test 4: Functionality tests
+        test('clampStat works correctly', () => {
+            const result = clampStat('strength', 15);
+            return result === 10; // Should clamp to max
+        });
+        
+        test('escapeHTML escapes correctly', () => {
+            const result = escapeHTML('<script>alert("xss")</script>');
+            return result === '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;';
+        });
+        
+        test('rollDice returns number', () => {
+            const result = rollDice(5);
+            return typeof result === 'number' && result >= 6 && result <= 15;
+        });
+        
+        test('applyStatChange modifies gameState', () => {
+            const oldValue = gameState.stats.strength;
+            applyStatChange('strength', 1, { silent: true });
+            const newValue = gameState.stats.strength;
+            // Restore
+            gameState.stats.strength = oldValue;
+            return newValue === oldValue + 1 || newValue === 10; // Either +1 or clamped to max
+        });
+        
+        test('resolveAction returns correct structure', () => {
+            const result = resolveAction('strength', 7, 0);
+            return result && 
+                   typeof result.roll === 'number' &&
+                   typeof result.success === 'boolean' &&
+                   typeof result.margin === 'number' &&
+                   typeof result.effectiveStat === 'number';
+        });
+        
+        // Display results
+        tests.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'test ' + (t.pass ? 'pass' : 'fail');
+            div.textContent = (t.pass ? '✓' : '✗') + ' ' + t.name;
+            if (t.error) {
+                div.textContent += ' - ' + t.error;
+            }
+            results.appendChild(div);
+        });
+        
+        const passed = tests.filter(t => t.pass).length;
+        const total = tests.length;
+        const summary = document.createElement('div');
+        summary.className = 'test ' + (passed === total ? 'pass' : 'fail');
+        summary.textContent = `\nResults: ${passed}/${total} tests passed`;
+        summary.style.marginTop = '20px';
+        summary.style.fontWeight = 'bold';
+        results.appendChild(summary);
+        
+        console.log('Test Results:', { passed, total, tests });
+    </script>
+</body>
+</html>

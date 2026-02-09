@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compiled Story Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@2.3.2/dist/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .debug { background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Compiled Story Test</h1>
+    <div id="results"></div>
+    <div class="debug" id="debug"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        const debug = document.getElementById('debug');
+        
+        function log(message, type = 'info') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function debugLog(message) {
+            debug.textContent += message + '\n';
+        }
+
+        async function testCompiledStory() {
+            log('🧪 Testing compiled story loading...', 'info');
+            
+            try {
+                // Load the compiled story
+                debugLog('Loading story JSON...');
+                const response = await fetch('public/stories/overworld/forest_test.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const jsonText = await response.text();
+                debugLog('JSON loaded, length: ' + jsonText.length);
+                debugLog('First 200 chars: ' + jsonText.substring(0, 200));
+                
+                // Parse JSON
+                const storyJson = JSON.parse(jsonText);
+                debugLog('JSON parsed successfully');
+                debugLog('inkVersion: ' + storyJson.inkVersion);
+                debugLog('Has root: ' + !!storyJson.root);
+                debugLog('Root type: ' + typeof storyJson.root);
+                
+                // Create ink story
+                debugLog('Creating ink Story instance...');
+                const story = new inkjs.Story(storyJson);
+                
+                log('✅ Story created successfully!', 'success');
+                log(`📖 inkVersion: ${storyJson.inkVersion}`, 'info');
+                log(`🔧 CurrentChoices: ${story.currentChoices.length}`, 'info');
+                
+                // Test external function binding
+                debugLog('Testing external function binding...');
+                let boundFunctions = 0;
+                
+                try {
+                    story.BindExternalFunction('advanceTime', (minutes) => {
+                        debugLog('✓ advanceTime called with: ' + minutes);
+                        return minutes;
+                    });
+                    boundFunctions++;
+                } catch (e) {
+                    debugLog('✗ advanceTime binding failed: ' + e.message);
+                }
+                
+                try {
+                    story.BindExternalFunction('getSupplies', () => {
+                        debugLog('✓ getSupplies called');
+                        return JSON.stringify({ food: 5, water: 3 });
+                    });
+                    boundFunctions++;
+                } catch (e) {
+                    debugLog('✗ getSupplies binding failed: ' + e.message);
+                }
+                
+                try {
+                    story.BindExternalFunction('consumeSupply', (type, amount) => {
+                        debugLog('✓ consumeSupply called with: ' + type + ', ' + amount);
+                        return true;
+                    });
+                    boundFunctions++;
+                } catch (e) {
+                    debugLog('✗ consumeSupply binding failed: ' + e.message);
+                }
+                
+                try {
+                    story.BindExternalFunction('showImage', (imagePath) => {
+                        debugLog('✓ showImage called with: ' + imagePath);
+                    });
+                    boundFunctions++;
+                } catch (e) {
+                    debugLog('✗ showImage binding failed: ' + e.message);
+                }
+                
+                log(`🔗 External functions bound: ${boundFunctions}/4`, boundFunctions === 4 ? 'success' : 'warning');
+                
+                // Test story execution
+                debugLog('Testing story execution...');
+                try {
+                    const text = story.Continue();
+                    log(`📝 Story text: "${text.trim()}"`, 'success');
+                    log(`🔄 Can continue: ${story.canContinue}`, 'info');
+                    log(`📊 Choices available: ${story.currentChoices.length}`, 'info');
+                    
+                    if (story.currentChoices.length > 0) {
+                        story.currentChoices.forEach((choice, index) => {
+                            log(`   Choice ${index}: ${choice.text}`, 'info');
+                        });
+                    }
+                    
+                } catch (e) {
+                    log(`❌ Story execution failed: ${e.message}`, 'error');
+                    debugLog('Execution error: ' + e.stack);
+                }
+                
+                log('🎉 Compiled story test completed!', 'success');
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`, 'error');
+                debugLog('Full error: ' + error.stack);
+            }
+        }
+        
+        // Run test
+        testCompiledStory();
+    </script>
+</body>
+</html>

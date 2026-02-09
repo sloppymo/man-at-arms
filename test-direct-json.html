@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct JSON Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        #results { margin-top: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Direct JSON Loading Test</h1>
+    
+    <div>
+        <button onclick="testMainFixed()">Test main-fixed.json</button>
+        <button onclick="testCharacterFixed()">Test character-creation-fixed.json</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <!-- Ink.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/inkjs@1.10.4/dist/ink.js"></script>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testJsonFile(filename) {
+            addResult(`Testing ${filename}...`, 'info');
+            
+            try {
+                const response = await fetch(`js/ink/ink-stories/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const jsonData = await response.json();
+                addResult(`✅ ${filename} loaded successfully (${JSON.stringify(jsonData).length} chars)`, 'pass');
+                
+                // Try to create Story
+                try {
+                    const story = new inkjs.Story(jsonData);
+                    addResult(`✅ ${filename} parsed by Ink.js successfully`, 'pass');
+                    
+                    if (story.canContinue) {
+                        const text = story.Continue();
+                        addResult(`✅ ${filename} generated content: "${text.substring(0, 50)}..."`, 'pass');
+                    } else {
+                        addResult(`⚠️ ${filename} cannot continue`, 'info');
+                    }
+                    
+                } catch (inkError) {
+                    addResult(`❌ ${filename} failed to parse: ${inkError.message}`, 'fail');
+                    console.error(`Ink.js error for ${filename}:`, inkError);
+                }
+                
+            } catch (error) {
+                addResult(`❌ Failed to load ${filename}: ${error.message}`, 'fail');
+                console.error(`Loading error for ${filename}:`, error);
+            }
+        }
+        
+        async function testMainFixed() {
+            await testJsonFile('main-fixed.json');
+        }
+        
+        async function testCharacterFixed() {
+            await testJsonFile('character-creation-fixed.json');
+        }
+        
+        // Auto-test both on load
+        window.addEventListener('load', async () => {
+            setTimeout(async () => {
+                await testMainFixed();
+                await testCharacterFixed();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

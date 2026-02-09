@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo Strike Upgrade Test</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="man-at-arms-equipment-system.js"></script>
+    
+    <!-- Core Systems -->
+    <script src="js/core/constants.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <script src="js/core/utils.js"></script>
+    
+    <!-- Game Systems -->
+    <script src="js/systems/tempo-strike-profiles.js"></script>
+    <script src="js/main.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>Tempo Strike Upgrade Test</h1>
+        </div>
+        
+        <div class="main-content">
+            <div class="story-text">
+                <p>Test the upgraded Tempo Strike QTE system with profile-driven mechanics.</p>
+                
+                <h3>Test Options:</h3>
+                <div class="choices">
+                    <div class="choices-title">Choose a test scenario:</div>
+                    <div id="choices-container">
+                        <button class="control-button" onclick="testPress()">Test Press (Safe)</button>
+                        <button class="control-button" onclick="testHold()">Test Hold (Safe)</button>
+                        <button class="control-button" onclick="testDrive()">Test Drive (Safe)</button>
+                        <button class="control-button" onclick="testGreedy()">Test Press (Greedy)</button>
+                        <button class="control-button" onclick="testMultiBeat()">Test Hold Multi-beat (Greedy)</button>
+                    </div>
+                </div>
+                
+                <div id="test-results" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                    <h4>Test Results:</h4>
+                    <div id="results-content">No tests run yet.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Minigame Overlay -->
+    <div id="minigame-overlay" style="display: none;">
+        <div id="minigame-content">
+            <h2 id="minigame-title">Minigame Title</h2>
+            <p id="minigame-subtitle">Subtitle</p>
+            <div id="minigame-display"></div>
+            <div id="minigame-instructions"></div>
+            <div id="combat-progress" style="display: none;"></div>
+            <div id="combat-log" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize minimal game state for testing
+        window.gameState = window.makeDefaultGameState();
+        window.gameState.stats = {
+            strength: 5,
+            agility: 5,
+            wits: 5,
+            charisma: 5,
+            endurance: 5,
+            luck: 5,
+            morale: 5,
+            stress: 5,
+            initiative: 5,
+            wealth: 10,
+            reputation: 0,
+            experience: 0
+        };
+        
+        function updateResults(content) {
+            document.getElementById('results-content').innerHTML = content;
+        }
+        
+        async function testPress() {
+            updateResults('Testing Press (Safe tier)...');
+            const result = await window.startTempoStrike({
+                title: 'Press Attack Test',
+                subtitle: 'Test Press profile with Safe tier',
+                profileId: 'press',
+                tierId: 'safe',
+                weaponId: 'sword'
+            });
+            
+            updateResults(`
+                <strong>Press (Safe) Result:</strong><br>
+                Grade: ${result.grade} (${result.label})<br>
+                Bonus: +${result.bonus}<br>
+                Tier: ${result.tier}<br>
+                Hit Error: ${result.hitErrorMs}ms (${result.direction})<br>
+                Exertion: +${result.exertionDelta}<br>
+                Effects: ${result.effectTags.join(', ') || 'None'}<br>
+                <small>Full object: ${JSON.stringify(result, null, 2)}</small>
+            `);
+        }
+        
+        async function testHold() {
+            updateResults('Testing Hold (Safe tier)...');
+            const result = await window.startTempoStrike({
+                title: 'Hold Test',
+                subtitle: 'Test Hold profile with Safe tier',
+                profileId: 'hold',
+                tierId: 'safe'
+            });
+            
+            updateResults(`
+                <strong>Hold (Safe) Result:</strong><br>
+                Grade: ${result.grade} (${result.label})<br>
+                Bonus: +${result.bonus}<br>
+                Tier: ${result.tier}<br>
+                Hit Error: ${result.hitErrorMs}ms (${result.direction})<br>
+                Exertion: +${result.exertionDelta}<br>
+                Effects: ${result.effectTags.join(', ') || 'None'}<br>
+                <small>Full object: ${JSON.stringify(result, null, 2)}</small>
+            `);
+        }
+        
+        async function testDrive() {
+            updateResults('Testing Drive (Safe tier)...');
+            const result = await window.startTempoStrike({
+                title: 'Drive Test',
+                subtitle: 'Test Drive profile with Safe tier',
+                profileId: 'drive',
+                tierId: 'safe'
+            });
+            
+            updateResults(`
+                <strong>Drive (Safe) Result:</strong><br>
+                Grade: ${result.grade} (${result.label})<br>
+                Bonus: +${result.bonus}<br>
+                Tier: ${result.tier}<br>
+                Hit Error: ${result.hitErrorMs}ms (${result.direction})<br>
+                Exertion: +${result.exertionDelta}<br>
+                Effects: ${result.effectTags.join(', ') || 'None'}<br>
+                <small>Full object: ${JSON.stringify(result, null, 2)}</small>
+            `);
+        }
+        
+        async function testGreedy() {
+            updateResults('Testing Press (Greedy tier)...');
+            const result = await window.startTempoStrike({
+                title: 'Press Attack (Greedy)',
+                subtitle: 'Test Press profile with Greedy tier - higher risk, higher reward!',
+                profileId: 'press',
+                tierId: 'greedy',
+                weaponId: 'spear'
+            });
+            
+            updateResults(`
+                <strong>Press (Greedy) Result:</strong><br>
+                Grade: ${result.grade} (${result.label})<br>
+                Bonus: +${result.bonus}<br>
+                Tier: ${result.tier}<br>
+                Hit Error: ${result.hitErrorMs}ms (${result.direction})<br>
+                Exertion: +${result.exertionDelta}<br>
+                Effects: ${result.effectTags.join(', ') || 'None'}<br>
+                <small>Full object: ${JSON.stringify(result, null, 2)}</small>
+            `);
+        }
+        
+        async function testMultiBeat() {
+            updateResults('Testing Hold Multi-beat (Greedy tier)...');
+            const result = await window.startTempoStrike({
+                title: 'Hold Multi-beat (Greedy)',
+                subtitle: 'Test Hold profile with multi-beat in Greedy tier - hit multiple beats!',
+                profileId: 'hold',
+                tierId: 'greedy'
+            });
+            
+            const beatsInfo = result.beats ? 
+                `<br>Beats: ${result.beats.map(b => `${b.grade}(${b.bonus})`).join(', ')}` : '';
+            
+            updateResults(`
+                <strong>Hold Multi-beat (Greedy) Result:</strong><br>
+                Grade: ${result.grade} (${result.label})<br>
+                Bonus: +${result.bonus}<br>
+                Tier: ${result.tier}<br>
+                Hit Error: ${result.hitErrorMs}ms (${result.direction})<br>
+                Exertion: +${result.exertionDelta}<br>
+                Effects: ${result.effectTags.join(', ') || 'None'}${beatsInfo}<br>
+                <small>Full object: ${JSON.stringify(result, null, 2)}</small>
+            `);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quest Flow Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #1a1a1a; 
+            color: #fff; 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #444; 
+            border-radius: 5px; 
+        }
+        .expected { color: #4CAF50; }
+        .actual { color: #2196F3; }
+        .error { color: #f44336; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🏰 Test Campaign Quest Flow</h1>
+    
+    <div class="test-section">
+        <h2>Quest Overview</h2>
+        <p><strong>Objective:</strong> Test the 3-step delivery quest</p>
+        <ol>
+            <li><strong>Town Square</strong> → Get message scroll from merchant</li>
+            <li><strong>Castle Gate</strong> → Deliver scroll to guard</li>
+            <li><strong>Town Square</strong> → Complete quest and get reward</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Steps</h2>
+        <div class="expected">
+            <h3>✅ Expected Behavior:</h3>
+            <ul>
+                <li>Visit town-square (200, 200) → Get "message_scroll" item</li>
+                <li>Visit castle-gate (172, 884) → Remove "message_scroll" item</li>
+                <li>Return to town-square → Get 5 wealth + 1 reputation reward</li>
+            </ul>
+        </div>
+        
+        <div class="actual">
+            <h3>🎮 Manual Test Instructions:</h3>
+            <ol>
+                <li>Start game and move to <strong>town-square</strong> (red circle at 200, 200)</li>
+                <li>Accept the quest from merchant → Should receive "message_scroll"</li>
+                <li>Move to <strong>castle-gate</strong> (red circle at 172, 884)</li>
+                <li>Deliver scroll to guard → "message_scroll" should be removed</li>
+                <li>Return to <strong>town-square</strong> → Should get completion dialog and reward</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Debug Information</h2>
+        <p>Check browser console for:</p>
+        <ul>
+            <li>Inventory updates: <code>INVENTORY_UPDATE</code> events</li>
+            <li>Story triggering: <code>TRIGGER_ENCOUNTER</code> events</li>
+            <li>Hotspot detection: <code>Player entered hotspot</code> messages</li>
+        </ul>
+        
+        <h3>Hotspot Locations:</h3>
+        <pre>
+town-square:    x=200, y=200, radius=60
+castle-gate:    x=172, y=884, radius=40  
+forest-entrance: x=800, y=150, radius=35
+        </pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Inventory Functions Test</h2>
+        <p>These external functions should work in Ink stories:</p>
+        <ul>
+            <li><code>addItem("message_scroll", 1)</code> - Adds item to inventory</li>
+            <li><code>removeItem("message_scroll", 1)</code> - Removes item from inventory</li>
+            <li><code>hasItem("message_scroll")</code> - Checks if player has item</li>
+            <li><code>getItemCount("message_scroll")</code> - Returns item quantity</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🏰 Quest Flow Test Page Loaded');
+        console.log('Open the game in another tab and follow the test steps above.');
+        
+        // Monitor inventory changes if game is running
+        if (typeof window !== 'undefined') {
+            let inventoryLog = [];
+            
+            // Log inventory changes
+            const originalLog = console.log;
+            console.log = function(...args) {
+                if (args[0] && args[0].includes && args[0].includes('INVENTORY_UPDATE')) {
+                    inventoryLog.push(args);
+                    document.body.insertAdjacentHTML('beforeend', 
+                        `<div class="test-section actual">
+                            <h4>📦 Inventory Update Detected:</h4>
+                            <pre>${args.join(' ')}</pre>
+                        </div>`
+                    );
+                }
+                originalLog.apply(console, args);
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo Strike Unit Tests</title>
+    <script src="man-at-arms-equipment-system.js"></script>
+
+    <!-- Core Systems -->
+    <script src="js/core/constants.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <script src="js/core/utils.js"></script>
+
+    <!-- Game Systems -->
+    <script src="js/systems/tempo-strike-profiles.js"></script>
+    <script src="js/main.js"></script>
+
+    <!-- Unit Tests -->
+    <script src="test-tempo-timing-unit.js"></script>
+</head>
+<body>
+    <div style="padding: 20px; font-family: monospace;">
+        <h1>Tempo Strike Unit Tests</h1>
+        <button onclick="runTests()" style="padding: 10px 20px; font-size: 16px;">Run Unit Tests</button>
+        <div id="results" style="margin-top: 20px; white-space: pre-line;"></div>
+    </div>
+
+    <script>
+        function runTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = 'Running tests...\n\n';
+
+            // Capture console.log output
+            const originalLog = console.log;
+            let logOutput = '';
+
+            console.log = function(...args) {
+                logOutput += args.join(' ') + '\n';
+                originalLog.apply(console, args);
+            };
+
+            try {
+                const testResults = window.runTempoStrikeUnitTests();
+
+                // Restore console.log
+                console.log = originalLog;
+
+                resultsDiv.textContent = logOutput;
+
+                // Add summary
+                let summary = `\n=== FINAL RESULT ===\n`;
+                summary += `Overall: ${testResults.overall ? 'ALL TESTS PASSED ✓' : 'SOME TESTS FAILED ✗'}\n`;
+                summary += `Timing Algorithm: ${testResults.timing.failed === 0 ? 'PASS' : 'FAIL'}\n`;
+                summary += `Circular Distance: ${testResults.circularDistance ? 'PASS' : 'FAIL'}\n`;
+
+                resultsDiv.textContent += summary;
+
+            } catch (error) {
+                console.log = originalLog;
+                resultsDiv.textContent += `\nERROR: ${error.message}\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

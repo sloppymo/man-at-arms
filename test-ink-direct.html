@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Ink Test</title>
+    <script src="js/ink/ink.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .story-text { 
+            background: #f5f5f5; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 10px 0;
+            min-height: 100px;
+        }
+        .choices { margin: 10px 0; }
+        .choice-button { 
+            display: block; 
+            width: 100%; 
+            margin: 5px 0; 
+            padding: 10px; 
+            background: #e0e0e0; 
+            border: 1px solid #999; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        .choice-button:hover { background: #d0d0d0; }
+        .debug { 
+            background: #333; 
+            color: white; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Direct Ink Story Test</h1>
+        
+        <button onclick="loadStory()">Load Forest Story</button>
+        <button onclick="clearStory()">Clear</button>
+        
+        <div class="debug" id="debug">Click "Load Forest Story" to begin...</div>
+        
+        <div class="story-text" id="story-text">Story will appear here...</div>
+        <div class="choices" id="choices"></div>
+    </div>
+
+    <script>
+        let story = null;
+        
+        function updateDebug(message) {
+            document.getElementById('debug').innerHTML += '<br>' + message;
+            console.log(message);
+        }
+        
+        function clearStory() {
+            document.getElementById('story-text').innerHTML = 'Story will appear here...';
+            document.getElementById('choices').innerHTML = '';
+            document.getElementById('debug').innerHTML = 'Debug cleared...';
+            story = null;
+        }
+        
+        function loadStory() {
+            updateDebug('Loading story...');
+            
+            try {
+                updateDebug('Loading known working JSON file...');
+                
+                // Load the actual working JSON file from project
+                fetch('public/stories/overworld/simple_test_scene.json')
+                    .then(response => {
+                        if (!response.ok) throw new Error('File not found: ' + response.status);
+                        return response.json();
+                    })
+                    .then(storyData => {
+                        updateDebug('Loaded working JSON file successfully');
+                        console.log('Story data:', storyData);
+                        
+                        if (typeof window.inkjs !== 'undefined' && window.inkjs.Story) {
+                            story = new window.inkjs.Story(storyData);
+                            updateDebug('Story instance created successfully!');
+                            
+                            continueStory();
+                        } else {
+                            updateDebug('Ink.js Story not available');
+                        }
+                    })
+                    .catch(error => {
+                        updateDebug('Error loading file: ' + error.message);
+                        console.error('File loading error:', error);
+                    });
+                
+            } catch (error) {
+                updateDebug('Error: ' + error.message);
+                console.error('Story loading error:', error);
+            }
+        }
+        
+        function continueStory() {
+            if (!story) return;
+            
+            try {
+                updateDebug('Continuing story...');
+                
+                // Get next story content
+                const text = story.Continue();
+                updateDebug('Got text: ' + text.substring(0, 50) + '...');
+                
+                // Display text
+                document.getElementById('story-text').innerHTML = text;
+                
+                // Get choices
+                const choices = story.currentChoices;
+                updateDebug('Choices available: ' + choices.length);
+                
+                // Display choices
+                const choicesContainer = document.getElementById('choices');
+                choicesContainer.innerHTML = '';
+                
+                choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-button';
+                    button.textContent = choice.text;
+                    button.onclick = () => chooseChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+                
+                if (choices.length === 0) {
+                    updateDebug('Story ended - no choices available');
+                }
+                
+            } catch (error) {
+                updateDebug('Continue error: ' + error.message);
+                console.error('Continue error:', error);
+            }
+        }
+        
+        function chooseChoice(choice) {
+            updateDebug('Choosing: ' + choice.text);
+            
+            try {
+                choice.choose();
+                continueStory();
+            } catch (error) {
+                updateDebug('Choice error: ' + error.message);
+                console.error('Choice error:', error);
+            }
+        }
+        
+        // Check if Ink.js loaded
+        window.onload = function() {
+            if (typeof window.inkjs !== 'undefined') {
+                updateDebug('Ink.js loaded successfully');
+                updateDebug('Compiler available: ' + typeof window.inkjs.Compiler);
+            } else {
+                updateDebug('Ink.js failed to load');
+            }
+        };
+    </script>
+</body>
+</html>
