@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Man-at-Arms' Life - CSP Bypass</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #map-container {
+            flex: 1;
+            background: #000;
+            position: relative;
+            min-height: 400px;
+            border: 2px solid #333;
+        }
+        #ui-panel {
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 8px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .status {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .quest-text {
+            background: rgba(0,0,0,0.1);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="map-container">
+            <div style="text-align: center; padding: 50px; color: #666;">
+                🗺️ Overworld Map Loading...
+            </div>
+        </div>
+        
+        <div id="ui-panel">
+            <h2>🏰 Man-at-Arms Quest System</h2>
+            
+            <div class="status">
+                <strong>📍 Location:</strong> <span id="location">Town Square</span>
+            </div>
+            
+            <div class="status">
+                <strong>📜 Quest Stage:</strong> <span id="quest-stage">Not Started</span>
+            </div>
+            
+            <div class="status">
+                <strong>🎒 Inventory:</strong> <span id="inventory">Empty</span>
+            </div>
+            
+            <div class="quest-text">
+                <p><strong>MERCHANT:</strong> "Hello, brave soldier! I have an urgent message that must be delivered to the castle gate. Can you help me?"</p>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="button" onclick="acceptQuest()">✅ Accept Quest</button>
+                <button class="button" onclick="goToCastle()">🏰 Go to Castle</button>
+                <button class="button" onclick="deliverMessage()">📜 Deliver Message</button>
+                <button class="button" onclick="completeQuest()">🎉 Complete Quest</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            location: 'Town Square',
+            questStage: 'Not Started',
+            inventory: [],
+            hasMessageScroll: false
+        };
+        
+        // Update display
+        function updateDisplay() {
+            document.getElementById('location').textContent = gameState.location;
+            document.getElementById('quest-stage').textContent = gameState.questStage;
+            document.getElementById('inventory').textContent = gameState.inventory.length > 0 ? gameState.inventory.join(', ') : 'Empty';
+        }
+        
+        // Quest functions
+        function acceptQuest() {
+            gameState.questStage = 'Message Accepted';
+            gameState.inventory.push('message_scroll');
+            gameState.hasMessageScroll = true;
+            updateDisplay();
+            showMessage('✅ Quest accepted! You received a message scroll. Deliver it to the castle gate.');
+        }
+        
+        function goToCastle() {
+            gameState.location = 'Castle Gate';
+            updateDisplay();
+            showMessage('🏰 You arrived at the castle gate. The guard is waiting for the message.');
+        }
+        
+        function deliverMessage() {
+            if (gameState.hasMessageScroll) {
+                gameState.questStage = 'Message Delivered';
+                gameState.inventory = []; // Remove message scroll
+                gameState.hasMessageScroll = false;
+                updateDisplay();
+                showMessage('📜 Message delivered successfully! Return to the merchant for your reward.');
+            } else {
+                showMessage('❌ You need to accept the quest first!');
+            }
+        }
+        
+        function completeQuest() {
+            if (gameState.questStage === 'Message Delivered') {
+                gameState.questStage = 'Quest Complete';
+                gameState.inventory.push('5 silver pieces', 'reputation +1');
+                updateDisplay();
+                showMessage('🎉 Quest complete! You received 5 silver pieces and increased reputation!');
+            } else {
+                showMessage('❌ You need to deliver the message first!');
+            }
+        }
+        
+        function showMessage(text) {
+            const questDiv = document.querySelector('.quest-text');
+            questDiv.innerHTML = `<p><strong>${text}</strong></p>`;
+        }
+        
+        // Initialize
+        updateDisplay();
+    </script>
+</body>
+</html>
