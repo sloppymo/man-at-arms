@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Map Loading Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+    class TestScene extends Phaser.Scene {
+        preload() {
+            console.log('Loading map from:', 'https://raw.githubusercontent.com/sloppymo/man-at-arms/pages/overworld/map.png');
+            this.load.image('overworld-map', 'https://raw.githubusercontent.com/sloppymo/man-at-arms/pages/overworld/map.png');
+        }
+        
+        create() {
+            console.log('Creating scene...');
+            if (this.textures.exists('overworld-map')) {
+                console.log('Map loaded successfully!');
+                this.add.image(0, 0, 'overworld-map').setOrigin(0, 0);
+            } else {
+                console.error('Map failed to load!');
+            }
+        }
+    }
+    
+    const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        parent: 'game-container',
+        scene: TestScene
+    };
+    
+    const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>
