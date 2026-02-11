@@ -400,8 +400,8 @@ export class DialogueService {
       }
       
       console.log('DialogueService: About to switchStory:', storyName);
-      this.switchStory(storyName);
       this.dispatcher.dispatch(EVENT_TYPES.MODE_CHANGE, 'dialogue');
+      this.switchStory(storyName);
     });
     if (triggerEncHandle) this._unsubscribeHandles.push(triggerEncHandle);
 
@@ -633,40 +633,6 @@ export class DialogueService {
       }
     });
 
-    safeBind('consumeSupply', (type, amount) => {
-      const supplyType = String(type || '').trim();
-      const consumeAmount = parseInt(amount) || 0;
-      
-      if (!supplyType || consumeAmount <= 0) {
-        console.warn('DialogueService: consumeSupply called with invalid args:', { type, amount });
-        return false;
-      }
-      
-      try {
-        const supplies = this.gameState.overworld?.supplies || {};
-        if (!supplies[supplyType] || supplies[supplyType] < consumeAmount) {
-          console.log(`DialogueService: Not enough ${supplyType} (have: ${supplies[supplyType]}, need: ${consumeAmount})`);
-          return false;
-        }
-        
-        supplies[supplyType] -= consumeAmount;
-        console.log(`DialogueService: Consumed ${consumeAmount} ${supplyType}, remaining: ${supplies[supplyType]}`);
-        
-        this.dispatcher.dispatch('SUPPLY_CONSUMED', {
-          type: supplyType,
-          amount: consumeAmount,
-          remaining: supplies[supplyType],
-          source: 'ink'
-        }, 'dialogue-service');
-        
-        return true;
-        
-      } catch (error) {
-        console.error('DialogueService: Error in consumeSupply:', error);
-        return false;
-      }
-    });
-
     safeBind('showImage', (imagePath) => {
       if (!imagePath || typeof imagePath !== 'string') {
         console.warn('DialogueService: Invalid image path provided to showImage:', imagePath);
@@ -695,7 +661,7 @@ export class DialogueService {
     });
 
     console.log(`DialogueService: External function binding complete. Bound functions:`, [
-      'advanceTime', 'getSupplies', 'consumeSupply', 'showImage'
+      'advanceTime', 'getSupplies', 'showImage'
     ]);
 
     // Stat modifications - dispatch events instead of direct calls
@@ -912,28 +878,46 @@ export class DialogueService {
       return true;
     });
 
-    story.BindExternalFunction('gainSupply', function(type, amount) {
-      const supplies = (this.gameState.overworld && this.gameState.overworld.supplies) || {};
-      supplies[type] = (supplies[type] || 0) + (parseInt(amount) || 0);
-      return true;
-    }.bind(this));
-      const itemIndex = this.gameState.inventory.findIndex(item => item.id === itemId);
-      if (itemIndex !== -1) {
-        const item = this.gameState.inventory[itemIndex];
-        if (item.stackCount <= quantity) {
-          this.gameState.inventory.splice(itemIndex, 1);
-        } else {
-          item.stackCount -= quantity;
-        }
-        this.dispatcher.dispatch('INVENTORY_UPDATE', {
-          action: 'remove',
-          itemId,
-          quantity
-        }, 'dialogue-service');
-        return true;
+    story.BindExternalFunction('consumeSupply', (type, amount) => {
+      const supplyType = String(type || '').trim();
+      const changeAmount = parseInt(amount) || 0;
+
+      if (!supplyType) {
+        console.warn('DialogueService: consumeSupply called with invalid args:', { type, amount });
+        return false;
       }
-      return false;
+
+      try {
+        const supplies = (this.gameState.overworld && this.gameState.overworld.supplies) || {};
+        if (changeAmount > 0) {
+          // add
+          supplies[supplyType] = (supplies[supplyType] || 0) + changeAmount;
+          console.log(`DialogueService: Added ${changeAmount} ${supplyType}, now: ${supplies[supplyType]}`);
+        } else if (changeAmount < 0) {
+          // consume
+          const consumeAmount = -changeAmount;
+          if (!supplies[supplyType] || supplies[supplyType] < consumeAmount) {
+            console.log(`DialogueService: Not enough ${supplyType} (have: ${supplies[supplyType]}, need: ${consumeAmount})`);
+            return false;
+          }
+          supplies[supplyType] -= consumeAmount;
+          console.log(`DialogueService: Consumed ${consumeAmount} ${supplyType}, remaining: ${supplies[supplyType]}`);
+          this.dispatcher.dispatch('SUPPLY_CONSUMED', {
+            type: supplyType,
+            amount: consumeAmount,
+            remaining: supplies[supplyType],
+            source: 'ink'
+          }, 'dialogue-service');
+        } else {
+          return true; // amount 0, do nothing
+        }
+        return true;
+      } catch (error) {
+        console.error('DialogueService: Error in consumeSupply:', error);
+        return false;
+      }
     });
+
 
     story.BindExternalFunction('hasItem', (itemId) => {
       return this.gameState.inventory.some(item => item.id === itemId);
@@ -996,9 +980,15 @@ export class DialogueService {
       return;
     }
 
+    // Advance the story until we reach a choice point or the end
+    while (this.currentStory.canContinue && this.currentStory.currentChoices.length === 0) {
+      console.log('Continuing story to find choices...');
+      this.currentStory.Continue();
+    }
+
     try {
       // Get current story text
-      const currentText = this.currentStory.currentText || this.currentStory.Continue() || "The story begins...";
+      const currentText = this.currentStory.currentText || "The story begins...";
       console.log('Story text:', currentText);
       
       // Process tags from the current story content

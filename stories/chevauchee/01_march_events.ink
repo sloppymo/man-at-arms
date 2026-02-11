@@ -39,6 +39,28 @@ Several archers raise their bows instinctively, but Sir Robert holds up a hand. 
   {advanceTime(10)}
   -> DONE
 
+* [Shoot the deer anyway]
+  You ignore the command and draw your bow in one fluid motion. The arrow flies true, striking the deer in the flank. It staggers, blood spraying, then crashes into the underbrush.
+
+  The column falls silent. Sir Robert turns to you, his face like stone. "You disobeyed a direct order. In war, that gets men killed."
+
+  The men look away uncomfortably. One of your comrades mutters, "Fresh meat's fresh meat."
+
+  {changeStat("stress", 3)}
+  {addHeat(2)}
+  {advanceTime(30)}
+  -> DONE
+
+* [Signal the men to stand down]
+  You raise your hand alongside Sir Robert's, reinforcing his command. The archers lower their bows, and the deer disappears into the forest unharmed.
+
+  Sir Robert gives you a brief nod of approval. "Good man. Discipline above all."
+
+  {changeStat("leadership", 1)}
+  {changeStat("stress", -1)}
+  {advanceTime(5)}
+  -> DONE
+
 === march_event_2
 You come across a small stream, crystal clear and babbling over smooth stones. The men are thirsty from the long march, and several start to kneel to drink.
 

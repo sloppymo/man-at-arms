@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,13 +51,9 @@ function convertInkToBytecode(inkContent) {
             }
         }
 
-        // Handle choice lines - temporarily disabled to fix browser loading
+        // Handle choice lines - temporarily disabled due to inkjs compatibility issues
         if (line.startsWith('*')) {
             // Skip choice lines for now to get basic loading working
-            // choices.push({
-            //     '*': 'Continue',
-            //     '->': 'DONE'
-            // });
             i++;
             continue;
         }
@@ -96,6 +93,22 @@ function compileInkFile(inputPath, outputPath) {
     try {
         console.log(`📖 Compiling ${path.relative(projectRoot, inputPath)}...`);
 
+        // Try official inklecate first for proper choice support
+        try {
+            execSync(`inklecate "${inputPath}" -o "${outputPath}"`, { stdio: 'pipe' });
+            console.log(`✅ Compiled with inklecate to ${path.relative(projectRoot, outputPath)}`);
+
+            // Basic verification for inklecate output
+            if (fs.existsSync(outputPath)) {
+                const stats = fs.statSync(outputPath);
+                console.log(`   📊 File size: ${stats.size} bytes`);
+                return outputPath;
+            }
+        } catch (inklecateError) {
+            console.log(`Inklecate not available or failed (${inklecateError.message}), falling back to custom compiler...`);
+        }
+
+        // Fallback to custom compiler
         const inkContent = fs.readFileSync(inputPath, 'utf8');
 
         // Use enhanced custom compiler
@@ -116,7 +129,7 @@ function compileInkFile(inputPath, outputPath) {
         // Write compiled JSON
         fs.writeFileSync(outputPath, JSON.stringify(compiled, null, 2));
 
-        console.log(`✅ Compiled to ${path.relative(projectRoot, outputPath)} (${root.length} sections)`);
+        console.log(`✅ Compiled with custom compiler to ${path.relative(projectRoot, outputPath)} (${root.length} sections)`);
 
         // Basic verification
         const hasContent = root.length > 0;
