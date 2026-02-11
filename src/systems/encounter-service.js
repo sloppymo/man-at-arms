@@ -202,14 +202,11 @@ export class EncounterService {
     
     // Dispatch encounter trigger
     this.dispatcher.dispatch(EVENT_TYPES.TRIGGER_ENCOUNTER, {
-      payload: {
-        story: storyName,
-        encounterType: encounterResult.type,
-        zone: zone,
-        hex: { q, r }
-      },
-      source: 'encounter-service'
-    });
+      story: storyName,
+      encounterType: encounterResult.type,
+      zone: zone,
+      hex: { q, r }
+    }, 'encounter-service');
   }
 
   /**

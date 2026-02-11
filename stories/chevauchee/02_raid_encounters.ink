@@ -10,6 +10,7 @@ EXTERNAL discoverHex(q, r)
 EXTERNAL rollDice(modifier)
 EXTERNAL doCheck(stat, difficulty, bonus)
 EXTERNAL triggerSkirmish(skirmishType)
+EXTERNAL addSupply(type, amount)
 
 == start
 === raid_village_1
@@ -581,13 +582,436 @@ The garrison commander sends a messenger. "The town will pay tribute if you spar
   -> market_negotiation
 
 == DONE
-{addHeat(5)}
-{advanceTime(120)}
+~ addHeat(5)
+~ advanceTime(120)
 
-The raiding continues, each target yielding different challenges and rewards. Some surrender peacefully, others resist futilely. Wealth accumulates, but so does the heat - the French are surely organizing their response.
+The raiding continues. Villages burn. Supplies accumulate. The French respond.
 
+~ changeStat("stress", 3)
+
+=== raid_cottage
+{showImage("artwork/burn_line.jpg")}
+
+You find a small cottage on the outskirts of a burned village. The thatch roof smolders but has not yet caught fully. Smoke curls lazily into the morning sky.
+
+{advanceTime(10)}
+
+{addHeat(1)}
+
+Pushing open the door, you enter. The air smells of milk and damp wool. A woman kneels by the hearth, her face turned to the floor and her eyes shut in silent prayer. A man lies against the far wall, struggling to breathe through labored gasps - perhaps injured in the earlier chaos. A child watches from behind the door, silent and wide-eyed, not crying.
+
+You overturn the grain bin and find it lined with coins sewn into linen bags - their life savings. A cured ham hangs in the rafters, and a sack of beans lies beneath the bed.
+
+* [Take everything.] -> cottage_take_all
+* [Take the ham and half the coins.] -> cottage_take_essentials
+* [Take only the ham.] -> cottage_show_mercy
+* [Bind the man's wounds.] -> cottage_help_wounded
+
+== cottage_take_all
+You strip the cottage bare - the coins, ham, beans, even the wool blankets from the bed. The woman doesn't look up, but the child begins to whimper softly.
+
+{addHeat(2)}
+{changeStat("stress", 1)}
+{changeStat("morale", -1)}
+{consumeSupply("food", -3)}  // Gained supplies
+
+The men load the goods onto the cart. That night, they eat well.
+
+-> cottage_exit
+
+== cottage_take_essentials
+You take the ham and half the coins, leaving the beans and some coin for their survival. The woman raises her head slightly, hope flickering in her eyes.
+
+{addHeat(1)}
+{changeStat("morale", 1)}
+{consumeSupply("food", -1)}
+
+The men divide the ham among themselves. The child watches silently.
+
+-> cottage_exit
+
+== cottage_show_mercy
+You take only the ham, leaving the coins and beans untouched. "Winter comes," you mutter, more to yourself than to them.
+
+{changeStat("stress", -1)}
+{changeStat("morale", 2)}
+{changeStat("reputation", 1)}
+{consumeSupply("food", -1)}
+
+The woman does not look up. The man breathes shallowly against the wall.
+
+-> cottage_exit
+
+== cottage_help_wounded
+You kneel by the man and examine his wounds - a deep gash from a falling beam. You bind it with strips from your own cloak and give him water from your flask.
+
+{advanceTime(20)}
+{changeStat("stress", -2)}
+{changeStat("morale", 3)}
+{changeStat("health", -1)}  // Using your supplies to help
+
+The man opens his eyes and whispers thanks. He lives.
+
+-> cottage_exit
+
+== cottage_exit
+{advanceTime(15)}
+
+You leave the cottage, the smoldering roof finally catching fire behind you. The child watches from the door.
+
+-> DONE
+
+=== raid_roadside_family
+{showImage("artwork/standoff.jpg")}
+
+Along a narrow country road, you encounter a family fleeing the raids. They've loaded their lives into a two-wheeled cart: threadbare blankets, a wooden churn, a cage of scrawny hens. The ox pulling it is thin and blown from the pace, its ribs visible beneath matted hide.
+
+{advanceTime(15)}
+
+{addHeat(1)}
+
+The father steps forward defiantly, a kitchen knife clutched in his trembling hand - a weapon that should never have been shown. The mother kneels in the dirt behind him, gathering butter that has spilled from the churn as if the scattered cream could still be saved.
+
+* [Kill the father and take the cart.] -> roadside_take_cart_kill
+* [Take the cart but spare the father.] -> roadside_take_cart_spare
+* [Take the ox and hens.] -> roadside_take_livestock
+* [Let them pass.] -> roadside_show_mercy
+
+== roadside_take_cart_kill
+You knock the father down with the flat of your sword, then run him through as he struggles in the dirt. The mother screams, the child wails. Your men seize the cart whole, the hens scattering in panic. One soldier cuts the ox loose and leads it away.
+
+{addHeat(3)}
+{changeStat("stress", 2)}
+{changeStat("morale", -2)}
+{consumeSupply("food", -2)}  // Cart contents
+
+The cart holds blankets, churn, and a small hoard of flour. The screams echo in the morning air.
+
+-> roadside_exit
+
+== roadside_take_cart_spare
+You disarm the father with a sharp blow, leaving him bruised but alive. "Go," you command. Your men take the cart, hens scattering wildly. The ox is cut loose and led away.
+
+{addHeat(2)}
+{changeStat("stress", 1)}
+{consumeSupply("food", -2)}
+
+The mother gathers what has spilled from the churn. The father watches you depart.
+
+-> roadside_exit
+
+== roadside_take_livestock
+You take the ox and the cage of hens, leaving the cart and its pitiful contents. The family watches in stunned silence as you depart.
+
+{addHeat(1)}
+{changeStat("morale", 1)}
+{consumeSupply("food", -1)}
+
+The ox lows softly as it's led away. The cart sits abandoned on the road.
+
+-> roadside_exit
+
+== roadside_show_mercy
+You lower your weapon. "Pass," you say simply. The father nods jerkily, the knife falling from his hand. They continue their desperate flight.
+
+{changeStat("stress", -2)}
+{changeStat("morale", 2)}
+{changeStat("reputation", 1)}
+
+The mother kneels in the road, gathering what has spilled from the churn.
+
+-> roadside_exit
+
+== roadside_exit
+{advanceTime(10)}
+
+The road stretches empty behind you. Another family displaced by the chevauchée's shadow.
+
+-> DONE
+
+=== raid_monastery_vignette
+{showImage("artwork/Vigiles_du_roi_Charles_VII_32.jpg")}
+
+The monastery gate is not built for war. It yields after the third blow from your men's axes. The brothers do not resist - they stand in the cloister yard with their hands folded into their sleeves, faces composed in resignation.
+
+{advanceTime(20)}
+
+{addHeat(2)}
+
+You break the cellar doors to find wine in casks and salt beef in brine. In the sacristy, chalices gleam on the altar and a reliquary wrapped in cloth catches your eye.
+
+The abbot approaches, his voice steady. "We are men of peace. Spare us!"
+
+* [Take everything from the monastery.] -> monastery_take_burn
+* [Take the wine and silver, spare the books.] -> monastery_take_spare
+* [Take only what you need.] -> monastery_take_essentials
+* [Spare the monastery entirely.] -> monastery_spare_all
+
+== monastery_take_burn
+Your men strip the silver from the chalices and reliquary. You stack the books in the yard and set them alight, the abbot watching with tears in his eyes as centuries of knowledge burn.
+
+{addHeat(4)}
 {changeStat("stress", 3)}
+{changeStat("morale", -3)}
+{consumeSupply("food", -5)}  // Wine and beef
 
-This is the heart of the chevauchée - systematic destruction and looting, breaking the French will to fight by destroying their economic base. Every village burned, every farm looted, every church plundered serves the greater strategy.
+The wine is excellent, the beef well-preserved. The ashes settle slowly.
 
-But with each raid, the risk increases. The French won't let this continue unanswered.
+-> monastery_exit
+
+== monastery_take_spare
+You take the wine, beef, and silver, but leave the books untouched. The abbot bows deeply. "You will be remembered."
+
+{addHeat(2)}
+{changeStat("stress", -1)}
+{changeStat("morale", 1)}
+{consumeSupply("food", -3)}
+
+The brothers stand silent as you depart. The library remains.
+
+-> monastery_exit
+
+== monastery_take_essentials
+You take the beef and some wine, leaving the silver chalices and reliquary. The abbot nods. "Practical mercy."
+
+{addHeat(1)}
+{changeStat("morale", 2)}
+{consumeSupply("food", -2)}
+
+The abbot watches you leave. The monastery stands diminished but intact.
+
+-> monastery_exit
+
+== monastery_spare_all
+You sheath your sword. "This place will not be harmed," you declare. Your men grumble but obey. The abbot offers you bread and wine as guests.
+
+{changeStat("stress", -3)}
+{changeStat("morale", 4)}
+{changeStat("reputation", 2)}
+{changeStat("health", 1)}  // Rest and food
+
+The brothers kneel in thanks. The monastery endures.
+
+-> monastery_exit
+
+== monastery_exit
+{advanceTime(30)}
+
+You leave the monastery behind, its bells tolling faintly in the distance. The chevauchée rolls on.
+
+-> DONE
+
+=== raid_smokehouse
+~ showImage("artwork/burn_line.jpg")
+
+The yard is empty but for a tethered goat and a line of shirts stiff with drying lye. The smokehouse door is barred. You pry it open and the smell of meat rolls out thick and sweet.
+
+~ advanceTime(10)
+
+~ addHeat(1)
+
+Inside hang sides of pork and links of sausage dark with pepper. A man crawls from beneath the racks with a cleaver in his hand and blood already on his apron. He drops it when he sees how many of you there are.
+
+You take the meat first. One of your men pockets the man's boots while he is made to kneel in the yard.
+
+* [Kill the man and take everything.] -> smokehouse_kill_take_all
+* [Take his boots and the goat.] -> smokehouse_spare_take_some
+* [Take only the meat.] -> smokehouse_mercy
+* [Recruit the man as a cook.] -> smokehouse_recruit
+
+== smokehouse_kill_take_all
+You run him through where he kneels. His blood mixes with the dirt. Your men strip the smokehouse bare - every link of sausage, every side of pork.
+
+~ addHeat(3)
+~ changeStat("stress", 2)
+~ changeStat("morale", -1)
+~ addSupply("food", 5)
+
+That night the men eat well. No one speaks of the blood on the ground.
+
+-> smokehouse_exit
+
+== smokehouse_spare_take_some
+You let him live but take his boots and untether the goat. "Walk home barefoot," you command. He nods, tears in his eyes.
+
+~ addHeat(2)
+~ changeStat("stress", 1)
+~ changeStat("morale", 1)
+~ addSupply("food", 2)
+
+The man limps away barefoot. The goat follows obediently.
+
+-> smokehouse_exit
+
+== smokehouse_mercy
+You leave him his boots and the goat. "The meat is ours, but you may keep your dignity." He whispers thanks as you depart.
+
+~ changeStat("stress", -1)
+~ changeStat("morale", 2)
+~ changeStat("reputation", 1)
+~ addSupply("food", 3)
+
+The man does not look up as you leave. The meat is gone.
+
+-> smokehouse_exit
+
+== smokehouse_recruit
+"You know meat," you say. "Come with us. Cook for our men." He hesitates, then nods. The army needs skilled hands.
+
+~ changeStat("stress", -2)
+~ changeStat("morale", 3)
+~ gainSupply("food", 3)
+
+He follows silently, cleaver still in hand.
+
+-> smokehouse_exit
+
+== smokehouse_exit
+~ advanceTime(15)
+
+The smokehouse stands empty, the scent of meat lingering in the air. Another piece of Normandy claimed by the chevauchée.
+
+-> DONE
+
+=== raid_manor_pantry
+{showImage("artwork/signup.jpg")}
+
+The manor hall stands intact, shutters closed, servants fled. Only the steward remains, keys at his belt and ink on his fingers. He speaks of accounts and obligations as though they will matter.
+
+{advanceTime(15)}
+
+{addHeat(2)}
+
+You walk him to the pantry and have him open it himself. There are wheels of cheese, sacks of oats, jars of honey sealed in wax. In the strongroom, a small chest of rent silver waits for collection that will not come.
+
+You leave the steward alive. He will be the one to explain what is gone.
+
+* [Slit the steward's throat and take everything.] -> pantry_take_all_kill
+* [Take the silver and supplies, leave the steward.] -> pantry_take_most_spare
+* [Take only what you need for the march.] -> pantry_take_essentials
+* [Take the silver, leave the rest.] -> pantry_leave_portion
+
+== pantry_take_all_kill
+You slit the steward's throat after he unlocks everything. His body slumps by the pantry door. Your men load all the cheese, oats, honey, and silver.
+
+~ addHeat(4)
+~ changeStat("stress", 3)
+~ changeStat("morale", -2)
+~ addSupply("food", 8)
+
+The manor accounts will never balance. The ink stains the steward's fingers even in death.
+
+-> pantry_exit
+
+== pantry_take_most_spare
+You take the silver chest and most of the supplies, leaving a wheel of cheese and some oats. The steward watches silently as you depart.
+
+~ addHeat(2)
+~ changeStat("stress", 1)
+~ addSupply("food", 6)
+
+The steward remains to explain the emptiness. His ink-stained fingers tremble.
+
+-> pantry_exit
+
+== pantry_take_essentials
+You take half the silver and enough supplies for your immediate needs. "This will sustain your household," you tell the steward.
+
+~ addHeat(1)
+~ changeStat("morale", 1)
+~ addSupply("food", 4)
+
+The steward nods. The pantry stands half-empty.
+
+-> pantry_exit
+
+== pantry_leave_portion
+You take the silver but leave most of the pantry intact. "War is necessity," you say. The steward nods gratefully.
+
+~ changeStat("stress", -1)
+~ changeStat("morale", 2)
+~ changeStat("reputation", 1)
+~ addSupply("food", 2)
+
+The steward will explain the silver's absence. The accounts show restraint.
+
+-> pantry_exit
+
+== pantry_exit
+~ advanceTime(20)
+
+The manor doors close behind you. The steward's accounts will show a new kind of obligation.
+
+-> raid_abbey_granary
+
+=== raid_abbey_granary
+~ showImage("artwork/Vigiles_du_roi_Charles_VII_32.jpg")
+
+The abbey fields lie trampled but the granary walls are stone and thick. The brothers stand apart while you force the door. Dust rises in the dim light and settles on your mail.
+
+~ advanceTime(20)
+
+~ addHeat(2)
+
+Barrels of wheat are stacked to the rafters. There are beeswax candles by the hundred and bolts of wool meant for market. In the infirmary, a thin monk clutches a locked coffer to his chest until one of your men takes it from him.
+
+The abbot approaches, his voice steady. "Spare the library. The books are worth more than silver."
+
+* [Take everything and burn the granary.] -> granary_take_burn
+* [Take the supplies and coin, spare the building.] -> granary_take_spare
+* [Take only the coin.] -> granary_coin_only
+* [Spare the abbey entirely.] -> granary_spare_all
+
+== granary_take_burn
+You load the wheat, candles, wool, and coin. Then you torch the granary. The brothers watch in silence as their winter stores burn.
+
+~ addHeat(4)
+~ changeStat("stress", 3)
+~ changeStat("morale", -3)
+~ addSupply("food", 10)
+
+The coin will buy arms. The ashes drift across the fields.
+
+-> granary_exit
+
+== granary_take_spare
+You take the coin, wheat, candles, and wool, but leave the building standing. The abbot inclines his head. "You will be remembered."
+
+~ addHeat(2)
+~ changeStat("stress", -1)
+~ changeStat("morale", 1)
+~ addSupply("food", 8)
+
+The brothers stand silent as you depart. The granary endures.
+
+-> granary_exit
+
+== granary_coin_only
+You take only the coffer of coin, leaving the granary untouched. The monk who guarded it lowers his eyes.
+
+~ addHeat(1)
+~ changeStat("morale", 2)
+~ changeStat("reputation", 1)
+~ addSupply("food", 2)
+
+The coin alone will sustain your campaign. The granary remains full.
+
+-> granary_exit
+
+== granary_spare_all
+You close the coffer and return it to the monk. "This place will not be touched." The brothers kneel in silence.
+
+~ changeStat("stress", -3)
+~ changeStat("morale", 4)
+~ changeStat("reputation", 2)
+
+The abbey stands untouched. The chevauchée passes it by.
+
+-> granary_exit
+
+== granary_exit
+~ advanceTime(25)
+
+The abbey granary stands silent. The chevauchée's shadow passes, leaving different marks depending on your choices.
+
+-> DONE

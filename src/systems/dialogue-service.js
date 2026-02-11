@@ -912,7 +912,11 @@ export class DialogueService {
       return true;
     });
 
-    story.BindExternalFunction('removeItem', (itemId, quantity = 1) => {
+    story.BindExternalFunction('gainSupply', function(type, amount) {
+      const supplies = (this.gameState.overworld && this.gameState.overworld.supplies) || {};
+      supplies[type] = (supplies[type] || 0) + (parseInt(amount) || 0);
+      return true;
+    }.bind(this));
       const itemIndex = this.gameState.inventory.findIndex(item => item.id === itemId);
       if (itemIndex !== -1) {
         const item = this.gameState.inventory[itemIndex];
