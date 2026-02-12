@@ -1,0 +1,26 @@
+title: chained-conditions
+---
+Testing chained conditions:
+<<set $stats.strength 8>>
+<<set $stats.charisma 12>>
+<<set $overworld.heat 50>>
+
+-> "Test strength and charisma" <<if $stats.strength >= 5 && $stats.charisma >= 10>>
+    Both conditions met!
+    <<jump END>>
+-> "Test strength or heat" <<if $stats.strength >= 10 || $overworld.heat >= 40>>
+    One condition met!
+    <<jump END>>
+-> "Test complex chain" <<if $stats.strength >= 5 && $stats.charisma >= 8 && $overworld.heat <= 60>>
+    Complex chain satisfied!
+    <<jump END>>
+-> "No conditions met"
+    Default path.
+    <<jump END>>
+
+===
+
+title: END
+---
+Conditions test complete.
+<<stop>>

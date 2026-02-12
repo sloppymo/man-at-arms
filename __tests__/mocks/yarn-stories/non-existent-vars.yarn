@@ -1,0 +1,9 @@
+title: non-existent-vars
+---
+Testing non-existent variables:
+Your unknown stat is: {stats.nonexistent}
+Your unknown overworld value is: {overworld.unknown}
+Your completely unknown var is: {unknown_var}
+
+Continue anyway.
+<<stop>>

@@ -1,0 +1,54 @@
+title: complex-story
+---
+Welcome to the complex story test.
+<<set $stats.strength 10>>
+<<set $stats.charisma 5>>
+
+Your strength is {stats.strength} and charisma is {stats.charisma}.
+
+-> "Fight your way through"
+    <<jump fight_path>>
+-> "Talk your way through"
+    <<jump talk_path>>
+-> "Sneak past"
+    <<jump sneak_path>>
+
+===
+
+title: fight_path
+---
+You use your strength to break through!
+<<changeStat "strength" 1>>
+<<advanceTime 15>>
+Success!
+<<jump END>>
+
+===
+
+title: talk_path
+---
+You try to negotiate.
+<<resolveAction "charisma" 12 0>>
+{
+<<if $success>>
+Your charisma works!
+<<jump END>>
+<<if $failure>>
+You fail to convince them.
+<<jump END>>
+}
+
+===
+
+title: sneak_path
+---
+You sneak past quietly.
+<<advanceTime 20>>
+<<jump END>>
+
+===
+
+title: END
+---
+Story complete.
+<<stop>>

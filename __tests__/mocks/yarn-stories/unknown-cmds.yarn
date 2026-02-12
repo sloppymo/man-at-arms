@@ -1,0 +1,11 @@
+title: unknown-cmds
+---
+Testing unknown commands:
+<<unknownCommand arg1 arg2>>
+<<anotherUnknownCmd "quoted arg">>
+<<yetAnotherCmd>>
+
+Back to normal commands:
+<<advanceTime 10>>
+Unknown commands test complete.
+<<stop>>
