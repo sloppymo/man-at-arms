@@ -106,8 +106,14 @@ export function setMode(gameState, newMode, options = {}) {
   console.log('Target mode:', newMode);
 
   if (currentMode === newMode) {
-    // Already in this mode
+    // Already in this mode - ensure body class is set
     console.log('Already in target mode, no change needed');
+    if (typeof window !== 'undefined' && window.document) {
+      const body = window.document.body;
+      body.classList.remove('title-mode', 'dialogue-mode', 'overworld-mode', 'combat-mode');
+      body.classList.add(`${newMode.toLowerCase()}-mode`);
+      console.log(`Body class ensured: ${newMode.toLowerCase()}-mode`);
+    }
     return true;
   }
 
@@ -122,6 +128,18 @@ export function setMode(gameState, newMode, options = {}) {
   const oldMode = gameState.mode;
   gameState.mode = newMode;
   console.log('Mode updated in gameState:', gameState.mode);
+
+  // Update body classes for CSS styling
+  if (typeof window !== 'undefined' && window.document) {
+    const body = window.document.body;
+    
+    // Remove all mode classes
+    body.classList.remove('title-mode', 'dialogue-mode', 'overworld-mode', 'combat-mode');
+    
+    // Add current mode class
+    body.classList.add(`${newMode.toLowerCase()}-mode`);
+    console.log(`Body class updated to: ${newMode.toLowerCase()}-mode`);
+  }
 
   // Dispatch mode change event if dispatcher is available
   if (typeof window !== 'undefined' && window.dispatcher) {
