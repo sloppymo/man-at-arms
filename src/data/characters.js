@@ -170,12 +170,12 @@ export const CHARACTERS = {
     title: 'Trader',
     description: 'A shrewd merchant who deals in goods and information.',
     portrait: {
-      basePath: 'portraits/merchant',
+      basePath: '/artwork',
       emotions: {
-        neutral: 'neutral.svg',
-        happy: 'happy.svg'
+        neutral: 'Wat.png',
+        happy: 'Wat.png'
       },
-      defaultEmotion: 'neutral'
+      defaultEmotion: 'Wat.png'
     },
     personality: {
       traits: ['shrewd', 'opportunistic', 'talkative', 'greedy'],
@@ -276,6 +276,63 @@ export const CHARACTERS = {
       min: -100
     },
     dialogTopics: ['threats', 'demands', 'violence', 'survival']
+  },
+
+  blacksmith: {
+    id: 'blacksmith',
+    name: 'Blacksmith',
+    title: 'Craftsman',
+    description: 'A skilled blacksmith who forges weapons and armor.',
+    portrait: {
+      basePath: 'portraits/blacksmith',
+      emotions: {
+        neutral: 'neutral.png',
+        happy: 'smile.png',
+        angry: 'frown.png',
+        sad: 'worried.png',
+        surprised: 'surprised.png',
+        fearful: 'scared.png',
+        contempt: 'annoyed.png'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['skilled', 'practical', 'hardworking', 'direct'],
+      speechPattern: 'straightforward and practical',
+      voice: 'deep, gruff'
+    },
+    relationships: {
+      default: 0,
+      max: 50,
+      min: -30
+    },
+    dialogTopics: ['weapons', 'armor', 'craftsmanship', 'business']
+  },
+
+  bandit: {
+    id: 'bandit',
+    name: 'Bandit',
+    title: 'Thug',
+    description: 'A common bandit who robs travelers on the road.',
+    portrait: {
+      basePath: 'portraits/bandit_leader', // Reuse bandit_leader portrait
+      emotions: {
+        neutral: 'neutral.svg',
+        happy: 'cruel_smile.svg'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['greedy', 'violent', 'cowardly', 'desperate'],
+      speechPattern: 'rough and threatening',
+      voice: 'raspy, aggressive'
+    },
+    relationships: {
+      default: -30,
+      max: 10,
+      min: -100
+    },
+    dialogTopics: ['robbery', 'threats', 'money', 'escape']
   }
 };
 

@@ -496,8 +496,23 @@ export class DialogUI {
       this.updateDialog(event.payload);
     });
 
+    // Listen for dialog end events to hide the UI
     this.dispatcher.subscribe('DIALOG_ENDED', () => {
+      console.log('DialogUI received DIALOG_ENDED - hiding dialog');
       this.hideDialog();
+    });
+
+    // Handle pause commands that require user advancement
+    this.dispatcher.subscribe('DIALOG_PAUSED', () => {
+      console.log('DialogUI received DIALOG_PAUSED - showing continue button');
+      // After pause, show continue button to allow advancement
+      this.canContinue = true;
+      // Force UI update to show continue button
+      this.updateDialog({
+        text: this.currentText || 'Continue...',
+        choices: [],
+        canContinue: true
+      });
     });
 
     // Portrait events
@@ -509,6 +524,13 @@ export class DialogUI {
     this.skipButton.addEventListener('click', () => this.skipTypewriter());
     this.historyButton.addEventListener('click', () => this.toggleHistory());
     this.closeButton.addEventListener('click', () => this.closeDialog());
+
+    // Add click handler to text container for continue functionality
+    this.dialogTextElement.addEventListener('click', () => {
+      if (this.canContinue && !this.isTypewriterActive) {
+        this.continueDialog();
+      }
+    });
 
     // Keyboard events
     document.addEventListener('keydown', (e) => this.handleKeyboard(e));
@@ -536,11 +558,13 @@ export class DialogUI {
       return;
     }
 
-    // Enter to select
+    // Enter to select choice or continue dialog
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       if (this.currentChoiceIndex >= 0 && this.currentChoiceIndex < this.choices.length) {
         this.selectChoice(this.currentChoiceIndex);
+      } else if (this.canContinue && !this.isTypewriterActive) {
+        this.continueDialog();
       }
       return;
     }
@@ -580,11 +604,16 @@ export class DialogUI {
    */
   showDialog(dialogData) {
     console.log('DialogUI showDialog called with:', dialogData);
-    this.currentCharacter = dialogData.character;
+    
+    // Extract character from payload
+    this.currentCharacter = dialogData.character || 'Unknown';
     this.currentEmotion = dialogData.emotion || 'neutral';
     
     // Update character info
     this.updateCharacterInfo(dialogData);
+    
+    // Update portrait for the character
+    this.updatePortrait(dialogData);
     
     // Show dialog with animation
     console.log('DialogUI: Removing hidden class, adding visible');
@@ -598,10 +627,91 @@ export class DialogUI {
     
     this.isVisible = true;
     
-    // Add to history
-    this.addToHistory(dialogData);
+    // If we have node data (from DialogSystem), display it immediately
+    if (dialogData.node) {
+      console.log('DialogUI: Processing node data from DialogSystem');
+      this.displayNode(dialogData.node);
+    }
     
     console.log('DialogUI: showDialog complete, isVisible =', this.isVisible);
+  }
+
+  /**
+   * Display a dialog node with text and choices
+   */
+  displayNode(node) {
+    console.log('DialogUI: Displaying node:', node);
+    
+    // Get gameState for choice filtering
+    const gameState = window.gameState || {};
+    
+    // Update character info
+    this.updateCharacterInfo({ character: node.character, emotion: node.emotion });
+    
+    // Display text with typewriter effect
+    this.startTypewriter(node.text);
+    
+    // Get available choices (filter by conditions)
+    const availableChoices = this.getAvailableChoices(node, gameState);
+    
+    // Update choices after typewriter finishes
+    const typewriterDelay = node.text.length * 20 + 500;
+    setTimeout(() => {
+      this.updateChoices(availableChoices.map(choice => ({
+        text: choice.text,
+        disabled: false
+      })));
+    }, typewriterDelay);
+    
+    // Store current node for choice handling
+    this.currentNode = node;
+    
+    // Add to history
+    this.addToHistory({
+      character: node.character,
+      text: node.text,
+      choices: availableChoices
+    });
+  }
+
+  /**
+   * Get available choices based on game state and conditions
+   */
+  getAvailableChoices(node, gameState) {
+    if (!node.choices) return [];
+    
+    return node.choices.filter(choice => {
+      if (!choice.conditions) return true;
+      
+      return choice.conditions.every(condition => {
+        switch (condition.type) {
+          case 'stat':
+            const statValue = gameState.stats?.[condition.stat] || 0;
+            return this.compareValue(statValue, condition.operator, condition.value);
+          case 'flag':
+            return gameState.flags?.[condition.flag] === condition.value;
+          case 'item':
+            return gameState.inventory?.includes(condition.item);
+          default:
+            return true;
+        }
+      });
+    });
+  }
+
+  /**
+   * Compare values for condition checking
+   */
+  compareValue(actual, operator, expected) {
+    switch (operator) {
+      case 'gte': return actual >= expected;
+      case 'lte': return actual <= expected;
+      case 'gt': return actual > expected;
+      case 'lt': return actual < expected;
+      case 'eq': return actual === expected;
+      case 'neq': return actual !== expected;
+      default: return true;
+    }
   }
 
   /**
@@ -642,20 +752,23 @@ export class DialogUI {
    * Update dialog with typewriter effect
    */
   updateDialog(dialogData) {
-    const { text, choices } = dialogData;
-    
+    const { text, choices, canContinue } = dialogData;
+
     // Clear previous content
     this.choices = [];
     this.currentChoiceIndex = 0;
-    
+
+    // Store continue flag
+    this.canContinue = canContinue || false;
+
     // Start typewriter effect
     this.startTypewriter(text);
-    
+
     // Update choices after a delay
     setTimeout(() => {
       this.updateChoices(choices || []);
     }, text.length * 20 + 500); // Wait for typewriter to finish
-    
+
     // Add to history
     this.addToHistory(dialogData);
   }
@@ -785,23 +898,57 @@ export class DialogUI {
   }
 
   /**
+   * Continue dialog (advance through text)
+   */
+  continueDialog() {
+    if (!this.canContinue) return;
+
+    // Dispatch continue event
+    this.dispatcher.dispatch('DIALOG_CONTINUE');
+  }
+
+  /**
    * Update portrait with emotion
    */
   updatePortrait(portraitData) {
+    console.log('DialogUI: updatePortrait called with:', portraitData);
     const { character, emotion } = portraitData;
     
-    if (character !== this.currentCharacter) return;
+    console.log('DialogUI: current character:', this.currentCharacter, 'requested character:', character);
+    
+    if (character !== this.currentCharacter && character !== undefined) {
+      this.currentCharacter = character;
+    }
     
     this.currentEmotion = emotion || 'neutral';
     
+    console.log('DialogUI: Loading portrait for character:', this.currentCharacter, 'emotion:', this.currentEmotion);
+    
     // Update portrait image
-    const characterData = getCharacter(character);
+    const characterData = getCharacter(this.currentCharacter);
+    console.log('DialogUI: Character data found:', characterData);
+    
     if (characterData && characterData.portrait) {
-      const portraitPath = `${characterData.portrait.basePath}/${emotion || characterData.portrait.defaultEmotion}.png`;
+      const emotionFile = (emotion || characterData.portrait.defaultEmotion).replace(/\.png$/i, '');
+      const portraitPath = `${characterData.portrait.basePath}/${emotionFile}.png`;
+      console.log('DialogUI: Loading portrait from path:', portraitPath);
       this.portraitElement.src = portraitPath;
       
       // Update emotion class
       this.portraitElement.className = `character-portrait emotion-${this.currentEmotion}`;
+      
+      // Add error handling
+      this.portraitElement.onerror = () => {
+        console.error('DialogUI: Failed to load portrait:', portraitPath);
+        this.portraitElement.src = ''; // Clear src on error
+      };
+      
+      this.portraitElement.onload = () => {
+        console.log('DialogUI: Portrait loaded successfully:', portraitPath);
+      };
+    } else {
+      console.warn('DialogUI: No portrait data found for character:', this.currentCharacter);
+      this.portraitElement.src = '';
     }
   }
 
