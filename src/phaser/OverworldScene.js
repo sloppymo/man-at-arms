@@ -7,11 +7,13 @@ import { CHEVAUCHEE_ZONES } from '../core/constants.js';
  * Phaser scene for the overworld map exploration
  */
 export class OverworldScene extends Scene {
-    constructor({ dispatch, getGameState, setMode }) {
+    constructor() {
         super({ key: 'OverworldScene' });
-        this.dispatch = dispatch;
-        this.getGameState = getGameState;
-        this.setGameMode = setMode;
+        
+        // Dependencies will be set from game registry in init()
+        this.dispatch = null;
+        this.getGameState = null;
+        this.setGameMode = null;
 
         // Scene state
         this.player = null;
@@ -26,6 +28,7 @@ export class OverworldScene extends Scene {
         // Movement state
         this.targetPosition = null;
         this.moveSpeed = 160; // pixels per second
+        this.isInDialogMode = false; // Track if player is in dialog to prevent movement
 
         // Hex tracking for event dispatch
         this.currentHex = { q: 0, r: 0 };
@@ -35,6 +38,34 @@ export class OverworldScene extends Scene {
 
         // Timer tracking for cleanup (Issue #2)
         this._cooldownTimers = new Set();
+    }
+
+    init(data) {
+        // Set dependencies from scene data
+        if (data) {
+            this.dispatch = data.dispatch;
+            this.getGameState = data.getGameState;
+            this.setGameMode = data.setGameMode;
+        }
+        
+        // Fallback: get dependencies from global scope if not set
+        if (!this.dispatch && window.dispatcher) {
+            this.dispatch = window.dispatcher.dispatch.bind(window.dispatcher);
+        }
+        
+        if (!this.getGameState && window.gameState) {
+            this.getGameState = () => window.gameState;
+        }
+        
+        if (!this.setGameMode && window.setMode) {
+            this.setGameMode = window.setMode;
+        }
+        
+        console.log('OverworldScene init() called with dependencies:', {
+            dispatch: !!this.dispatch,
+            getGameState: !!this.getGameState,
+            setGameMode: !!this.setGameMode
+        });
     }
 
     /**
@@ -126,7 +157,7 @@ export class OverworldScene extends Scene {
         console.log('Loading overworld assets...');
         
         // Load the actual map image
-        this.load.image('overworld-map', '/man-at-arms/map.png');
+        this.load.image('overworld-map', '/map.png');
         
         this.load.on('filecomplete', (key) => {
             console.log(`Loaded asset: ${key}`);
@@ -223,9 +254,9 @@ export class OverworldScene extends Scene {
         if (DEBUG_HOTSPOTS) {
             this.hotspots.forEach(hotspot => {
                 // Add visible circle for hotspot
-                const circle = this.add.circle(hotspot.x, hotspot.y, hotspot.radius, 0xffff00, 0.3);
+                const circle = this.add.circle(hotspot.x, hotspot.y, hotspot.radius, 0xffff00, 0.1);
                 circle.setStrokeStyle(3, 0xff0000, 0.8);
-                circle.setScrollFactor(0); // Keep fixed relative to camera
+                circle.setScrollFactor(1); // Scroll with the world
                 
                 // Add text label
                 const text = this.add.text(hotspot.x, hotspot.y - hotspot.radius - 20, hotspot.id.toUpperCase(), {
@@ -234,7 +265,7 @@ export class OverworldScene extends Scene {
                     backgroundColor: '#ffff00',
                     padding: { x: 4, y: 2 }
                 }).setOrigin(0.5);
-                text.setScrollFactor(0);
+                text.setScrollFactor(1); // Scroll with the world
             });
         }
 
@@ -315,6 +346,8 @@ export class OverworldScene extends Scene {
      * Handle WASD/Arrow key movement
      */
     handleKeyboardMovement() {
+        // Don't move if in dialog mode
+        if (this.isInDialogMode) return;
         // Debug: Check if input is working
         if (!this.cursors || !this.wasdKeys) {
             console.log('ERROR: cursors or wasdKeys not available');
@@ -385,6 +418,8 @@ export class OverworldScene extends Scene {
      * Move toward click target position
      */
     handleClickToMove() {
+        // Don't move if in dialog mode
+        if (this.isInDialogMode) return;
         if (!this.targetPosition) return;
 
         const distance = PhaserMath.Distance.Between(
@@ -470,8 +505,8 @@ export class OverworldScene extends Scene {
                 this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'castle_gate_delivery', character: 'guard' } });
                 break;
             case 'forest-entrance':
-                // Dispatch encounter trigger for forest_test story
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'forest_encounter', character: 'bandit' } });
+                // Dispatch encounter trigger for raid encounter
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'raid_encounter', character: 'bandit' } });
                 break;
             case 'market':
                 console.log('Entering market - triggering forest encounter');
@@ -532,6 +567,24 @@ export class OverworldScene extends Scene {
         }
         
         console.log('Overworld scene resumed successfully');
+    }
+
+    /**
+     * Override pause to track dialog mode
+     */
+    pause() {
+        super.pause();
+        this.isInDialogMode = true;
+        console.log('Overworld scene paused - entering dialog mode');
+    }
+
+    /**
+     * Override resume to track dialog mode
+     */
+    resume() {
+        super.resume();
+        this.isInDialogMode = false;
+        console.log('Overworld scene resumed - exiting dialog mode');
     }
 
     /**

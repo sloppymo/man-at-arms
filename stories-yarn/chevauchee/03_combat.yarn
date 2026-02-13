@@ -1,0 +1,355 @@
+title: Start
+---
+== start
+===
+
+title: skirmish_patrol_1
+---
+<<showImage artwork/supplyshortage.jpg>>
+The French patrol appears suddenly from the woods ahead - twenty mounted men-at-arms, professional soldiers in good armor. They spot you at the same moment.
+<<advanceTime 10>>
+<<addHeat 3>>
+"English dogs!" their leader shouts. "You've come to the wrong land to die!"
+Sir Robert immediately forms a battle line. "Archers! Loose arrows! Men-at-arms, prepare to charge!"
+* "I'll lead the cavalry charge!"
+"Good!" Sir Robert agrees. "Take twenty men and hit their flank. Archers will keep them busy."
+<<changeStat stress, 2>>
+<<advanceTime 15>>
+<<jump cavalry_charge>>
+* "Archers! Concentrate fire on their leader!"
+The English longbowmen respond instantly, arrows darkening the sky around the French commander.
+<<advanceTime 10>>
+<<jump leader_target>>
+* "Form defensive circle! Let them come to us!"
+"Smart," Sir Robert nods. "Let them waste their charge on our defenses."
+<<changeStat stress, -1>>
+<<advanceTime 15>>
+<<jump defensive_circle>>
+== cavalry_charge
+<<showImage artwork/supplyshortage.jpg>>
+You lead the charge, your horse thundering across the field. The French patrol turns to meet you, but they're surprised by your aggressiveness.
+<<advanceTime 20>>
+<<triggerSkirmish cavalry_vs_patrol>>
+Lances shatter and swords flash as the two forces collide. You're in the thick of it, your sword finding gaps in French armor.
+<<addHeat 2>>
+* "Press the advantage! Break their line!"
+Your men follow your lead, driving deeper into the French formation. The patrol starts to break.
+<<advanceTime 15>>
+<<jump breaking_patrol>>
+* "Fall back! Regroup!"
+"No!" you shout. "We have them! Keep fighting!"
+<<changeStat stress, 1>>
+<<advanceTime 10>>
+<<jump continue_fight>>
+* "Capture their leader!"
+You spot the French commander trying to rally his men. "Take him alive!"
+<<advanceTime 15>>
+<<jump leader_capture>>
+== leader_target
+<<showImage artwork/supplyshortage.jpg>>
+The English arrows find their mark. The French commander falls from his horse, multiple arrows in his chest. The patrol hesitates, leaderless.
+<<advanceTime 10>>
+{addHeat(1}
+"Charge!" Sir Robert commands. "They're broken!"
+* "Take no prisoners!"
+Your men roar approval and surge forward. The remaining French soldiers try to flee but are cut down.
+<<changeStat stress, 2>>
+{advanceTime(20}
+<<jump no_prisoners>>
+* "Accept their surrender!"
+Some French soldiers throw down their weapons. "Mercy! We surrender!"
+{advanceTime(15}
+<<jump french_surrender>>
+* "Pursue the fugitives!"
+"Let them go," Sir Robert decides. "We have wounded to tend to and loot to gather."
+<<changeStat stress, -1>>
+{advanceTime(10}
+<<jump pursuit_abandoned>>
+===
+
+title: skirmish_ambush_1
+---
+<<showImage artwork/supplyshortage.jpg>>
+The road narrows between thick woods - perfect ambush territory. Too late, you realize the danger as arrows fly from both sides.
+{advanceTime(15}
+{addHeat(2}
+"AMBUSH!" Sir Robert roars. "Form defensive positions!"
+French infantry emerge from the woods - fifty men, professional soldiers. They've planned this carefully.
+* "Charge into the woods! Break the ambush!"
+"Madness," Sir Robert counters. "We don't know how many are in there. Hold formation!"
+<<changeStat stress, 2>>
+{advanceTime(10}
+<<jump woods_charge>>
+* "Archers! Return fire! Suppress them!"
+The English longbowmen respond, arrows flying back into the woods. Screams indicate they're finding targets.
+{advanceTime(15}
+<<jump arrow_duel>>
+* "Fall back to defensible ground!"
+"Good thinking," Sir Robert agrees. "We need better ground. Back to the hill!"
+{advanceTime(20}
+<<jump tactical_withdrawal>>
+== arrow_duel
+The forest becomes a deadly exchange of arrows. English longbows outrange the French crossbows, giving you an advantage.
+{advanceTime(25}
+<<triggerSkirmish archer_ambush>>
+French soldiers fall as English arrows find their marks. The ambush is turning against them.
+{addHeat(1}
+* "Forward! While they're reorganizing!"
+Sir Robert leads the charge. The French infantry, caught in the open between volleys, are vulnerable.
+{advanceTime(15}
+<<jump counter_ambush>>
+* "Keep firing! Break their morale!"
+The English archers maintain their deadly rhythm. The French start to break.
+{advanceTime(20}
+<<jump morale_break>>
+* "Send skirmishers to flush them out!"
+"Too risky," Sir Robert decides. "Let the arrows do their work. We're winning this exchange."
+<<changeStat stress, -1>>
+{advanceTime(10}
+<<jump arrow_victory>>
+===
+
+title: skirmish_scout_encounter
+---
+A French scout party appears on the ridge ahead - ten light cavalry, outriders for a larger force. They've spotted you.
+{advanceTime(10}
+{addHeat(2}
+"English!" their leader shouts. "The main army will be here soon!"
+* "Take them before they can report!"
+"Agreed," Sir Robert nods. "We can't let them warn anyone. Fast pursuit!"
+{advanceTime(15}
+<<jump scout_pursuit>>
+* "Ignore them! We need to move faster!"
+"Dangerous," Sir Robert cautions. "They know where we are now. We'll have French troops on us in hours."
+{advanceTime(10}
+<<jump strategic_withdrawal>>
+* "Try to capture them for intelligence!"
+"Good idea," Sir Robert agrees. "They might know French dispositions."
+<<changeStat stress, 1>>
+{advanceTime(15}
+<<jump scout_capture>>
+== scout_pursuit
+The French scouts flee, but your lighter cavalry is faster. The chase is on across the rolling countryside.
+{advanceTime(20}
+<<triggerSkirmish cavalry_pursuit>>
+You gain on the rearmost scout, your horse eating up the distance. He looks back in terror.
+{addHeat(1}
+* "Yield and live!" you shout.
+The scout pulls up his horse, surrendering. His companions continue to flee.
+{advanceTime(10}
+<<jump scout_surrender>>
+* "Take him down! Send a message!"
+Your lance strikes true, and the scout falls. His companions see this and ride harder.
+<<changeStat stress, 2>>
+{advanceTime(10}
+<<jump scout_execution>>
+* "Focus on the leader! The rest will break!"
+You push your horse harder, targeting the French commander. If he falls, the others will panic.
+{advanceTime(15}
+<<jump leader_targeting>>
+===
+
+title: skirmish_village_defense
+---
+The village you're raiding fights back - not with soldiers, but with desperate peasants led by the local lord. Fifty men, poorly armed but determined.
+{advanceTime(15}
+{addHeat(3}
+"For Normandy!" the lord shouts. "Drive out the English!"
+* "Break their charge! Show them the difference!"
+Sir Robert laughs. "Peasants against professional soldiers? This will be short."
+{advanceTime(10}
+<<jump peasant_charge>>
+* "Target their leader! Cut off the head!"
+"Good thinking," Sir Robert agrees. "Without their lord, they'll break."
+{advanceTime(15}
+<<jump lord_target>>
+* "Archers! Loose arrows! Break their morale!"
+The English longbowmen draw and loose. The peasant charge falters under the arrow storm.
+{advanceTime(20}
+<<jump arrow_storm>>
+== peasant_charge
+The peasants charge with desperate courage - pitchforks, axes, and hunting bows against professional men-at-arms.
+{advanceTime(15}
+<<triggerSkirmish peasant_revolt>>
+The result is never in doubt. English discipline and armor prove decisive. The peasants break after minimal casualties.
+{addHeat(1}
+* "Pursue and kill them all!"
+"No," Sir Robert decides. "The dead can't pay tribute. Round up the survivors."
+{advanceTime(10}
+<<jump survivor_roundup>>
+* "Take their leader prisoner!"
+The local lord tries to flee but is captured by your men. A valuable hostage.
+{advanceTime(15}
+<<jump lord_capture>>
+* "Burn the village! Make an example!"
+"Definitely," Sir Robert agrees. "They resisted - they need to learn the price of defiance."
+<<addHeat 3>>
+{advanceTime(25}
+<<jump example_burning>>
+===
+
+title: skirmish_castle_sally
+---
+The castle you've been raiding finally sallies forth - fifty professional soldiers led by an experienced knight. They're trying to break your siege of their outskirts.
+{advanceTime(20}
+{addHeat(4}
+"Enough of your raiding!" the castle commander shouts. "Face real soldiers!"
+* "Meet them head on! Show them English steel!"
+Sir Robert forms a battle line. "Steady, men! Let them come to us!"
+{advanceTime(15}
+<<jump head_on_meeting>>
+* "Archers! Soften them up first!"
+The English longbowmen loose volley after volley. The castle soldiers advance under a hail of arrows.
+{advanceTime(20}
+<<jump arrow_preparation>>
+* "Flank them! Use our mobility!"
+"Good idea," Sir Robert agrees. "Send cavalry around their sides. Pin them with infantry."
+<<changeStat stress, 1>>
+{advanceTime(25}
+<<jump flanking_maneuver>>
+== head_on_meeting
+The two forces crash together in a clash of steel and determination. Professional soldiers on both sides, this will be a real fight.
+{advanceTime(30}
+<<triggerSkirmish provincial_battle>>
+You're in the center of the fighting, your sword busy parrying and striking. The castle soldiers are tough, well-trained, and well-equipped.
+{addHeat(2}
+* "Press the attack! Break their center!"
+You lead the push, driving deeper into their formation. The castle line starts to bend.
+{advanceTime(15}
+<<jump center_break>>
+* "Fall back! Regroup and reform!"
+"Never!" Sir Robert shouts. "We have them! Keep fighting!"
+<<changeStat stress, 2>>
+{advanceTime(10}
+<<jump continued_assault>>
+* "Target their standard! Break their morale!"
+The castle standard bearer goes down under your sword. The castle soldiers hesitate.
+{advanceTime(15}
+<<jump standard_fall>>
+===
+
+title: skirmish_river_crossing
+---
+You're trying to cross a river when French forces appear on the opposite bank - archers and men-at-arms, determined to prevent your crossing.
+{advanceTime(15}
+{addHeat(2}
+"No English dogs cross this river!" their commander shouts. "Turn back or die!"
+* "Swim the river! Take the fight to them!"
+"Madness," Sir Robert says. "We'd be sitting ducks in the water."
+{advanceTime(10}
+<<jump river_swim>>
+* "Archers! Suppress their positions!"
+The English longbowmen respond, arrows forcing the French to take cover.
+{advanceTime(20}
+<<jump crossing_suppression>>
+* "Find another crossing!"
+"Good thinking," Sir Robert agrees. "No point fighting on unfavorable ground."
+<<changeStat stress, -1>>
+{advanceTime(30}
+<<jump alternate_crossing>>
+== crossing_suppression
+English arrows keep the French pinned while your engineers quickly construct a makeshift bridge.
+{advanceTime(25}
+<<triggerSkirmish river_crossing>>
+The French, unable to effectively respond, watch helplessly as your forces prepare to cross.
+{addHeat(1}
+* "Send cavalry across first! Secure the bridgehead!"
+"Agreed," Sir Robert nods. "Once we have a foothold, the rest can cross safely."
+{advanceTime(15}
+<<jump bridgehead_secured>>
+* "Cross all at once! Overwhelm them!"
+"Too risky," Sir Robert cautions. "If the bridge fails, we lose everyone."
+{advanceTime(10}
+<<jump controlled_crossing>>
+* "Burn the bridge after we cross!"
+"Definitely," Sir Robert agrees. "No point letting them follow us."
+{advanceTime(20}
+<<jump bridge_burning>>
+===
+
+title: skirmish_night_attack
+---
+The French attack your camp at night - a desperate attempt to catch you unprepared. Torches light the chaos as soldiers pour into your encampment.
+{advanceTime(10}
+{addHeat(3}
+"English! Wake up! We're under attack!" Sir Robert's voice cuts through the confusion.
+* "Form defensive perimeter! Protect the supplies!"
+Your men quickly organize, forming a shield wall around the supply wagons.
+{advanceTime(15}
+<<jump camp_defense>>
+* "Counter-charge! Drive them out!"
+"Too risky in the dark," Sir Robert cautions. "We don't know how many there are."
+{advanceTime(10}
+<<jump defensive_stance>>
+* "Light more torches! See what we're facing!"
+Good idea - the additional light reveals the French force size. About a hundred men.
+<<changeStat stress, 1>>
+{advanceTime(10}
+<<jump force_assessment>>
+== camp_defense
+Your men hold a defensive perimeter, shields locked together. The French attack repeatedly but can't break the shield wall.
+{advanceTime(30}
+<<triggerSkirmish night_defense>>
+The fighting is desperate in the torchlight. English discipline holds against French ferocity.
+{addHeat(1}
+* "Sally forth! Break their morale!"
+"Now!" Sir Robert commands. The shield wall opens and your men charge out.
+{advanceTime(15}
+<<jump camp_sally>>
+* "Hold firm! Let them exhaust themselves!"
+The French attacks become weaker as casualties mount. Their morale is failing.
+{advanceTime(20}
+<<jump french_exhaustion>>
+* "Archers! Fire into their rear!"
+The English archers, positioned on the wagons, shoot over the shield wall into the French rear.
+{advanceTime(15}
+<<jump rear_attack>>
+===
+
+title: skirmish_rearguard_action
+---
+You're covering the main force's withdrawal when French cavalry appears - fast, professional soldiers trying to catch your stragglers.
+{advanceTime(15}
+{addHeat(2}
+"Form rearguard!" Sir Robert commands. "Buy the main force time to escape!"
+* "Hold this ground at all costs!"
+Your men form a battle line across the road. The French cavalry approaches at a gallop.
+{advanceTime(10}
+<<jump last_stand>>
+* "Fighting withdrawal! Fall back slowly!"
+"Good tactic," Sir Robert agrees. "Disengage before they can bring full force to bear."
+<<changeStat stress, -1>>
+{advanceTime(20}
+<<jump tactical_withdrawal>>
+* "Ambush them! Use the terrain!"
+"Excellent idea," Sir Robert nods. "The woods on our right - we can hit their flank."
+<<changeStat stress, 1>>
+{advanceTime(15}
+<<jump rearguard_ambush>>
+== tactical_withdrawal
+Your fighting withdrawal works perfectly. You engage just long enough to delay the French, then fall back before they can bring overwhelming force to bear.
+{advanceTime(25}
+<<triggerSkirmish rearguard_action>>
+The French commander grows increasingly frustrated as your force slips away, always just out of reach.
+{addHeat(1}
+* "Make a stand here! This is good ground!"
+"No," Sir Robert decides. "Our job is to delay, not to die. Keep falling back."
+{advanceTime(15}
+<<jump continued_withdrawal>>
+* "Turn and fight! They're getting too close!"
+"Not yet," Sir Robert cautions. "Wait for the right moment."
+{advanceTime(10}
+<<jump timing_fight>>
+* "We've bought enough time! Full retreat!"
+"Agreed," Sir Robert nods. "The main force should be safe by now. Let's go."
+{advanceTime(20}
+<<jump successful_withdrawal>>
+== DONE
+<<showImage artwork/supplyshortage.jpg>>
+<<addHeat 4>>
+<<advanceTime 90>>
+The skirmishes are over for now, but they've taken their toll. Your force is battered but victorious, richer in plunder and experience but poorer in men and morale.
+<<changeStat stress, 3>>
+Each fight has increased the heat - the French now know you're a serious threat, not just raiders but a professional fighting force. They'll respond with stronger forces, better coordination, and greater determination.
+The chevauchee continues, but the easy targets are gone. From here on, every encounter will be more dangerous, every French response more determined.
+===

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+canvas { border: 1px solid black; }
+</style>
+</head>
+<body>
+<canvas id="canvas" width="1024" height="1024"></canvas>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Create a simple hexagonal map
+ctx.fillStyle = '#2a4d3a';
+ctx.fillRect(0, 0, 1024, 1024);
+
+// Draw hexagonal region
+ctx.fillStyle = '#1a3d2a';
+ctx.beginPath();
+ctx.moveTo(512, 100);
+ctx.lineTo(800, 300);
+ctx.lineTo(800, 700);
+ctx.lineTo(512, 900);
+ctx.lineTo(224, 700);
+ctx.lineTo(224, 300);
+ctx.closePath();
+ctx.fill();
+
+// Add some texture
+ctx.fillStyle = '#3a5d4a';
+for(let i = 0; i < 50; i++) {
+    const x = Math.random() * 1024;
+    const y = Math.random() * 1024;
+    const size = Math.random() * 20 + 5;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Convert to blob and download
+canvas.toBlob(function(blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hex_forest_region.png';
+    a.click();
+});
+</script>
+</body>
+</html>

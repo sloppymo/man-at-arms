@@ -99,17 +99,8 @@ export function resetGame() {
 function updateStory() {
     console.log("=== UPDATE STORY START ===");
 
-    // Wait for Ink initialization if available
-    if (window.inkReady && window.inkStory) {
-        window.inkReady.then(() => {
-            renderStoryContent();
-        }).catch(error => {
-            console.error("Ink initialization failed:", error);
-            renderLegacyContent();
-        });
-    } else {
-        renderStoryContent();
-    }
+    // System removed - render story content directly
+    renderStoryContent();
 }
 
 /**
@@ -147,71 +138,28 @@ function updateStats() {
 }
 
 /**
- * Update choices display using Ink.js
+ * Update choices display
  */
 function updateChoices() {
     renderChoices();
 }
 
 /**
- * Render choices from Ink story
+ * Render choices
  */
 function renderChoices() {
     const choicesEl = document.getElementById('choices-container');
     if (!choicesEl) return;
 
-    // Check if we have an active Ink story with choices
-    if (window.inkStory && window.inkStory.currentChoices && window.inkStory.currentChoices.length > 0) {
-        try {
-            const choices = window.inkStory.currentChoices;
-            let choicesHTML = '<div class="choices-list">';
-            
-            choices.forEach((choice, index) => {
-                choicesHTML += `
-                    <button class="choice-button" data-choice-index="${index}">
-                        ${choice.text}
-                    </button>
-                `;
-            });
-            
-            choicesHTML += '</div>';
-            choicesEl.innerHTML = choicesHTML;
-            
-            // Add click handlers for choices
-            const choiceButtons = choicesEl.querySelectorAll('.choice-button');
-            choiceButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const choiceIndex = parseInt(button.dataset.choiceIndex);
-                    selectChoice(choiceIndex);
-                });
-            });
-            
-        } catch (error) {
-            console.error('Error rendering choices:', error);
-            choicesEl.innerHTML = '<p>Error loading choices</p>';
-        }
-    } else {
-        // No choices available
-        choicesEl.innerHTML = '';
-    }
+    // System removed - no choices to render
+    choicesEl.innerHTML = '';
 }
 
 /**
- * Handle choice selection
+ * Handle choice selection - system removed
  */
 function selectChoice(choiceIndex) {
-    if (!window.inkStory) return;
-    
-    try {
-        // Select the choice in Ink
-        window.inkStory.ChooseChoiceIndex(choiceIndex);
-        
-        // Update the display to show the next part of the story
-        updateDisplay();
-        
-    } catch (error) {
-        console.error('Error selecting choice:', error);
-    }
+    console.log('selectChoice called - system removed');
 }
 
 function updateStatusBar() {
@@ -227,54 +175,14 @@ function updateStatusBar() {
 }
 
 /**
- * Render story content using Ink.js
+ * Render story content - system removed
  */
 function renderStoryContent() {
     const storyEl = document.getElementById('story');
     if (!storyEl) return;
 
-    // Check if we have an active Ink story
-    if (window.inkStory && typeof window.inkStory.Continue === 'function') {
-        try {
-            let storyText = '';
-            let allTags = [];
-            
-            // Continue story until we need choices or it ends
-            while (window.inkStory.canContinue) {
-                const line = window.inkStory.Continue();
-                if (line && line.trim()) {
-                    storyText += line + '\n';
-                }
-                
-                // Collect tags from this continuation
-                if (window.inkStory.currentTags) {
-                    allTags.push(...window.inkStory.currentTags);
-                }
-            }
-            
-            // Process all collected tags through tag router
-            if (window.dialogueService && window.dialogueService.tagRouter && allTags.length > 0) {
-                window.dialogueService.tagRouter.processTags(allTags);
-            }
-            
-            // Display story text
-            if (storyText.trim()) {
-                storyEl.innerHTML = `<div class="story-text">${storyText.trim()}</div>`;
-            } else {
-                storyEl.innerHTML = '<div class="story-text">The story continues...</div>';
-            }
-            
-            // Render choices if available
-            renderChoices();
-            
-        } catch (error) {
-            console.error('Error rendering Ink story:', error);
-            storyEl.innerHTML = '<div class="story-error">Error loading story content</div>';
-        }
-    } else {
-        // No active story
-        storyEl.innerHTML = '<div class="story-text">No story is currently active.</div>';
-    }
+    // System removed - use legacy content
+    renderLegacyContent();
 }
 
 /**

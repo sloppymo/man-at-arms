@@ -1,0 +1,27 @@
+title: Start
+---
+== start
+<<showImage artwork/supplyshortage.jpg>>
+You arrive at the imposing castle gate. A stern guard in full plate armor stands watch.
+"Halt! State your business."
+{if hasItem("message_scroll"):
+You show the sealed scroll. "I have a message for the castle."
+The guard examines the seal and nods. "From the merchant, I presume. Let me see that."
+<<removeItem message_scroll, 1>>
+The guard breaks the seal and reads quickly, then looks at you with approval. "Excellent work. This confirms the merchant's report about suspicious activity near the forest. You've done the realm a service."
+<<advanceTime 10>>
+"Return to the merchant and tell him the matter is being handled. He'll have your reward."
+<<stop>>
+else:
+"I said, state your business. If you have no official business here, move along."
+* "I'm just passing through."
+The guard eyes you suspiciously. "Move along then."
+<<stop>>
+* "I'm looking for work."
+"The castle isn't hiring today. Try the town square."
+<<stop>>
+* "Never mind."
+You back away slowly from the intimidating guard.
+<<stop>>
+}
+===

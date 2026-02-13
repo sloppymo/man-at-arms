@@ -1,11 +1,11 @@
-import Phaser from 'phaser';
+import { Scene } from '../vendor/phaser.js';
 
 /**
  * Overworld HUD — Chevauchée Status Display
  * Tracks time, heat, and supplies during map exploration
  * Updates via dispatcher events for clean separation
  */
-export class OverworldHUD extends Phaser.Scene {
+export class OverworldHUD extends Scene {
     constructor() {
         super({ key: 'OverworldHUD', active: false });
         this.dispatch = null;

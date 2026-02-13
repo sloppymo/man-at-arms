@@ -359,6 +359,12 @@ function bootGame() {
   console.log('setMode result:', result);
   console.log('Current gameState.mode:', gameState.mode);
   
+  // Immediately trigger the welcome encounter
+  console.log('Triggering initial welcome encounter...');
+  setTimeout(() => {
+    dispatcher.dispatch('START_DIALOG', { payload: { dialogId: 'forest_encounter' } });
+  }, 100); // Small delay to ensure everything is initialized
+  
   // Add debug controls in development only
   const enableDebugControls = isDevelopment && (window.DEBUG_DIALOGS || window.location.search.includes('debug=true'));
   

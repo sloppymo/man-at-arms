@@ -20,6 +20,7 @@ export class DialogUI {
     this.isTypewriterActive = false;
     this.currentChoiceIndex = 0;
     this.choices = [];
+    this.currentSource = null; // Track whether dialog is from Yarn or JSON system
     
     this.createDialogElements();
     this.setupEventListeners();
@@ -53,6 +54,9 @@ export class DialogUI {
         </div>
         
         <div class="dialog-content-section">
+          <div class="dialog-scene-image">
+            <img id="dialog-scene-image" class="scene-image" src="" alt="" style="display: none;">
+          </div>
           <div class="dialog-text-container">
             <div id="dialog-text" class="dialog-text"></div>
             <div id="dialog-history" class="dialog-history hidden"></div>
@@ -293,6 +297,20 @@ export class DialogUI {
         line-height: 1.4;
       }
 
+      /* Scene Image */
+      .dialog-scene-image {
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .scene-image {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        object-fit: contain;
+      }
+
       /* Choices */
       .dialog-choices-container {
         background: rgba(0, 0, 0, 0.3);
@@ -478,12 +496,7 @@ export class DialogUI {
       if (event.payload === 'dialogue') {
         // Show dialogue when mode changes to dialogue
         console.log('DialogUI showing dialogue');
-        this.showDialog({
-          character: 'Unknown',
-          emotion: 'neutral',
-          text: 'Loading story...',
-          choices: []
-        });
+        // Don't show loading dialog - wait for actual content
       } else {
         // Hide dialogue when leaving dialogue mode
         console.log('DialogUI hiding dialogue');
@@ -493,7 +506,14 @@ export class DialogUI {
 
     this.dispatcher.subscribe('DIALOG_UPDATED', (event) => {
       console.log('DialogUI received DIALOG_UPDATED:', event.payload);
-      this.updateDialog(event.payload);
+      // Show dialog if not already visible
+      this.currentSource = event.payload.source || null; // Store source (yarn or null for JSON)
+      if (!this.isVisible) {
+        this.showDialog(event.payload);
+      } else {
+        // Just update the content
+        this.updateDialog(event.payload);
+      }
     });
 
     // Listen for dialog end events to hide the UI
@@ -515,9 +535,10 @@ export class DialogUI {
       });
     });
 
-    // Portrait events
-    this.dispatcher.subscribe('PORTRAIT_UPDATED', (event) => {
-      this.updatePortrait(event.payload);
+    // Handle show image events
+    this.dispatcher.subscribe('SHOW_IMAGE', (event) => {
+      console.log('DialogUI received SHOW_IMAGE:', event.payload);
+      this.showDialogImage(event.payload.imagePath);
     });
 
     // Button events
@@ -626,6 +647,12 @@ export class DialogUI {
     }, 10);
     
     this.isVisible = true;
+    
+    // If we have text data, display it immediately
+    if (dialogData.text) {
+      console.log('DialogUI: Processing text data, calling updateDialog');
+      this.updateDialog(dialogData);
+    }
     
     // If we have node data (from DialogSystem), display it immediately
     if (dialogData.node) {
@@ -764,10 +791,8 @@ export class DialogUI {
     // Start typewriter effect
     this.startTypewriter(text);
 
-    // Update choices after a delay
-    setTimeout(() => {
-      this.updateChoices(choices || []);
-    }, text.length * 20 + 500); // Wait for typewriter to finish
+    // Update choices immediately since there's no typewriter effect
+    this.updateChoices(choices || []);
 
     // Add to history
     this.addToHistory(dialogData);
@@ -782,34 +807,17 @@ export class DialogUI {
     }
 
     this.currentText = text;
-    this.isTypewriterActive = true;
-    this.dialogTextElement.textContent = '';
+    this.isTypewriterActive = false; // Disable typewriter animation
+    this.dialogTextElement.textContent = text; // Show full text immediately
 
-    // Enable skip button during typewriter animation
+    // Disable skip button since there's no animation
     if (this.skipButton) {
-      this.skipButton.disabled = false;
-      this.skipButton.style.opacity = '1';
+      this.skipButton.disabled = true;
+      this.skipButton.style.opacity = '0.5';
     }
 
-    let currentIndex = 0;
-    const typeSpeed = 20; // ms per character
-
-    const typeNextChar = () => {
-      if (currentIndex < text.length) {
-        this.dialogTextElement.textContent += text[currentIndex];
-        currentIndex++;
-        this.typewriterTimeout = setTimeout(typeNextChar, typeSpeed);
-      } else {
-        this.isTypewriterActive = false;
-        // Disable skip button when animation completes
-        if (this.skipButton) {
-          this.skipButton.disabled = true;
-          this.skipButton.style.opacity = '0.5';
-        }
-      }
-    };
-
-    typeNextChar();
+    // Add to history
+    this.addToHistory({ text: text });
   }
 
   /**
@@ -838,11 +846,11 @@ export class DialogUI {
     this.choicesElement.innerHTML = '';
     this.choices = [];
     
-    choices.forEach((choice, index) => {
+    choices.forEach((choice, loopIndex) => {
       const choiceElement = document.createElement('button');
       choiceElement.className = 'dialog-choice';
       choiceElement.innerHTML = `
-        <span class="choice-number">${index + 1}</span>
+        <span class="choice-number">${loopIndex + 1}</span>
         <span class="choice-text">${choice.text}</span>
       `;
       
@@ -855,7 +863,7 @@ export class DialogUI {
       // Add click handler
       choiceElement.addEventListener('click', () => {
         if (!choice.disabled) {
-          this.selectChoice(index);
+          this.selectChoice(choice.index); // Use choice.index instead of loopIndex
         }
       });
       
@@ -864,7 +872,7 @@ export class DialogUI {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           if (!choice.disabled) {
-            this.selectChoice(index);
+            this.selectChoice(choice.index); // Use choice.index instead of loopIndex
           }
         }
       });
@@ -893,8 +901,9 @@ export class DialogUI {
     // Add selection effect
     choice.classList.add('selected');
     
-    // Dispatch choice event
-    this.dispatcher.dispatch('DIALOG_CHOICE', { choiceIndex: index });
+    // Dispatch appropriate choice event based on source
+    const eventType = this.currentSource === 'yarn' ? 'YARN_CHOICE' : 'DIALOG_CHOICE';
+    this.dispatcher.dispatch(eventType, { choiceIndex: index });
   }
 
   /**
@@ -903,18 +912,34 @@ export class DialogUI {
   continueDialog() {
     if (!this.canContinue) return;
 
-    // Dispatch continue event
-    this.dispatcher.dispatch('DIALOG_CONTINUE');
+    // Dispatch appropriate continue event based on source
+    const eventType = this.currentSource === 'yarn' ? 'YARN_CONTINUE' : 'DIALOG_CONTINUE';
+    this.dispatcher.dispatch(eventType);
+  }
+
+  /**
+   * Show dialog image for scene artwork
+   */
+  showDialogImage(imagePath) {
+    if (!imagePath) return;
+    
+    if (!this.sceneImageElement) {
+      this.sceneImageElement = document.getElementById('dialog-scene-image');
+    }
+    
+    if (this.sceneImageElement) {
+      this.sceneImageElement.src = imagePath;
+      this.sceneImageElement.style.display = 'block';
+    } else {
+      console.error('DialogUI: Scene image element not found');
+    }
   }
 
   /**
    * Update portrait with emotion
    */
   updatePortrait(portraitData) {
-    console.log('DialogUI: updatePortrait called with:', portraitData);
     const { character, emotion } = portraitData;
-    
-    console.log('DialogUI: current character:', this.currentCharacter, 'requested character:', character);
     
     if (character !== this.currentCharacter && character !== undefined) {
       this.currentCharacter = character;
@@ -937,10 +962,16 @@ export class DialogUI {
       // Update emotion class
       this.portraitElement.className = `character-portrait emotion-${this.currentEmotion}`;
       
+      // Show portrait container
+      const container = this.portraitElement.closest('.character-portrait-container');
+      if (container) {
+        container.style.display = 'block';
+      }
+      
       // Add error handling
       this.portraitElement.onerror = () => {
-        console.error('DialogUI: Failed to load portrait:', portraitPath);
         this.portraitElement.src = ''; // Clear src on error
+        // Keep container visible even if image fails
       };
       
       this.portraitElement.onload = () => {
@@ -949,6 +980,12 @@ export class DialogUI {
     } else {
       console.warn('DialogUI: No portrait data found for character:', this.currentCharacter);
       this.portraitElement.src = '';
+      
+      // Hide portrait container when no character
+      const container = this.portraitElement.closest('.character-portrait-container');
+      if (container) {
+        container.style.display = 'none';
+      }
     }
   }
 
@@ -1024,6 +1061,14 @@ export class DialogUI {
     }, 300);
     
     this.isVisible = false;
+    this.currentSource = null; // Reset source when dialog is hidden
+    
+    // Hide scene image
+    if (this.sceneImageElement) {
+      this.sceneImageElement.style.display = 'none';
+      this.sceneImageElement.src = '';
+    }
+    
     this.hideHistory();
   }
 
@@ -1033,6 +1078,12 @@ export class DialogUI {
   closeDialog() {
     console.log('DialogUI: closeDialog called - dispatching DIALOG_ENDED');
     this.dispatcher.dispatch('DIALOG_ENDED');
+    
+    // If this is a Yarn dialog, transition back to overworld mode
+    if (this.currentSource === 'yarn') {
+      console.log('DialogUI: Yarn dialog closed, dispatching MODE_CHANGE to overworld');
+      this.dispatcher.dispatch('MODE_CHANGE', 'overworld');
+    }
     
     // Also try to resume the overworld scene directly
     if (window.overworldGame && window.overworldGame.resume) {

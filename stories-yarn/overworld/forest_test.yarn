@@ -1,0 +1,130 @@
+title: Start
+---
+== start
+<<showImage artwork/supplyshortage.jpg>>
+Welcome to the game!
+-> "Okay!"
+    <<stop>>
+== investigate_sounds
+<<advanceTime 15>>
+You creep closer, your heart pounding. Through the underbrush, you spot three rough-looking men armed with swords and bows. They appear to be bandits, arguing over the division of some stolen goods. One of them notices movement and shouts an alarm!
+"Intruder! Get 'em!"
+-> "[Charge into combat!]"
+    <<jump bandit_combat>>
+-> "[Try to talk them down]"
+    <<jump bandit_diplomacy>>
+-> "[Run back the way you came]"
+    <<jump bandit_escape>>
+== bandit_combat
+<<triggerCombat bandits>>
+<<stop>>
+== bandit_diplomacy
+You raise your hands peacefully. "Hold! I mean no harm. I'm just a traveler passing through."
+The bandits pause, weapons half-drawn. Their leader, a scarred man with a missing tooth, eyes you suspiciously.
+<<resolveAction charisma, 12, 0>>
+{
+<<if $success>>
+"Alright, traveler. You seem honest enough. But this forest ain't safe. Pay us a toll - 2 food supplies - and we'll let you pass."
+-> "[Pay the toll]"
+    <<jump pay_toll>>
+-> "[Refuse and fight]"
+    <<jump bandit_combat>>
+<<if $failure>>
+"Nice try, but we ain't fools. Get 'em boys!"
+<<jump bandit_combat>>
+<<endif>>
+== pay_toll
+<<consumeSupply food, 2>>
+You hand over the supplies. The bandits step aside, grumbling but allowing you to pass.
+<<changeStat reputation, -1>>
+Your reputation among the locals suffers from this cowardice, but at least you're alive.
+<<jump forest_exit>>
+== bandit_escape
+You turn and run as fast as your legs can carry you!
+<<resolveAction agility, 10, 0>>
+{
+<<if $success>>
+You crash through the underbrush, the bandits' arrows whistling past you harmlessly. You lose your way briefly but eventually find the forest edge again.
+<<advanceTime 30>>
+<<addCondition exhausted, negative, 2>>
+<<jump forest_exit>>
+<<if $failure>>
+An arrow catches your leg as you flee! You stumble and fall, the bandits closing in...
+<<changeStat health, -2>>
+<<addCondition wounded, negative, 4>>
+<<advanceTime 45>>
+<<jump bandit_combat>>
+<<endif>>
+== continue_path
+<<advanceTime 45>>
+You press on, ignoring the sounds. The path narrows and becomes more overgrown. Suddenly, you stumble into a hidden glade - a peaceful clearing with a small spring and soft grass.
+This seems like a good place to rest, but you also notice some interesting tracks leading deeper into the forest.
+-> "[Rest here for a while]"
+    <<jump rest_glade>>
+-> "[Follow the tracks deeper]"
+    <<jump explore_deeper>>
+-> "[Continue past the glade]"
+    <<jump forest_exit>>
+== rest_glade
+<<advanceTime 60>>
+You sit by the spring and rest. The peaceful sounds of nature soothe your weary soul.
+<<consumeSupply food, 1>>
+<<changeStat health, 1>>
+<<removeCondition exhausted>>
+Refreshed, you continue your journey.
+<<jump forest_exit>>
+== explore_deeper
+<<advanceTime 30>>
+Following the tracks, you discover an ancient ruined chapel, its stone walls overgrown with ivy. The air feels sacred here.
+-> "[Search for hidden treasure]"
+    <<jump search_treasure>>
+-> "[Pray for a blessing]"
+    <<jump pray_blessing>>
+-> "[Leave this place]"
+    <<jump forest_exit>>
+== search_treasure
+You carefully search the chapel ruins, moving aside fallen stones and peering into dark corners.
+<<resolveAction perception, 13, 0>>
+{
+<<if $success>>
+You find a small chest hidden behind the altar! Inside are some coins and a silver amulet.
+<<addItem coins, 15>>
+<<addItem silver_amulet, 1>>
+<<showNotification Treasure Found!, You discovered 15 coins and a silver amulet!, success>>
+<<jump chapel_exit>>
+<<if $failure>>
+As you search, you disturb a wasps' nest! The angry insects swarm you.
+<<changeStat health, -1>>
+<<addCondition stung, negative, 2>>
+<<advanceTime 15>>
+<<jump chapel_exit>>
+<<endif>>
+== pray_blessing
+You kneel before the ruined altar and pray for guidance and protection.
+<<advanceTime 20>>
+A sense of peace washes over you. You feel blessed.
+<<changeStat morale, 2>>
+<<addCondition blessed, positive, 6>>
+<<jump chapel_exit>>
+== chapel_exit
+As you leave the chapel, you feel the forest's secrets have touched you in some way.
+<<jump forest_exit>>
+== circle_around
+<<advanceTime 20>>
+You attempt to circle around the suspicious area quietly.
+<<resolveAction stealth, 11, 0>>
+{
+<<if $success>>
+You slip past undetected and find yourself on the far side of the disturbance. Whatever was there is now behind you.
+<<advanceTime 30>>
+<<jump forest_exit>>
+<<if $failure>>
+Your foot catches on a root and you stumble with a loud crash! The sounds ahead go quiet for a moment, then you hear approaching footsteps...
+<<jump investigate_sounds>>
+<<endif>>
+== forest_exit
+<<advanceTime 30>>
+You emerge from the forest onto familiar ground. The encounter has changed you somehow - for better or worse.
+-> "Continue"
+    <<stop>>
+===

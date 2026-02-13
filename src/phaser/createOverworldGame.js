@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { Game, Scale, AUTO, Math } from '../vendor/phaser.js';
 import { OverworldScene } from './OverworldScene.js';
 
 /**
@@ -29,7 +29,7 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
 
         // Phaser game configuration optimized for Vite + GitHub Pages
         const config = {
-            type: Phaser.AUTO,
+            type: AUTO,
             parent: parentElement,
             backgroundColor: 'transparent', // Allow CSS background to show through
             physics: {
@@ -46,18 +46,24 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                 }
             },
             scale: {
-                mode: Phaser.Scale.RESIZE, // Responsive scaling for mobile/desktop
-                autoCenter: Phaser.Scale.CENTER_BOTH, // Center the game canvas
-                width: window.innerWidth,
-                height: window.innerHeight,
+                mode: Scale.FIT, // Fit the game to viewport while maintaining aspect ratio
+                autoCenter: Scale.CENTER_BOTH, // Center the game canvas
+                width: 1024, // Fixed world width to match map
+                height: 1024, // Fixed world height to match map
                 parent: parentElement, // Use the parent element for proper containment
                 expandParent: false // Don't expand parent, let CSS handle layout
             },
-            scene: [new OverworldScene({ dispatch, getGameState, setMode })]
+            scene: [OverworldScene]
         };
 
         // Create the Phaser game instance
-        const game = new Phaser.Game(config);
+        const game = new Game(config);
+
+        // Wait for game to boot, then start the scene
+        game.events.once('ready', () => {
+            console.log('Phaser game ready, starting OverworldScene...');
+            game.scene.start('OverworldScene', { dispatch, getGameState, setMode });
+        });
 
         // Handle window resize for responsive scaling (debounced)
         let resizeTimeout;
@@ -160,7 +166,7 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                         // Check if player is near any hotspot
                         console.log('Checking hotspot distances for repositioning...');
                         for (const hotspot of hotspots) {
-                            const distance = Phaser.Math.Distance.Between(
+                            const distance = Math.Distance.Between(
                                 scene.player.x, scene.player.y,
                                 hotspot.x, hotspot.y
                             );
@@ -180,21 +186,21 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                             // Instead of moving to center, move player just outside hotspot
                             // Find the hotspot we're inside
                             for (const hotspot of hotspots) {
-                                const distance = Phaser.Math.Distance.Between(
+                                const distance = Math.Distance.Between(
                                     scene.player.x, scene.player.y,
                                     hotspot.x, hotspot.y
                                 );
                                 if (distance <= hotspot.radius) {
                                     // Calculate direction from hotspot center to player
-                                    const angle = Math.atan2(
+                                    const angle = window.Math.atan2(
                                         scene.player.y - hotspot.y,
                                         scene.player.x - hotspot.x
                                     );
                                     
                                     // Move player just outside hotspot radius
                                     const safeDistance = hotspot.radius + 20; // 20 pixels outside for safety
-                                    scene.player.x = hotspot.x + Math.cos(angle) * safeDistance;
-                                    scene.player.y = hotspot.y + Math.sin(angle) * safeDistance;
+                                    scene.player.x = hotspot.x + window.Math.cos(angle) * safeDistance;
+                                    scene.player.y = hotspot.y + window.Math.sin(angle) * safeDistance;
                                     
                                     console.log(`Moved player to safe position (${scene.player.x.toFixed(1)}, ${scene.player.y.toFixed(1)}) outside ${hotspot.id}`);
                                     

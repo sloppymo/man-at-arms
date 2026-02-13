@@ -284,7 +284,7 @@ export const CHARACTERS = {
     title: 'Craftsman',
     description: 'A skilled blacksmith who forges weapons and armor.',
     portrait: {
-      basePath: 'portraits/blacksmith',
+      basePath: 'portraits/blacksmith', // Use blacksmith folder
       emotions: {
         neutral: 'neutral.png',
         happy: 'smile.png',
@@ -309,16 +309,140 @@ export const CHARACTERS = {
     dialogTopics: ['weapons', 'armor', 'craftsmanship', 'business']
   },
 
+  merchant: {
+    id: 'merchant',
+    name: 'Merchant',
+    title: 'Trader',
+    description: 'A shrewd businessman who deals in goods and information.',
+    portrait: {
+      basePath: 'portraits/ashkhan', // Use existing portrait
+      emotions: {
+        neutral: 'neutral.png',
+        happy: 'smile.png',
+        angry: 'frown.png',
+        sad: 'worried.png',
+        surprised: 'surprised.png',
+        fearful: 'scared.png',
+        contempt: 'annoyed.png'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['shrewd', 'pragmatic', 'nervous', 'informative'],
+      speechPattern: 'businesslike and cautious',
+      voice: 'measured, slightly anxious'
+    },
+    relationships: {
+      default: 0,
+      max: 60,
+      min: -20
+    },
+    dialogTopics: ['trade', 'information', 'quests', 'danger']
+  },
+
+  guard: {
+    id: 'guard',
+    name: 'Castle Guard',
+    title: 'Soldier',
+    description: 'A professional soldier guarding the castle gates.',
+    portrait: {
+      basePath: 'portraits/blacksmith', // Use blacksmith folder
+      emotions: {
+        neutral: 'neutral.png',
+        happy: 'smile.png',
+        angry: 'frown.png',
+        sad: 'worried.png',
+        surprised: 'surprised.png',
+        fearful: 'scared.png',
+        contempt: 'annoyed.png'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['authoritative', 'dutiful', 'stern', 'professional'],
+      speechPattern: 'official and commanding',
+      voice: 'firm, authoritative'
+    },
+    relationships: {
+      default: 0,
+      max: 40,
+      min: -40
+    },
+    dialogTopics: ['authority', 'security', 'castle', 'orders']
+  },
+
+  innkeeper: {
+    id: 'innkeeper',
+    name: 'Innkeeper',
+    title: 'Tavern Owner',
+    description: 'A pragmatic tavern owner who knows the local gossip.',
+    portrait: {
+      basePath: 'portraits/ashkhan', // Use existing portrait
+      emotions: {
+        neutral: 'neutral.png',
+        happy: 'smile.png',
+        angry: 'frown.png',
+        sad: 'worried.png',
+        surprised: 'surprised.png',
+        fearful: 'scared.png',
+        contempt: 'annoyed.png'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['pragmatic', 'sociable', 'observant', 'helpful'],
+      speechPattern: 'friendly but businesslike',
+      voice: 'warm, welcoming'
+    },
+    relationships: {
+      default: 10,
+      max: 70,
+      min: -10
+    },
+    dialogTopics: ['rumors', 'accommodations', 'local_news', 'drink']
+  },
+
+  priest: {
+    id: 'priest',
+    name: 'Village Priest',
+    title: 'Cleric',
+    description: 'A devout priest who serves the spiritual needs of the community.',
+    portrait: {
+      basePath: 'portraits/ashkhan', // Use existing portrait
+      emotions: {
+        neutral: 'neutral.png',
+        happy: 'smile.png',
+        angry: 'frown.png',
+        sad: 'worried.png',
+        surprised: 'surprised.png',
+        fearful: 'scared.png',
+        contempt: 'annoyed.png'
+      },
+      defaultEmotion: 'neutral'
+    },
+    personality: {
+      traits: ['devout', 'compassionate', 'wise', 'moral'],
+      speechPattern: 'calm and spiritual',
+      voice: 'gentle, reassuring'
+    },
+    relationships: {
+      default: 20,
+      max: 80,
+      min: 0
+    },
+    dialogTopics: ['faith', 'morality', 'community', 'blessings']
+  },
+
   bandit: {
     id: 'bandit',
     name: 'Bandit',
     title: 'Thug',
     description: 'A common bandit who robs travelers on the road.',
     portrait: {
-      basePath: 'portraits/bandit_leader', // Reuse bandit_leader portrait
+      basePath: 'portraits/bandit_leader', // Use bandit_leader folder
       emotions: {
-        neutral: 'neutral.svg',
-        happy: 'cruel_smile.svg'
+        neutral: 'neutral.png',
+        happy: 'cruel_smile.png'
       },
       defaultEmotion: 'neutral'
     },
