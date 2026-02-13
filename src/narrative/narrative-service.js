@@ -379,16 +379,85 @@ export class NarrativeService {
 
     for (const key of possibleKeys) {
       if (this.storyModules[key]) {
-        return await this.storyModules[key]();
+        const yarnText = await this.storyModules[key]();
+        // Preprocess conditionals before returning
+        return this.preprocessConditionals(yarnText);
       }
     }
 
     const suffixKey = Object.keys(this.storyModules).find(k => k.endsWith(`/${storyPath}.yarn`));
     if (suffixKey) {
-      return await this.storyModules[suffixKey]();
+      const yarnText = await this.storyModules[suffixKey]();
+      // Preprocess conditionals before returning
+      return this.preprocessConditionals(yarnText);
     }
 
     throw new Error(`Story not found: ${storyPath}`);
+  }
+
+  // Preprocess Yarn text to handle flag conditionals
+  preprocessConditionals(yarnText) {
+    const lines = yarnText.split('\n');
+    const processedLines = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i].trim();
+
+      if (line.startsWith('<<if hasFlag ')) {
+        // Extract flag name
+        const flagMatch = line.match(/<<if hasFlag ([^>]+)>>/);
+        if (flagMatch) {
+          const flagName = flagMatch[1].trim();
+          const hasFlag = this.gameState.flags && this.gameState.flags[flagName];
+
+          // Find the corresponding <<else>> and <<endif>>
+          let elseIndex = -1;
+          let endifIndex = -1;
+          let depth = 0;
+
+          for (let j = i + 1; j < lines.length; j++) {
+            const checkLine = lines[j].trim();
+            if (checkLine === '<<if hasFlag ' + flagName + '>>') {
+              depth++;
+            } else if (checkLine === '<<endif>>') {
+              if (depth === 0) {
+                endifIndex = j;
+                break;
+              } else {
+                depth--;
+              }
+            } else if (checkLine === '<<else>>' && depth === 0) {
+              elseIndex = j;
+            }
+          }
+
+          if (endifIndex !== -1) {
+            if (hasFlag) {
+              // Include lines from i+1 to elseIndex-1 or endifIndex-1
+              const endIndex = elseIndex !== -1 ? elseIndex : endifIndex;
+              for (let j = i + 1; j < endIndex; j++) {
+                processedLines.push(lines[j]);
+              }
+            } else {
+              // Include lines from elseIndex+1 to endifIndex-1
+              if (elseIndex !== -1) {
+                for (let j = elseIndex + 1; j < endifIndex; j++) {
+                  processedLines.push(lines[j]);
+                }
+              }
+            }
+            i = endifIndex + 1;
+            continue;
+          }
+        }
+      }
+
+      processedLines.push(lines[i]);
+      i++;
+    }
+
+    return processedLines.join('\n');
   }
 
   createVariableStorage() {
@@ -517,18 +586,18 @@ export class NarrativeService {
         this.gameState.overworld.heat = Math.min(100, Math.max(0, heat + parseInt(args[0]) || 0));
         break;
 
-      case 'wait':
-        this.dispatcher.dispatch('DIALOG_WAIT', { duration: parseFloat(args[0]) || 1.0 });
+      case 'addFlag':
+        if (!this.gameState.flags) this.gameState.flags = {};
+        this.gameState.flags[args[0]] = true;
+        console.log(`Added flag: ${args[0]}`);
         break;
 
-      case 'pause':
-        // Pause command requires explicit user advancement
-        // UI should show continue button after pause
-        this.dispatcher.dispatch('DIALOG_PAUSED');
+      case 'removeFlag':
+        if (this.gameState.flags) {
+          delete this.gameState.flags[args[0]];
+          console.log(`Removed flag: ${args[0]}`);
+        }
         break;
-
-      default:
-        console.warn(`Unknown Yarn command: ${cmdName}`, args);
     }
   }
 
