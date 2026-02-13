@@ -47,9 +47,11 @@ export class CombatMinigame extends Scene {
         this.playerHealth = 3;
         this.maxHealth = 3;
         this.gameTime = 0;
-        this.gameDuration = 30000; // 30 seconds
-        this.projectileSpeed = 100; // pixels per second
-        this.spawnRate = 2000; // milliseconds between spawns
+        this.gameDuration = 15000; // 15 seconds (reduced duration)
+        this.projectileSpeed = 300; // pixels per second (3x faster)
+        this.spawnRate = 1000; // milliseconds between spawns (increased frequency)
+        this.projectileCount = 20; // starting projectiles per spawn
+        this.lastIncrease = 0; // track difficulty increases
 
         // Projectiles group
         this.projectiles = this.add.group();
@@ -107,6 +109,13 @@ export class CombatMinigame extends Scene {
         const seconds = Math.floor(this.gameTime / 1000);
         this.timeText.setText(`Time: ${seconds}s`);
 
+        // Increase difficulty every 5 seconds
+        const increaseInterval = Math.floor(this.gameTime / 5000);
+        if (increaseInterval > this.lastIncrease) {
+            this.projectileCount += 5;
+            this.lastIncrease = increaseInterval;
+        }
+
         // Player movement
         const speed = 200;
         let moveX = 0;
@@ -140,9 +149,11 @@ export class CombatMinigame extends Scene {
     }
 
     spawnProjectile() {
-        const x = Phaser.Math.Between(50, 750);
-        const projectile = this.add.circle(x, 0, 8, 0xff0000);
-        this.projectiles.add(projectile);
+        for (let i = 0; i < this.projectileCount; i++) {
+            const x = Phaser.Math.Between(50, 750);
+            const projectile = this.add.circle(x, 0, 8, 0xff0000);
+            this.projectiles.add(projectile);
+        }
     }
 
     checkCollisions() {
