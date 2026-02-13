@@ -32,6 +32,7 @@ export class OverworldScene extends Scene {
 
         // Hex tracking for event dispatch
         this.currentHex = { q: 0, r: 0 };
+        this.hasInitializedHex = false; // Prevent triggering on start
 
         // Chevauchée zone definition
         this.CHEVAUCHEE_ZONE = CHEVAUCHEE_ZONES.normandy_raids;
@@ -324,6 +325,12 @@ export class OverworldScene extends Scene {
 
         // Check for hex entry
         const newHex = this.pixelToHex(this.player.x, this.player.y);
+        if (!this.hasInitializedHex) {
+            // Set initial hex without triggering encounter
+            this.currentHex = newHex;
+            this.hasInitializedHex = true;
+            return;
+        }
         if (newHex.q !== this.currentHex.q || newHex.r !== this.currentHex.r) {
             console.log(`Entering hex: (${newHex.q}, ${newHex.r}) at position (${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)})`);
             this.currentHex = newHex;
@@ -458,7 +465,7 @@ export class OverworldScene extends Scene {
      * Check if player overlaps with any hotspots
      */
     checkHotspotOverlaps() {
-        if (!this.player) return;
+        if (!this.player || this.isInDialogMode) return;
 
         this.hotspots.forEach(hotspot => {
             const distance = PhaserMath.Distance.Between(

@@ -67,6 +67,9 @@ export class EncounterService {
     // Debug mode flag
     this.debugMode = typeof window !== 'undefined' && 
       (window.location.hostname === 'localhost' || window.location.search.includes('debug=true'));
+    
+    // TEMPORARY: Disable random encounters for development
+    this.enableRandomEncounters = false;
   }
 
   /**
@@ -141,6 +144,12 @@ export class EncounterService {
    */
   shouldTriggerEncounter(event) {
     const { zone } = event;
+    
+    // TEMPORARY: Disable random encounters if flag is false
+    if (!this.enableRandomEncounters) {
+      console.log('EncounterService: Random encounters disabled');
+      return false;
+    }
     
     // Skip encounters on first hex entry to allow welcome dialog
     if (this.skipFirstHex) {

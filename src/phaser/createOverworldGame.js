@@ -114,137 +114,103 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
             },
 
             /**
-             * Pause the Phaser game (scene remains loaded)
+             * Pause the Phaser game (set dialog mode instead of pausing scene)
              */
             pause: () => {
-                if (game.scene && game.scene.isActive('OverworldScene')) {
-                    game.scene.pause('OverworldScene');
-                    console.log('Paused Phaser overworld');
+                const scene = game.scene.getScene('OverworldScene');
+                if (scene) {
+                    scene.isInDialogMode = true;
+                    console.log('Set Phaser overworld to dialog mode');
                 }
             },
 
             /**
-             * Resume Phaser game
+             * Resume Phaser game (set active mode instead of resuming scene)
              */
             resume: () => {
                 console.log('=== RESUME DEBUG START ===');
-                console.log('game.scene exists:', !!game.scene);
-                console.log('OverworldScene exists:', !!game.scene.getScene('OverworldScene'));
-                console.log('Scene isPaused:', game.scene.isPaused('OverworldScene'));
-                console.log('Scene isActive:', game.scene.isActive('OverworldScene'));
+                const scene = game.scene.getScene('OverworldScene');
+                console.log('OverworldScene exists:', !!scene);
                 
-                // Try to resume the scene regardless of getScene() result
-                if (game.scene) {
-                    try {
-                        // Check if scene exists at all
-                        const sceneExists = game.scene.getScene('OverworldScene');
+                if (scene) {
+                    scene.isInDialogMode = false;
+                    console.log('Set Phaser overworld to active mode');
+                    
+                    // Handle player repositioning after dialog
+                    if (scene.player) {
+                        // Find all hotspots and move player to a safe location
+                        const hotspots = scene.hotspots || [];
+                        let needsMove = false;
                         
-                        if (!sceneExists) {
-                            console.log('Scene does not exist, restarting OverworldScene...');
-                            // Restart the scene if it doesn't exist
-                            game.scene.start('OverworldScene', { dispatch, getGameState, setMode });
-                            console.log('Scene restarted successfully');
-                            return;
+                        // Check if player is near any hotspot
+                        console.log('Checking hotspot distances for repositioning...');
+                        for (const hotspot of hotspots) {
+                            const distance = Math.Distance.Between(
+                                scene.player.x, scene.player.y,
+                                hotspot.x, hotspot.y
+                            );
+                            console.log(`Distance to ${hotspot.id}: ${distance.toFixed(1)} (radius: ${hotspot.radius})`);
+                            
+                            // Only move if player is actually INSIDE the hotspot, not just near it
+                            if (distance <= hotspot.radius) {
+                                console.log(`Player is inside hotspot ${hotspot.id}, needs to move`);
+                                needsMove = true;
+                                break;
+                            }
                         }
                         
-                        console.log('Attempting to resume scene directly...');
-                        game.scene.resume('OverworldScene');
-                        console.log('Resume called, checking if scene is now active:', game.scene.isActive('OverworldScene'));
-                        console.log('Resume called, checking if scene is now paused:', game.scene.isPaused('OverworldScene'));
-                        console.log('Resumed Phaser overworld');
-                        
-                        // Now try to get the scene reference for additional setup
-                        const scene = game.scene.getScene('OverworldScene');
-                        if (scene) {
-                            console.log('Resume: scene found after resume:', !!scene);
-                            if (scene.player) {
-                                // Find all hotspots and move player to a safe location
-                                const hotspots = scene.hotspots || [];
-                                let needsMove = false;
-                                
-                                // Check if player is near any hotspot
-                                console.log('Checking hotspot distances for repositioning...');
-                                for (const hotspot of hotspots) {
-                                    const distance = Math.Distance.Between(
-                                        scene.player.x, scene.player.y,
-                                        hotspot.x, hotspot.y
+                        if (needsMove) {
+                            console.log('Moving player to safe position outside hotspot...');
+                            
+                            // Find the hotspot we're inside
+                            for (const hotspot of hotspots) {
+                                const distance = Math.Distance.Between(
+                                    scene.player.x, scene.player.y,
+                                    hotspot.x, hotspot.y
+                                );
+                                if (distance <= hotspot.radius) {
+                                    // Calculate direction from hotspot center to player
+                                    const angle = window.Math.atan2(
+                                        scene.player.y - hotspot.y,
+                                        scene.player.x - hotspot.x
                                     );
-                                    console.log(`Distance to ${hotspot.id}: ${distance.toFixed(1)} (radius: ${hotspot.radius})`);
                                     
-                                    // Only move if player is actually INSIDE the hotspot, not just near it
-                                    if (distance <= hotspot.radius) {
-                                        console.log(`Player is inside hotspot ${hotspot.id}, needs to move`);
-                                        needsMove = true;
-                                        break;
-                                    }
-                                }
-                                
-                                if (needsMove) {
-                                    console.log('Moving player to safe position outside hotspot...');
+                                    // Move player just outside hotspot radius
+                                    const safeDistance = hotspot.radius + 20; // 20 pixels outside for safety
+                                    scene.player.x = hotspot.x + window.Math.cos(angle) * safeDistance;
+                                    scene.player.y = hotspot.y + window.Math.sin(angle) * safeDistance;
                                     
-                                    // Find the hotspot we're inside
-                                    for (const hotspot of hotspots) {
-                                        const distance = Math.Distance.Between(
-                                            scene.player.x, scene.player.y,
-                                            hotspot.x, hotspot.y
-                                        );
-                                        if (distance <= hotspot.radius) {
-                                            // Calculate direction from hotspot center to player
-                                            const angle = window.Math.atan2(
-                                                scene.player.y - hotspot.y,
-                                                scene.player.x - hotspot.x
-                                            );
-                                            
-                                            // Move player just outside hotspot radius
-                                            const safeDistance = hotspot.radius + 20; // 20 pixels outside for safety
-                                            scene.player.x = hotspot.x + window.Math.cos(angle) * safeDistance;
-                                            scene.player.y = hotspot.y + window.Math.sin(angle) * safeDistance;
-                                            
-                                            console.log(`Moved player to safe position (${scene.player.x.toFixed(1)}, ${scene.player.y.toFixed(1)}) outside ${hotspot.id}`);
-                                            
-                                            // Clear any ongoing movement to prevent immediate re-entry
-                                            if (scene.targetPosition) {
-                                                scene.targetPosition = null;
-                                                console.log('Cleared target position to prevent hotspot re-entry');
-                                            }
-                                            break;
-                                        }
+                                    console.log(`Moved player to safe position (${scene.player.x.toFixed(1)}, ${scene.player.y.toFixed(1)}) outside ${hotspot.id}`);
+                                    
+                                    // Clear any ongoing movement to prevent immediate re-entry
+                                    if (scene.targetPosition) {
+                                        scene.targetPosition = null;
+                                        console.log('Cleared target position to prevent hotspot re-entry');
                                     }
-                                } else {
-                                    console.log('Player is not inside any hotspot, no repositioning needed');
-                                }
-                            }
-                            
-                            // Re-enable input if disabled
-                            if (scene.input && !scene.input.enabled) {
-                                scene.input.enabled = true;
-                                console.log('Re-enabled scene input');
-                            }
-                            
-                            // Check keyboard input status
-                            if (scene.input && scene.input.keyboard) {
-                                console.log('Keyboard input status:', scene.input.keyboard.enabled);
-                                if (!scene.input.keyboard.enabled) {
-                                    scene.input.keyboard.enabled = true;
-                                    console.log('Re-enabled keyboard input');
+                                    break;
                                 }
                             }
                         } else {
-                            console.log('Scene reference not available after resume, but resume was attempted');
+                            console.log('Player is not inside any hotspot, no repositioning needed');
                         }
-                    } catch (error) {
-                        console.error('Error during scene resume:', error);
-                        // Try to restart the scene as a fallback
-                        try {
-                            console.log('Attempting to restart scene as fallback...');
-                            game.scene.start('OverworldScene', { dispatch, getGameState, setMode });
-                            console.log('Scene restarted as fallback');
-                        } catch (fallbackError) {
-                            console.error('Fallback scene restart also failed:', fallbackError);
+                    }
+                    
+                    // Re-enable input if disabled
+                    if (scene.input && !scene.input.enabled) {
+                        scene.input.enabled = true;
+                        console.log('Re-enabled scene input');
+                    }
+                    
+                    // Check keyboard input status
+                    if (scene.input && scene.input.keyboard) {
+                        console.log('Keyboard input status:', scene.input.keyboard.enabled);
+                        if (!scene.input.keyboard.enabled) {
+                            scene.input.keyboard.enabled = true;
+                            console.log('Re-enabled keyboard input');
                         }
                     }
                 } else {
-                    console.log('Cannot resume: game.scene not available');
+                    console.log('Scene not available, cannot resume');
                 }
                 console.log('=== RESUME DEBUG END ===');
             }
