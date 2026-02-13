@@ -259,7 +259,8 @@ export class OverworldScene extends Scene {
                 circle.setScrollFactor(1); // Scroll with the world
                 
                 // Add text label
-                const text = this.add.text(hotspot.x, hotspot.y - hotspot.radius - 20, hotspot.id.toUpperCase(), {
+                const displayText = hotspot.id === 'tavern' ? 'Forest' : hotspot.id.toUpperCase();
+                const text = this.add.text(hotspot.x, hotspot.y - hotspot.radius - 20, displayText, {
                     fontSize: '14px',
                     color: '#ff0000',
                     backgroundColor: '#ffff00',
