@@ -651,7 +651,7 @@ export class NarrativeService {
     // Simple encounter rolling based on seed and zone
     const encounterTypes = {
       'chevauchee': ['march_event', 'raid_village', 'patrol_spotted', 'forage', 'camp_event'],
-      'normandy_raids': ['ambush', 'french_scouts', 'late_raid'],
+      'normandy_raids': ['ambush', 'french_scouts', 'late_raid', 'prisoner_execution', 'deserter_bribe', 'french_mother_boy', 'village_burning_order', 'wounded_enemy', 'corrupt_quartermaster'],
       'forest': ['forest_encounter'],
       'default': ['march_event']
     };
