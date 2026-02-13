@@ -10,11 +10,11 @@ import { EVENT_TYPES } from '../core/dispatcher.js';
  * Encounter rates by zone type
  */
 const ENCOUNTER_RATES = {
-  'chevauchee': 0.30,      // 30% per hex in raid zone
-  'normandy_raids': 0.30,  // 30% in normandy raids zone
-  'forest': 0.15,          // 15% in forests
-  'road': 0.05,           // 5% on roads
-  null: 0                 // Safe zones
+  'chevauchee': 0.00,       // TEMPORARILY DISABLED - stories have JSON parsing errors
+  'normandy_raids': 0.00,   // TEMPORARILY DISABLED - stories have JSON parsing errors
+  'forest': 0.15,           // 15% in forests
+  'road': 0.05,            // 5% on roads
+  null: 0                  // Safe zones
 };
 
 /**
@@ -210,10 +210,15 @@ export class EncounterService {
   }
 
   /**
-   * Get time of day from game state (delegate to dialogue service)
+   * Get time of day from game state
    */
   getTimeOfDay() {
-    return this.dialogueService.getTimeOfDay(this.gameState.overworld?.time || 0);
+    const time = this.gameState.overworld?.time || 0;
+    // Simple time of day calculation based on 24-hour cycle
+    if (time >= 6 && time < 12) return 'morning';
+    if (time >= 12 && time < 18) return 'afternoon';
+    if (time >= 18 && time < 22) return 'evening';
+    return 'night';
   }
 
   /**
