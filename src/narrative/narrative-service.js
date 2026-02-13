@@ -573,9 +573,10 @@ export class NarrativeService {
         });
         break;
 
-      case 'triggerTetris':
-        this.dispatcher.dispatch('TRIGGER_TETRIS_MINIGAME', {
-          difficulty: args[0] || 'normal'
+      case 'triggerCombat':
+        this.dispatcher.dispatch('TRIGGER_COMBAT_MINIGAME', {
+          enemy: args[0] || 'unknown',
+          difficulty: args[1] || 'normal'
         });
         break;
 

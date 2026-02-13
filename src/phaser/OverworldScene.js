@@ -241,16 +241,17 @@ export class OverworldScene extends Scene {
             this.hotspotCooldown.clear();
         });
 
-        // Subscribe to tetris minigame trigger
-        this.dispatcher.subscribe('TRIGGER_TETRIS_MINIGAME', (data) => {
-            console.log('Launching tetris minigame:', data);
-            this.scene.start('TetrisMinigame', {
+        // Subscribe to combat minigame trigger
+        this.dispatcher.subscribe('TRIGGER_COMBAT_MINIGAME', (data) => {
+            console.log('Launching combat minigame:', data);
+            this.scene.start('CombatMinigame', {
                 dispatch: this.dispatch,
                 getGameState: this.getGameState,
                 setMode: this.setMode,
+                enemy: data.enemy,
                 difficulty: data.difficulty,
                 onComplete: (result) => {
-                    console.log('Tetris minigame completed:', result);
+                    console.log('Combat minigame completed:', result);
                     // Start back the OverworldScene
                     this.scene.start('OverworldScene', {
                         dispatch: this.dispatch,
@@ -259,7 +260,7 @@ export class OverworldScene extends Scene {
                     });
                     // Dispatch the result
                     this.dispatch({
-                        type: 'TETRIS_RESULT',
+                        type: 'COMBAT_RESULT',
                         payload: result
                     });
                 }
