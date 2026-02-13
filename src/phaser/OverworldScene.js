@@ -556,10 +556,23 @@ export class OverworldScene extends Scene {
     /**
      * Resume overworld scene (called when leaving other modes)
      */
-    resumeFromMode() {
-        console.log('Resuming overworld scene');
-        this.scene.resume();
-        
+    resume() {
+        super.resume();
+        this.isInDialogMode = false;
+        console.log('Overworld scene resumed - exiting dialog mode');
+
+        // Add cooldown to all hotspots to prevent immediate re-triggering after dialog
+        this.hotspots.forEach(hotspot => {
+            if (!this.hotspotCooldown.has(hotspot.id)) {
+                this.hotspotCooldown.add(hotspot.id);
+                const timerId = setTimeout(() => {
+                    this.hotspotCooldown.delete(hotspot.id);
+                    console.log(`Post-dialog cooldown ended for hotspot: ${hotspot.id}`);
+                }, 5000); // 5 second cooldown after dialog
+                this._cooldownTimers.add(timerId);
+            }
+        });
+
         // Re-enable input systems
         if (this.input && this.input.keyboard) {
             console.log('Re-enabling keyboard input');
@@ -576,7 +589,7 @@ export class OverworldScene extends Scene {
                 });
             }
         }
-        
+
         console.log('Overworld scene resumed successfully');
     }
 
