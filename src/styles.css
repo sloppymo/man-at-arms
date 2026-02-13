@@ -1003,12 +1003,12 @@ body {
 
 /* ===== PHASER OVERWORLD STYLES (Phase 4) ===== */
 #phaser-root {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 5; /* Above main game content but below DOM UI overlays */
+    z-index: 1; /* Below main game content */
     pointer-events: none; /* Allow clicks to pass through to DOM UI */
 }
 
