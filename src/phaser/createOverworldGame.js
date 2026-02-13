@@ -136,6 +136,17 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                 // Try to resume the scene regardless of getScene() result
                 if (game.scene) {
                     try {
+                        // Check if scene exists at all
+                        const sceneExists = game.scene.getScene('OverworldScene');
+                        
+                        if (!sceneExists) {
+                            console.log('Scene does not exist, restarting OverworldScene...');
+                            // Restart the scene if it doesn't exist
+                            game.scene.start('OverworldScene', { dispatch, getGameState, setMode });
+                            console.log('Scene restarted successfully');
+                            return;
+                        }
+                        
                         console.log('Attempting to resume scene directly...');
                         game.scene.resume('OverworldScene');
                         console.log('Resume called, checking if scene is now active:', game.scene.isActive('OverworldScene'));
@@ -223,6 +234,14 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                         }
                     } catch (error) {
                         console.error('Error during scene resume:', error);
+                        // Try to restart the scene as a fallback
+                        try {
+                            console.log('Attempting to restart scene as fallback...');
+                            game.scene.start('OverworldScene', { dispatch, getGameState, setMode });
+                            console.log('Scene restarted as fallback');
+                        } catch (fallbackError) {
+                            console.error('Fallback scene restart also failed:', fallbackError);
+                        }
                     }
                 } else {
                     console.log('Cannot resume: game.scene not available');
