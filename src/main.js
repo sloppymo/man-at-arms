@@ -46,9 +46,6 @@ import { EQUIPMENT_DATABASE, EquipmentManager } from './systems/equipment-system
 // Character Data
 import { CHARACTERS, getCharacter } from './data/characters.js';
 
-// Dialog Data
-import { DIALOG_DATA } from './data/dialog-data.js';
-
 // UI Functions (new implementations)
 import { showStats } from './ui/stats-display.js';
 import { openEquipmentScreen } from './ui/equipment-ui.js';
