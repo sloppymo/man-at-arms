@@ -1,0 +1,58 @@
+title: Wounded Enemy Encounter
+---
+== start
+<<showImage artwork/battlefield_wounded.jpg>>
+The battlefield reeks of blood, smoke, and voided bowels as you pick through the dead after the skirmish. A French soldier stirs weakly in the mud, his armor dented, face pale with shock. Blood bubbles from a chest wound with each ragged breath. He reaches out a trembling hand, whispering "Eau... water..." in French. His eyes are wide with pain and fear. Your men are looting the corpses nearby, laughing. The air is thick with flies buzzing around the dead.
+<<advanceTime 10>>
+What do you do?
+-> "Give him water and end it quickly." (Mercy - spare suffering)
+    <<jump merciful_end>>
+-> "Leave him to die slowly." (Ignore - let nature take course)
+    <<jump leave_to_die>>
+-> "Report him - he might have information." (Utilitarian - interrogate)
+    <<jump report_for_info>>
+-> "Finish him now while he's weak." (Ruthless - no risk of recovery)
+    <<jump execute_now>>
+
+== merciful_end
+<<showImage artwork/battlefield_wounded.jpg>>
+You give him a sip from your waterskin. He whispers thanks in broken English. Your knife is quick and clean. He goes limp with a final sigh. As you stand, you notice his wedding ring - he was someone's husband. Your men see you doing it and some nod approvingly, others look away.
+<<addFlag merciful_warrior, 1>>
+<<addFlag soldiers_mixed, 1>>
+<<addFlag wedding_ring_memory, 1>>
+<<advanceTime 45>>
+-> "Better than lingering."
+    <<stop>>
+
+== leave_to_die
+<<showImage artwork/battlefield_wounded.jpg>>
+You walk past, pretending not to see. His whimpers follow you. Hours later, as you make camp, his screams echo across the field until they finally stop. That night, you can't sleep. Was it cowardice or wisdom? The other soldiers don't mention it.
+<<addFlag ignored_suffering, 1>>
+<<addFlag restless_nights, 1>>
+<<addFlag battlefield_ghost, 1>>
+<<advanceTime 120>>
+-> "Not my problem."
+    <<stop>>
+
+== report_for_info
+<<showImage artwork/battlefield_wounded.jpg>>
+You drag him to the captain, who interrogates him roughly. The Frenchman reveals a French ambush planned for tomorrow. The captain rewards you with extra wine. But the man's screams during questioning haunt you. Was the information worth the cost?
+<<addItem wine, 1>>
+<<addFlag interrogator, 1>>
+<<addFlag ambush_foiled, 1>>
+<<addFlag tortured_soul, 1>>
+<<advanceTime 180>>
+-> "Information saved lives."
+    <<stop>>
+
+== execute_now
+<<showImage artwork/battlefield_wounded.jpg>>
+Your sword descends. He doesn't even have time to scream. Blood sprays across your boots, warm and sticky. You loot his body quickly - a few coins, a locket with a woman's face. The other soldiers cheer your efficiency. But as you ride away, you feel... nothing. Just another day.
+<<addItem coins, 5>>
+<<addFlag efficient_killer, 1>>
+<<addFlag soldiers_approve, 1>>
+<<addFlag emotional_detachment, 1>>
+<<advanceTime 60>>
+-> "Quick and clean."
+    <<stop>>
+===

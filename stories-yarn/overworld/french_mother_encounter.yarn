@@ -1,0 +1,87 @@
+title: French Mother Encounter
+---
+== start
+<<showImage artwork/french_mother.jpg>>
+The village square smells of smoke and fear as your patrol enters. A French woman in tattered clothes throws herself at your feet, her face streaked with tears and ash. She clutches a locket, sobbing hysterically in broken English. "Mon fils! My boy! He hide in barn! Please, soldiers, not hurt him! He only 14! I beg you!" Behind her, the barn door rattles faintly. Your sergeant cocks his crossbow. "French brat's in there. Orders are clear - no survivors."
+<<advanceTime 5>>
+What do you do?
+-> "Let her find him and flee." (Mercy - but sergeant will report you)
+    <<jump spare_boy>>
+-> "Search the barn yourself." (Compromise - check but decide)
+    <<jump search_personally>>
+-> "Follow orders - burn it." (Loyal - but hear her screams forever)
+    <<jump burn_barn>>
+-> "Kill her first to silence her." (Ruthless - end her suffering quickly)
+    <<jump end_her>>
+
+== spare_boy
+<<showImage artwork/french_mother.jpg>>
+You signal the woman to go. "Quickly. Take him and run." She kisses your boots, sobbing thanks, and disappears into the barn. Moments later, a boy emerges, terrified but alive. The sergeant watches with narrowed eyes. "You'll regret that mercy, soldier. Captain hears of this."
+<<addFlag spared_french_boy, 1>>
+<<addFlag sergeant_betrayed, 1>>
+<<addFlag mother_grateful, 1>>
+<<advanceTime 60>>
+-> "One life saved from this hell."
+    <<stop>>
+
+== search_personally
+<<showImage artwork/french_mother.jpg>>
+You enter the barn alone. Hay rustles, and you find the boy hiding in a loft, trembling. His eyes are wide with terror, face smeared with dirt. "Please monsieur, I no fight. Just help maman." The woman's sobs echo outside. You could kill him quickly... or let him go.
+What do you do?
+-> "Let him escape out the back."
+    <<jump let_escape>>
+-> "Execute him mercifully."
+    <<jump quick_death>>
+-> "Bring him out to the sergeant."
+    <<jump hand_over>>
+
+== burn_barn
+<<showImage artwork/french_mother.jpg>>
+You stand aside as torches are thrown. The woman's screams pierce the air like a wounded animal as flames roar to life. The barn collapses in a shower of sparks. She throws herself into the fire after him. The sergeant claps your shoulder. "Good work." But her final scream echoes in your ears for weeks.
+<<addFlag village_burner, 1>>
+<<addFlag captain_approves, 1>>
+<<addFlag mothers_scream, 1>>
+<<advanceTime 180>>
+-> "Orders followed."
+    <<stop>>
+
+== end_her
+<<showImage artwork/french_mother.jpg>>
+Your sword flashes once. She crumples silently, the locket falling open to reveal a boy's face. The barn burns anyway - orders are orders. The sergeant nods approvingly. "Clean work." But as you ride away, you wonder if mercy would have been worse.
+<<addFlag silenced_witness, 1>>
+<<addFlag sergeant_impressed, 1>>
+<<addFlag cold_killer, 1>>
+<<advanceTime 120>>
+-> "No more suffering."
+    <<stop>>
+
+== let_escape
+<<showImage artwork/french_mother.jpg>>
+You help the boy slip out the back into the fields. "Run. Don't stop." His mother sees him escape and her face transforms with joy before the terror returns. The sergeant notices your delay. "What took so long in there?"
+<<addFlag boy_saved, 1>>
+<<addFlag sergeant_suspicious, 1>>
+<<addFlag mother_reunited, 1>>
+<<advanceTime 90>>
+-> "He'll live to fight another day."
+    <<stop>>
+
+== quick_death
+<<showImage artwork/french_mother.jpg>>
+You draw your knife across his throat quickly. He gasps once, eyes wide, then goes limp. You close his eyes gently. Outside, his mother screams as the barn burns. The sergeant finds only ashes. "Good work." But you carry the weight of his last look.
+<<addFlag merciful_killer, 1>>
+<<addFlag mother_broken, 1>>
+<<addFlag silent_burden, 1>>
+<<advanceTime 150>>
+-> "Better than the flames."
+    <<stop>>
+
+== hand_over
+<<showImage artwork/french_mother.jpg>>
+You drag the boy out. The mother screams, throwing herself between you and him. "Non! Mon bébé!" The sergeant shoots her first, then the boy. Blood pools in the dirt. "Orders followed," he says flatly. You wonder if resistance would have saved them.
+<<addFlag delivered_death, 1>>
+<<addFlag sergeant_ally, 1>>
+<<addFlag blood_on_hands, 1>>
+<<advanceTime 200>>
+-> "Justice served."
+    <<stop>>
+===

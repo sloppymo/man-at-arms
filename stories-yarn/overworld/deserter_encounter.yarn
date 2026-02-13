@@ -1,0 +1,58 @@
+title: Deserter Encounter
+---
+== start
+<<showImage artwork/deserter.jpg>>
+The moon hangs low over the camp's edge where a shadow detaches from the trees. A young soldier, no older than you, steps into the firelight with desperate eyes. His uniform is torn, face gaunt with hunger and fear. He clutches a small pouch that jingles with coins. "Please," he whispers, voice cracking. "I can't do this anymore. The screams... the blood. Take this - 50 coins - just let me slip past the sentries. I have a wife waiting."
+<<advanceTime 10>>
+What do you do?
+-> "Take the money and let him go." (Mercenary - profit but risk court-martial)
+    <<jump accept_bribe>>
+-> "Report him to the captain." (Loyal - reward but betray a comrade)
+    <<jump report_deserter>>
+-> "Convince him to stay and face it." (Honorable - no reward but moral victory)
+    <<jump convince_stay>>
+-> "Kill him quietly to avoid scandal." (Ruthless - no witnesses but damned soul)
+    <<jump silent_execution>>
+
+== accept_bribe
+<<showImage artwork/deserter.jpg>>
+You palm the coins, their weight heavy in your pocket. "Go. And never come back." He vanishes into the night like a ghost. Later, you hear the sentries arguing about a shadow that slipped past. The captain questions everyone, his eyes suspicious. You spend the night sweating, wondering if he'll be caught and name you.
+<<addItem coins, 50>>
+<<addFlag deserter_accomplice, 1>>
+<<addFlag captain_suspicious, 1>>
+<<addFlag guilty_conscience, 1>>
+<<advanceTime 120>>
+-> "Hope he makes it home."
+    <<stop>>
+
+== report_deserter
+<<showImage artwork/deserter.jpg>>
+You drag him to the captain, who wakes with fury. "Desertion! You'll hang at dawn." The young man screams and begs as guards take him away. The captain rewards you with extra rations and a commendation. But that night, you can't sleep hearing his sobs from the stocks. Was it justice, or just another broken soul?
+<<addItem food, 3>>
+<<addFlag loyal_soldier, 1>>
+<<addFlag captain_trusts, 1>>
+<<addFlag haunted_by_cry, 1>>
+<<advanceTime 240>>
+-> "Orders are orders."
+    <<stop>>
+
+== convince_stay
+<<showImage artwork/deserter.jpg>>
+You grab his shoulder, speaking quietly of duty and honor. "We're all scared, brother. But running makes it worse." He breaks down sobbing, confessing his fear. You help him back to his tent. The next morning, he thanks you quietly. Word spreads of your mercy - some call you weak, others call you human.
+<<addFlag merciful_commander, 1>>
+<<addFlag soldiers_respect, 1>>
+<<addFlag emotionally_drained, 1>>
+-> "We're all in this together."
+    <<stop>>
+
+== silent_execution
+<<showImage artwork/deserter.jpg>>
+Your knife slides between his ribs with a wet sound. He gasps once, eyes wide with betrayal, then slumps. You drag the body into the woods, burying it shallowly. The coins feel like blood money in your pocket. Later, when they find the body, the captain rages about French assassins. You say nothing, but the deserter's face haunts your dreams.
+<<addItem coins, 50>>
+<<addFlag murderer, 1>>
+<<addFlag silent_killer, 1>>
+<<addFlag nightmares, 1>>
+<<advanceTime 300>>
+-> "No witnesses, no problems."
+    <<stop>>
+===

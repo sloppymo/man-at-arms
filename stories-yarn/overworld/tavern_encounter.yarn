@@ -1,0 +1,58 @@
+title: Tavern Encounter
+---
+== start
+<<showImage artwork/tavern.jpg>>
+The tavern reeks of spilled ale, stale pipe smoke, and unwashed soldiers.
+
+<<if hasFlag sergeant_enemy>>
+The sergeant from before spots you entering and glares, his face still flushed with humiliation. "You again? Come to ruin more evenings?"
+<<elseif hasFlag sergeant_humiliated>>
+The sergeant sees you and his face darkens. He mutters to his mates, who all turn to stare. The atmosphere grows tense.
+<<elseif hasFlag honorable>>
+Some soldiers nod respectfully as you enter. "That's the one who defended that French peasant," you hear whispered. A barmaid slips you an extra mug on the house.
+<<elseif hasFlag dishonorable>>
+The tavern goes quiet as you enter. Soldiers avoid your eyes. "Grain-beater," someone mutters under their breath.
+<<elseif hasFlag french_ally>>
+A few locals give you knowing looks. One French-looking man nods subtly. The English soldiers seem wary of you.
+<<else>>
+A red-faced sergeant stumbles toward you, sloshing bitter beer from his dented mug. His breath hits you like a punch - sour and hot. "Oy! Fresh meat! Bet you can't drink me under the table!" He slams his mug down on the scarred oak table, foam splattering across the wood. Dice rattle nearby as soldiers gamble. "Loser buys the next round!"
+<<endif>>
+
+<<advanceTime 30>>
+What do you do?
+-> "You're on, sergeant!" (Drinking contest - risky with a superior)
+    <<jump drinking_contest>>
+-> "Not interested, I'm on duty."
+    <<jump refuse_drink>>
+-> "How much are we betting?"
+    <<jump bet_drink>>
+
+== drinking_contest
+<<showImage artwork/tavern.jpg>>
+You down mug after mug of the bitter, watered-down swill that passes for ale here. The sergeant matches you drink for drink, his face turning purple. The tavern spins, voices blur into laughter and jeers. Finally, he slumps over the table, snoring loudly with his face in a puddle of spilled beer.
+The tavern erupts in cheers! "We have a winner!" The barkeep slides you a free meal, but you catch the sergeant mumbling your name as you leave. "Remember that face..."
+<<addItem food, 1>>
+<<addFlag tavern_hero, 1>>
+<<addFlag sergeant_enemy, 1>>
+<<advanceTime 60>>
+-> "Worth it for the free meal."
+    <<stop>>
+
+== refuse_drink
+<<showImage artwork/tavern.jpg>>
+The sergeant glares, his eyes bloodshot. "Suit yourself, teetotaler." He stumbles off to bother someone else, muttering about "weak soldiers."
+<<addFlag sober_soldier, 1>>
+<<addFlag sergeant_annoyed, 1>>
+-> "Better to stay sharp."
+    <<stop>>
+
+== bet_drink
+<<showImage artwork/tavern.jpg>>
+"Ten coins says I outdrink you!" he boasts, slamming coins on the table.
+You win easily - the man can barely stand, his uniform stained with vomit. He pays up grudgingly but fixes you with a hateful stare. "This ain't over, pretty boy."
+<<addItem coins, 10>>
+<<addFlag tavern_gambler, 1>>
+<<addFlag sergeant_humiliated, 1>>
+-> "Pleasure doing business."
+    <<stop>>
+===

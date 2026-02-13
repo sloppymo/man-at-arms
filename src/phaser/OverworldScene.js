@@ -505,7 +505,7 @@ export class OverworldScene extends Scene {
         const gameState = this.getGameState();
         switch (hotspot.id) {
             case 'town-square':
-                // Force simple quest story for testing
+                // Force improved merchant story for testing
                 const storyName = 'overworld/town_square_quest';
                 
                 console.log(`Entering town square - triggering: ${storyName}`);
@@ -516,24 +516,24 @@ export class OverworldScene extends Scene {
                 this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'castle_gate_delivery', character: 'guard' } });
                 break;
             case 'forest-entrance':
-                // Dispatch encounter trigger for raid encounter
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'raid_encounter', character: 'bandit' } });
+                // Trigger prisoner execution - the ultimate moral dilemma
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'prisoner_execution_encounter', character: 'captain' } });
                 break;
             case 'market':
-                console.log('Entering market - triggering forest encounter');
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'forest_encounter', character: 'merchant' } });
+                console.log('Entering market - triggering deserter encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'deserter_encounter', character: 'deserter' } });
                 break;
             case 'tavern':
-                console.log('Entering tavern - triggering quest encounter');
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'innkeeper' } });
+                console.log('Entering tavern - triggering drinking contest encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'tavern_encounter', character: 'sergeant' } });
                 break;
             case 'church':
-                console.log('Entering church - triggering quest encounter');
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'priest' } });
+                console.log('Entering church - triggering veteran encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'church_encounter', character: 'priest' } });
                 break;
             case 'blacksmith':
-                console.log('Entering blacksmith - triggering quest encounter');
-                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'blacksmith' } });
+                console.log('Entering blacksmith - triggering spy encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'blacksmith_encounter', character: 'stranger' } });
                 break;
         }
 

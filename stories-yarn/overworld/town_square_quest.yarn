@@ -3,7 +3,19 @@ title: Start
 == start
 <<showImage artwork/supplyshortage.jpg>>
 You approach the bustling town square. A nervous-looking merchant waves you over.
-"Ah, a man-at-arms! Just the person I need. I have an urgent message that must be delivered to the castle gate immediately."
+
+<<if hasFlag helped_spy>>
+The merchant's eyes light up with recognition. "Ah! You're the soldier who helped that poor soul in the blacksmith's forge. A man of mercy in dark times. I have a favor to ask..."
+<<elseif hasFlag turned_in_spy>>
+The merchant gives you a wary look. "You're the one who turned in that desperate man to the bailiffs. Heard he was dragged away in chains. Makes a man think twice about trusting soldiers."
+<<elseif hasFlag french_ally>>
+The merchant leans in closer, his voice dropping. "Word travels fast among us locals. Heard you sided with the French against your own. Dangerous game, but... perhaps we understand each other better now."
+<<elseif hasFlag captain_loyal>>
+The merchant's face tightens. "Captain's man, eh? Always following orders. I respect that... but in these troubled times, blind loyalty can be costly."
+<<else>>
+A nervous-looking merchant waves you over. "Ah, a man-at-arms! Just the person I need. I have an urgent message that must be delivered to the castle gate immediately."
+<<endif>>
+
 <<advanceTime 15>>
 What do you do?
 -> "I'll deliver your message"

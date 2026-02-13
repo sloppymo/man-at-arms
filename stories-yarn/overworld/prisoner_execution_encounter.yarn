@@ -1,0 +1,87 @@
+title: Prisoner Execution
+---
+== start
+<<showImage artwork/execution.jpg>>
+The captain's face is like carved stone as he points to the huddled figure in the muddy camp square. "This French whelp killed one of our archers yesterday. Ambush in the woods. He dies now, by your hand. Make it quick." The boy can't be more than 15, filthy and trembling, his thin arms bound behind his back. His eyes are wide with terror, tears streaking the dirt on his face. The other soldiers watch silently, the air thick with the stench of unwashed bodies and fear-sweat.
+<<advanceTime 5>>
+What do you do?
+-> "Captain's orders are clear. Step aside."
+    <<jump execute_orders>>
+-> "He's just a boy. I can't do this."
+    <<jump refuse_execution>>
+-> "Let me question him first. Maybe he knows something."
+    <<jump interrogate_boy>>
+-> "Execute him yourself if it's so important."
+    <<jump challenge_captain>>
+
+== execute_orders
+<<showImage artwork/execution.jpg>>
+You draw your sword. The boy's eyes widen in panic, a strangled whimper escaping his throat. Your hand shakes as you raise the blade. The captain nods approvingly. "Good man." The other soldiers murmur approval, but some look away. Blood pools in the mud. Later, you can't stop hearing his final gasp.
+<<addFlag executed_innocent, 1>>
+<<addFlag captain_loyal, 1>>
+<<addFlag nightmares, 1>>
+<<advanceTime 60>>
+-> "It had to be done."
+    <<stop>>
+
+== refuse_execution
+<<showImage artwork/execution.jpg>>
+"I won't kill a child," you say, voice steady despite the shaking. The captain's face reddens. "Refuse orders? You'll hang for this, soldier!" Guards grab your arms. The boy watches with wide eyes as you're dragged to the stocks. "Merciful" they call you, but mercy costs. The boy is executed by another hand while you rot in chains.
+<<addFlag court_martialed, 1>>
+<<addFlag merciful, 1>>
+<<addFlag imprisoned, 1>>
+<<advanceTime 480>>
+-> "At least I saved one life."
+    <<stop>>
+
+== interrogate_boy
+<<showImage artwork/execution.jpg>>
+You kneel before the boy. "Parlez-vous anglais?" He nods frantically. "Why did you kill our man?" Tears stream down his face. "He... he took our food. My sister was starving. I shot an arrow. I didn't mean to kill." The captain interrupts. "Excuses! Execute him now or join him." The boy's pleading eyes meet yours.
+What do you do?
+-> "His story changes nothing. Execute him."
+    <<jump execute_after_interrogation>>
+-> "He was defending his family. Let him go."
+    <<jump free_boy>>
+-> "Execute him, but make it painless."
+    <<jump merciful_execution>>
+
+== challenge_captain
+<<showImage artwork/execution.jpg>>
+"You want him dead, do it yourself," you snarl. The captain draws his sword, face purple with rage. "You'll regret this insolence!" The fight is brutal and short. You disarm him but spare his life. "Court-martial!" he screams as guards seize you. The boy watches in confusion as you're bound. The captain recovers and executes the boy personally, his face twisted in humiliated rage.
+<<addFlag challenged_authority, 1>>
+<<addFlag imprisoned, 1>>
+<<addFlag captain_enemy, 1>>
+<<advanceTime 240>>
+-> "Better to die standing than live on my knees."
+    <<stop>>
+
+== execute_after_interrogation
+<<showImage artwork/execution.jpg>>
+"Orders are orders," you mutter, ending it quickly. The boy's last words are "Mère..." Blood stains your hands and soul. The captain claps your shoulder. "Justice served." But the other soldiers avoid your eyes. That night, you dream of his sister's face.
+<<addFlag executed_child, 1>>
+<<addFlag loyal_soldier, 1>>
+<<addFlag haunted, 1>>
+<<advanceTime 120>>
+-> "War claims us all."
+    <<stop>>
+
+== free_boy
+<<showImage artwork/execution.jpg>>
+You cut his bonds. "Run. Find your family." The boy hesitates, then bolts into the woods. The captain explodes. "TRAITOR!" You're seized immediately. As they drag you away, you hear the boy's footsteps fading. The captain's rage echoes through the camp. "He'll bring their whole village down on us!"
+<<addFlag freed_enemy, 1>>
+<<addFlag traitor, 1>>
+<<addFlag hunted, 1>>
+<<advanceTime 360>>
+-> "One life saved from this madness."
+    <<stop>>
+
+== merciful_execution
+<<showImage artwork/execution.jpg>>
+You turn away as another soldier does the deed. "Make it quick," you order. The captain nods grudgingly. "Mercy in war is weakness, but... noted." Later, you find the boy's small knife hidden in his boot. A child's weapon against soldiers. Sleep eludes you.
+<<addFlag showed_mercy, 1>>
+<<addFlag conflicted, 1>>
+<<addFlag captain_respect, 1>>
+<<advanceTime 180>>
+-> "At least he didn't suffer long."
+    <<stop>>
+===

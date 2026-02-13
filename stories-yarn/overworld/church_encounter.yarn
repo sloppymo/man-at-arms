@@ -1,0 +1,53 @@
+title: Church Encounter
+---
+== start
+<<showImage artwork/church.jpg>>
+Stained glass windows cast rainbow patterns on the stone floor, worn smooth by generations of footsteps. The air is thick with incense smoke, candle wax, and the faint metallic tang of old blood from battlefield dressings. An elderly priest with calloused hands tends to a one-armed veteran slumped in a pew. The old soldier stares at the colored light filtering through the windows, tears streaking his weathered face. His stump throbs visibly under the bandage. "God has forsaken us," he whispers hoarsely. "All this killing... for what? My arm rots while the nobles feast."
+<<advanceTime 25>>
+What do you do?
+-> "War is hell, old man. We all suffer." (Share your own pain)
+    <<jump share_pain>>
+-> "God has a plan. Have faith." (Offer religious comfort)
+    <<jump offer_faith>>
+-> "Let's get you some food and rest." (Practical help)
+    <<jump offer_help>>
+-> "Stop whining. Men die every day." (Harsh realism)
+    <<jump callous_response>>
+
+== share_pain
+<<showImage artwork/church.jpg>>
+You sit beside him on the creaking wooden pew. The cold stone seeps through your armor. "I've seen friends torn apart by arrows, heard them scream for mothers they never saw again." The veteran nods slowly, his single hand gripping yours like a vice. "You understand. The screams never stop." You share stories of lost comrades until the priest offers you both bread from the altar.
+<<addFlag shared_war_pain, 1>>
+<<addFlag hardened_soul, 1>>
+<<addItem food, 1>>
+<<advanceTime 60>>
+-> "Stay strong, brother."
+    <<stop>>
+
+== offer_faith
+<<showImage artwork/church.jpg>>
+The priest smiles sadly, his eyes reflecting the stained glass. "Faith sustains us in dark times, son." He leads you both in prayer. The veteran's tears slow, though his pain remains. The priest offers you a blessing and whispers of a French ambush he's heard rumors about.
+<<addFlag blessed_warrior, 1>>
+<<addFlag ambush_warning, 1>>
+-> "Thank you, Father."
+    <<stop>>
+
+== offer_help
+<<showImage artwork/church.jpg>>
+You help the veteran to the priest's quarters. The small room smells of herbs and old books. You share your rations - hard bread and cheese that tastes like victory. "Thank you, son," he says quietly. "Not many care anymore." As thanks, he gives you a small silver cross. "For protection."
+<<addItem food, -1>>
+<<addItem holy_symbol, 1>>
+<<addFlag helped_veteran, 1>>
+<<addFlag generous, 1>>
+-> "You're welcome. Take care."
+    <<stop>>
+
+== callous_response
+<<showImage artwork/church.jpg>>
+"Pull yourself together, soldier," you snap. "You're alive, aren't you? Plenty died worse." The veteran's face hardens, his remaining hand clenching. The priest frowns at you. "War changes men," he says quietly. You leave feeling the weight of judgment, but also a strange numbness creeping in.
+<<addFlag callous, 1>>
+<<addFlag priest_disapproves, 1>>
+<<addFlag emotionally_detached, 1>>
+-> "War doesn't allow weakness."
+    <<stop>>
+===
