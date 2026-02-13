@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { Scene, Math as PhaserMath, Input } from 'phaser';
 import { setMode, GameMode } from '../core/game-modes.js';
 import { OverworldHUD } from './OverworldHUD.js';
 import { CHEVAUCHEE_ZONES } from '../core/constants.js';
@@ -6,7 +6,7 @@ import { CHEVAUCHEE_ZONES } from '../core/constants.js';
 /**
  * Phaser scene for the overworld map exploration
  */
-export class OverworldScene extends Phaser.Scene {
+export class OverworldScene extends Scene {
     constructor({ dispatch, getGameState, setMode }) {
         super({ key: 'OverworldScene' });
         this.dispatch = dispatch;
@@ -53,8 +53,8 @@ export class OverworldScene extends Phaser.Scene {
      */
     pixelToHex(x, y) {
         const hexSize = 50;
-        const q = Math.round((Math.sqrt(3)/3 * x - 1/3 * y) / hexSize);
-        const r = Math.round((2/3 * y) / hexSize);
+        const q = window.Math.round((window.Math.sqrt(3)/3 * x - 1/3 * y) / hexSize);
+        const r = window.Math.round((2/3 * y) / hexSize);
         return { q, r };
     }
 
@@ -76,7 +76,7 @@ export class OverworldScene extends Phaser.Scene {
 
         // Update player position approximately
         const hexSize = 50;
-        this.player.x = targetQ * hexSize * Math.sqrt(3);
+        this.player.x = targetQ * hexSize * window.Math.sqrt(3);
         this.player.y = targetR * hexSize * 1.5 + (targetQ * hexSize * 1.5) / 2;
     }
 
@@ -95,13 +95,13 @@ export class OverworldScene extends Phaser.Scene {
         const endZ = endR;
         const endY = -endX - endZ;
 
-        const N = Math.max(Math.abs(endX - startX), Math.abs(endY - startY), Math.abs(endZ - startZ));
+        const N = window.Math.max(window.Math.abs(endX - startX), window.Math.abs(endY - startY), window.Math.abs(endZ - startZ));
 
         for (let i = 0; i <= N; i++) {
             const t = N === 0 ? 0 : i / N;
-            const x = Math.round(startX + (endX - startX) * t);
-            const y = Math.round(startY + (endY - startY) * t);
-            const z = Math.round(startZ + (endZ - startZ) * t);
+            const x = window.Math.round(startX + (endX - startX) * t);
+            const y = window.Math.round(startY + (endY - startY) * t);
+            const z = window.Math.round(startZ + (endZ - startZ) * t);
             // Convert back to axial
             const q = x;
             const r = z;
@@ -125,10 +125,8 @@ export class OverworldScene extends Phaser.Scene {
     preload() {
         console.log('Loading overworld assets...');
         
-        // Load map image from public folder - use the hex forest region map
-        this.load.image('overworld-map', '/maps/hex_forest_region.png');
-        
-        // Player token will be created programmatically to avoid missing file errors
+        // Load the actual map image
+        this.load.image('overworld-map', '/map.png');
         
         this.load.on('filecomplete', (key) => {
             console.log(`Loaded asset: ${key}`);
@@ -145,37 +143,21 @@ export class OverworldScene extends Phaser.Scene {
     create() {
         console.log('Creating overworld scene...');
 
-        // Add the map background - directly load the map without temporary background
+        // Create a simple colored map background
         console.log('Creating map background...');
         
-        // Try to use the Phaser-loaded map image immediately
-        console.log('Available textures:', this.textures.list);
-        if (this.textures.exists('overworld-map')) {
-            console.log('Using Phaser-loaded map texture');
-            this.mapImage = this.add.image(0, 0, 'overworld-map').setOrigin(0, 0);
-            this.mapImage.setDepth(-100); // Very low depth to ensure it's behind everything
-            console.log('Successfully created map from Phaser texture');
-        } else {
-            console.log('Phaser map texture not available, creating minimal placeholder');
-            console.log('Looking for any loaded textures...');
-            const textureKeys = this.textures.getTextureKeys();
-            console.log('Loaded texture keys:', textureKeys);
-            
-            // Create minimal placeholder
-            this.mapImage = this.add.graphics();
-            this.mapImage.fillStyle(0x000000, 1); // Black background
-            this.mapImage.fillRect(0, 0, 1024, 1024);
-            this.mapImage.setDepth(-100);
-        }
+        // Add the loaded map image as background
+        this.mapImage = this.add.image(512, 512, 'overworld-map');
+        this.mapImage.setDepth(-100); // Very low depth to ensure it's behind everything
 
-        console.log('Final map object:', this.mapImage, 'position:', this.mapImage.x, this.mapImage.y, 'size:', this.mapImage.width, this.mapImage.height);
+        console.log('Successfully loaded map image');
 
         // Set physics world bounds to match map dimensions
-        const mapWidth = this.mapImage.width;
-        const mapHeight = this.mapImage.height;
+        const mapWidth = 1024;
+        const mapHeight = 1024;
         this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
 
-        // Create player as a simple colored rectangle (skip the problematic player-token)
+        // Create player as a simple colored rectangle
         const graphics = this.add.graphics();
         graphics.fillStyle(0xffd700, 1); // Gold color
         graphics.fillRect(0, 0, 16, 16);
@@ -185,10 +167,9 @@ export class OverworldScene extends Phaser.Scene {
         this.player = this.add.sprite(100, 100, 'simple-player'); // Start in safe area away from hotspots
         this.player.setDepth(10);
 
-        // Setup camera to follow player (disabled to test shaking)
+        // Setup camera to follow player
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
-        // Temporarily disable camera following to stop shaking
-        // this.cameras.main.startFollow(this.player, false, 0.15, 0.15);
+        this.cameras.main.startFollow(this.player, false, 0.15, 0.15);
 
         console.log('Input setup complete:', {
             cursors: !!this.cursors,
@@ -200,10 +181,10 @@ export class OverworldScene extends Phaser.Scene {
         // Setup input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasdKeys = this.input.keyboard.addKeys({
-            W: Phaser.Input.Keyboard.KeyCodes.W,
-            A: Phaser.Input.Keyboard.KeyCodes.A,
-            S: Phaser.Input.Keyboard.KeyCodes.S,
-            D: Phaser.Input.Keyboard.KeyCodes.D
+            W: Input.Keyboard.KeyCodes.W,
+            A: Input.Keyboard.KeyCodes.A,
+            S: Input.Keyboard.KeyCodes.S,
+            D: Input.Keyboard.KeyCodes.D
         });
 
         // Enable click-to-move
@@ -377,8 +358,8 @@ export class OverworldScene extends Phaser.Scene {
             this.player.y += deltaY;
             
             // Keep player in bounds
-            this.player.x = Phaser.Math.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
-            this.player.y = Phaser.Math.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
+            this.player.x = PhaserMath.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
+            this.player.y = PhaserMath.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
             
             console.log(`Player moved: (${oldX.toFixed(1)}, ${oldY.toFixed(1)}) -> (${this.player.x.toFixed(1)}, ${this.player.y.toFixed(1)})`);
         } else if (leftPressed || rightPressed || upPressed || downPressed) {
@@ -406,7 +387,7 @@ export class OverworldScene extends Phaser.Scene {
     handleClickToMove() {
         if (!this.targetPosition) return;
 
-        const distance = Phaser.Math.Distance.Between(
+        const distance = PhaserMath.Distance.Between(
             this.player.x, this.player.y,
             this.targetPosition.x, this.targetPosition.y
         );
@@ -419,22 +400,22 @@ export class OverworldScene extends Phaser.Scene {
         }
 
         // Move toward target using direct position updates
-        const angle = Phaser.Math.Angle.Between(
+        const angle = PhaserMath.Angle.Between(
             this.player.x, this.player.y,
             this.targetPosition.x, this.targetPosition.y
         );
 
         // Calculate movement delta for this frame
-        const deltaX = Math.cos(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
-        const deltaY = Math.sin(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
+        const deltaX = window.Math.cos(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
+        const deltaY = window.Math.sin(angle) * this.moveSpeed * (this.game.loop.delta / 1000);
 
         // Apply direct position update
         this.player.x += deltaX;
         this.player.y += deltaY;
 
         // Keep player in bounds
-        this.player.x = Phaser.Math.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
-        this.player.y = Phaser.Math.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
+        this.player.x = PhaserMath.Clamp(this.player.x, 0, this.physics.world.bounds.width || 1024);
+        this.player.y = PhaserMath.Clamp(this.player.y, 0, this.physics.world.bounds.height || 1024);
     }
 
     /**
@@ -444,7 +425,7 @@ export class OverworldScene extends Phaser.Scene {
         if (!this.player) return;
 
         this.hotspots.forEach(hotspot => {
-            const distance = Phaser.Math.Distance.Between(
+            const distance = PhaserMath.Distance.Between(
                 this.player.x, this.player.y,
                 hotspot.x, hotspot.y
             );
@@ -482,31 +463,31 @@ export class OverworldScene extends Phaser.Scene {
                 const storyName = 'overworld/town_square_quest';
                 
                 console.log(`Entering town square - triggering: ${storyName}`);
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: storyName } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'merchant' } });
                 break;
             case 'castle-gate':
                 console.log('Entering castle gate - triggering delivery encounter');
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/castle_gate_delivery' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'castle_gate_delivery', character: 'guard' } });
                 break;
             case 'forest-entrance':
                 // Dispatch encounter trigger for forest_test story
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/forest_test' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'forest_encounter', character: 'bandit' } });
                 break;
             case 'market':
                 console.log('Entering market - triggering forest encounter');
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/forest_test' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'forest_encounter', character: 'merchant' } });
                 break;
             case 'tavern':
                 console.log('Entering tavern - triggering quest encounter');
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/town_square_quest' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'innkeeper' } });
                 break;
             case 'church':
                 console.log('Entering church - triggering quest encounter');
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/town_square_quest' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'priest' } });
                 break;
             case 'blacksmith':
                 console.log('Entering blacksmith - triggering quest encounter');
-                this.dispatch({ type: 'TRIGGER_ENCOUNTER', payload: { story: 'overworld/town_square_quest' } });
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'town_square_quest', character: 'blacksmith' } });
                 break;
         }
 
@@ -542,10 +523,10 @@ export class OverworldScene extends Phaser.Scene {
             }
             if (!this.wasdKeys) {
                 this.wasdKeys = this.input.keyboard.addKeys({
-                    W: Phaser.Input.Keyboard.KeyCodes.W,
-                    A: Phaser.Input.Keyboard.KeyCodes.A,
-                    S: Phaser.Input.Keyboard.KeyCodes.S,
-                    D: Phaser.Input.Keyboard.KeyCodes.D
+                    W: Input.Keyboard.KeyCodes.W,
+                    A: Input.Keyboard.KeyCodes.A,
+                    S: Input.Keyboard.KeyCodes.S,
+                    D: Input.Keyboard.KeyCodes.D
                 });
             }
         }

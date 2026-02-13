@@ -32,12 +32,10 @@ import { migrateSavePayload } from './core/save-migration.js';
 import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
 import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
 import { MapScene, createMapScene, initializeMapSystem } from './scenes/overworld/map-scene.js';
-import { DialogueService, createDialogueService } from './systems/dialogue-service.js';
+import { NarrativeService } from './narrative/narrative-service.js';
 import { EncounterService } from './systems/encounter-service.js';
 import { DialogUI } from './ui/dialog-ui.js';
-import { createNarrativeBridge } from './ink/narrative-bridge.js';
 import { initializeErrorHandling, initializeDebugTools } from './core/error-handler.js';
-import { createInkValidationSuite } from './ink/ink-validation-suite.js';
 
 // Phaser Overworld (Phase 4)
 import { createOverworldGame } from './phaser/createOverworldGame.js';
@@ -73,8 +71,8 @@ window.setMode = setMode;
 window.GameMode = GameMode;
 
 // Story system helpers
-window.getStory = () => window.dialogueService?.getCurrentStory();
-window.ensureStory = () => window.dialogueService?.ensureInkStory();
+window.getStory = () => window.dialogSystem?.getCurrentState();
+window.ensureStory = () => window.dialogSystem?.isDialogActive();
 
 // ============================================
 // Boot sequence
@@ -83,29 +81,10 @@ window.ensureStory = () => window.dialogueService?.ensureInkStory();
 function bootGame() {
   console.log('Booting Man-at-Arms...');
   
-  // Check Ink.js availability
-  if (typeof window.inkjs === 'undefined') {
-    console.warn('Ink.js not loaded - narrative system unavailable');
-  }
-  
-  // Initialize UI (placeholder - Phase 7 error handling and debug tools active)
+  // Initialize UI (skip completion message - go straight to overworld)
   const storyEl = document.getElementById('story');
   if (storyEl) {
-    storyEl.innerHTML = `
-      <div style="padding: 20px; text-align: center;">
-        <h2 style="color: #d4af37;">Man-at-Arms v2.0 - Complete! 🎉</h2>
-        <p style="color: #888;">All Modernization Phases Finished</p>
-        <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          ✅ Error Handling: ✓<br>
-          ✅ Debug Tools: ✓<br>
-          ✅ Production Ready: ✓<br>
-          ✅ All Systems Operational: ✓
-        </p>
-        <p style="color: #888; margin-top: 30px;">
-          <em>Ready for deployment and production use!</em>
-        </p>
-      </div>
-    `;
+    storyEl.innerHTML = '';
   }
 
   // Initialize map system
@@ -126,12 +105,13 @@ function bootGame() {
   // Initialize effects preview state
   initializeEffectsPreview();
 
-  // Initialize dialogue service (loads Ink stories and binds externals)
-  const dialogueService = createDialogueService(dispatcher, gameState, window.EquipmentManager);
-  window.dialogueService = dialogueService;
+  // Initialize narrative service (Yarn-based)
+  const narrativeService = new NarrativeService(dispatcher, gameState);
+  window.narrativeService = narrativeService;
+  window.dialogSystem = narrativeService; // Keep compatibility for existing code
 
   // Initialize encounter service
-  const encounterService = new EncounterService(dispatcher, gameState, dialogueService);
+  const encounterService = new EncounterService(dispatcher, gameState, narrativeService);
   window.encounterService = encounterService;
   encounterService.initialize();
 
@@ -139,18 +119,6 @@ function bootGame() {
   const dialogUI = new DialogUI(dispatcher);
   window.dialogUI = dialogUI;
 
-  // Initialize dialog system
-  dialogueService.initializeDialogSystem().then(success => {
-    if (success) {
-      console.log('Dialog system initialized successfully');
-    } else {
-      console.warn('Dialog system initialization failed');
-    }
-  });
-
-  // Initialize validation suite (dev-only)
-  createInkValidationSuite();
-  
   // Initialize Phaser overworld (Phase 4) - feature flag controlled
   const enableOverworldPhaser = gameState.flags?.enableOverworldPhaser || false;
   // TEMPORARY: Force enable for Phase 4 testing
@@ -385,6 +353,12 @@ function bootGame() {
   
   console.log('Boot complete. Ready for Phase 2+ integration.');
   
+  // Set initial mode to OVERWORLD after all systems are initialized
+  console.log('Setting initial mode to OVERWORLD...');
+  const result = setMode(gameState, GameMode.OVERWORLD);
+  console.log('setMode result:', result);
+  console.log('Current gameState.mode:', gameState.mode);
+  
   // Add debug controls in development only
   const enableDebugControls = isDevelopment && (window.DEBUG_DIALOGS || window.location.search.includes('debug=true'));
   
@@ -416,7 +390,7 @@ function bootGame() {
     `;
     merchantButton.onclick = () => {
       console.log('Testing merchant dialog');
-      dialogueService.startDialogEncounter('merchant_encounter', 'merchant');
+      window.dispatcher.dispatch('START_DIALOG', { payload: { dialogId: 'town_square_quest', character: 'merchant' } });
     };
 
     const banditButton = document.createElement('button');
@@ -432,7 +406,7 @@ function bootGame() {
     `;
     banditButton.onclick = () => {
       console.log('Testing bandit dialog');
-      dialogueService.startDialogEncounter('bandit_encounter', 'bandit_leader');
+      window.dispatcher.dispatch('START_DIALOG', { payload: { dialogId: 'forest_encounter', character: 'bandit' } });
     };
 
     const statusButton = document.createElement('button');
@@ -447,7 +421,7 @@ function bootGame() {
       margin: 2px;
     `;
     statusButton.onclick = () => {
-      console.log('Dialog system status:', dialogueService.getDialogSystemStatus());
+      console.log('Dialog system status:', window.dialogSystem?.getCurrentState());
     };
 
     debugContainer.appendChild(merchantButton);
@@ -651,9 +625,8 @@ export {
   MapScene,
   createMapScene,
   initializeMapSystem,
-  DialogueService,
-  createDialogueService,
-  createNarrativeBridge,
+  NarrativeService,
+  EncounterService,
   initializeErrorHandling,
   initializeDebugTools,
   // UI Functions
