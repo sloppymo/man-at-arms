@@ -1,0 +1,9 @@
+title: malformed-commands
+---
+Testing malformed commands:
+<<advanceTime "unclosed quote>>
+<<changeStat stress 2>>
+<<showImage 'artwork/test.png'>>
+<<addItem "silver sword>>
+End of malformed test.
+<<stop>>

@@ -10,7 +10,7 @@
 class EventDispatcher {
   constructor() {
     this._listeners = new Map();
-    this._debug = true; // Set to true for development logging
+    this._debug = process.env.NODE_ENV !== 'production'; // Only debug in development
   }
 
   /**

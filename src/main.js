@@ -33,6 +33,7 @@ import { dispatcher, EVENT_TYPES } from './core/dispatcher.js';
 import { GameMode, isValidTransition, getValidTransitions, isValidMode, setMode, initializeGameState, getModeDisplayName } from './core/game-modes.js';
 import { MapScene, createMapScene, initializeMapSystem } from './scenes/overworld/map-scene.js';
 import { DialogueService, createDialogueService } from './systems/dialogue-service.js';
+import { EncounterService } from './systems/encounter-service.js';
 import { DialogUI } from './ui/dialog-ui.js';
 import { createNarrativeBridge } from './ink/narrative-bridge.js';
 import { initializeErrorHandling, initializeDebugTools } from './core/error-handler.js';
@@ -67,6 +68,9 @@ window.showNotification = showNotification;
 window.resetGame = resetGame;
 window.CHARACTERS = CHARACTERS;
 window.getCharacter = getCharacter;
+window.gameState = gameState;
+window.setMode = setMode;
+window.GameMode = GameMode;
 
 // Story system helpers
 window.getStory = () => window.dialogueService?.getCurrentStory();
@@ -125,6 +129,11 @@ function bootGame() {
   // Initialize dialogue service (loads Ink stories and binds externals)
   const dialogueService = createDialogueService(dispatcher, gameState, window.EquipmentManager);
   window.dialogueService = dialogueService;
+
+  // Initialize encounter service
+  const encounterService = new EncounterService(dispatcher, gameState, dialogueService);
+  window.encounterService = encounterService;
+  encounterService.initialize();
 
   // Initialize dialog UI
   const dialogUI = new DialogUI(dispatcher);
@@ -447,94 +456,129 @@ function bootGame() {
     document.body.appendChild(debugContainer);
   }
 
-  // TEMPORARY: Add dialog system debug buttons
-  const dialogDebugContainer = document.createElement('div');
-  dialogDebugContainer.style.cssText = `
-    position: fixed;
-    top: 60px;
-    right: 10px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  `;
+  // TEMPORARY: Remove auto-triggering debug buttons - they cause blocking dialogs on launch
+  // const dialogDebugContainer = document.createElement('div');
+  // dialogDebugContainer.style.cssText = `
+  //   position: fixed;
+  //   top: 60px;
+  //   right: 10px;
+  //   z-index: 9999;
+  //   display: flex;
+  //   flex-direction: column;
+  //   gap: 5px;
+  // `;
 
-  const merchantButton = document.createElement('button');
-  merchantButton.textContent = 'TEST MERCHANT DIALOG';
-  merchantButton.style.cssText = `
-    background: blue;
-    color: white;
-    padding: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  merchantButton.onclick = () => {
-    console.log('Testing merchant dialog');
-    dialogueService.startDialogEncounter('merchant_encounter', 'merchant');
-  };
+  // const merchantButton = document.createElement('button');
+  // merchantButton.textContent = 'TEST MERCHANT DIALOG';
+  // merchantButton.style.cssText = `
+  //   background: blue;
+  //   color: white;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // merchantButton.onclick = () => {
+  //   console.log('Testing merchant dialog');
+  //   dialogueService.startDialogEncounter('merchant_encounter', 'merchant');
+  // };
 
-  const banditButton = document.createElement('button');
-  banditButton.textContent = 'TEST BANDIT DIALOG';
-  banditButton.style.cssText = `
-    background: orange;
-    color: white;
-    padding: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  banditButton.onclick = () => {
-    console.log('Testing bandit dialog');
-    dialogueService.startDialogEncounter('bandit_encounter', 'bandit_leader');
-  };
+  // const banditButton = document.createElement('button');
+  // banditButton.textContent = 'TEST BANDIT DIALOG';
+  // banditButton.style.cssText = `
+  //   background: orange;
+  //   color: white;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // banditButton.onclick = () => {
+  //   console.log('Testing bandit dialog');
+  //   dialogueService.startDialogEncounter('bandit_encounter', 'bandit_leader');
+  // };
 
-  const statusButton = document.createElement('button');
-  statusButton.textContent = 'DIALOG STATUS';
-  statusButton.style.cssText = `
-    background: green;
-    color: white;
-    padding: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  statusButton.onclick = () => {
-    console.log('Dialog system status:', dialogueService.getDialogSystemStatus());
-  };
+  // const statusButton = document.createElement('button');
+  // statusButton.textContent = 'DIALOG STATUS';
+  // statusButton.style.cssText = `
+  //   background: green;
+  //   color: white;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // statusButton.onclick = () => {
+  //   console.log('Dialog system status:', dialogueService.getDialogSystemStatus());
+  // };
 
-  const testUI = document.createElement('button');
-  testUI.textContent = 'TEST DIALOG UI';
-  testUI.style.cssText = `
-    background: purple;
-    color: white;
-    padding: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  testUI.onclick = () => {
-    console.log('Testing dialog UI directly');
-    if (window.dialogUI) {
-      window.dialogUI.showDialog({
-        character: 'merchant',
-        emotion: 'neutral',
-        text: 'This is a test dialog message. Can you see this UI?',
-        choices: [
-          { text: 'Choice 1', enabled: true },
-          { text: 'Choice 2', enabled: true }
-        ]
-      });
-    } else {
-      console.error('dialogUI not available');
-    }
-  };
+  // const testUI = document.createElement('button');
+  // testUI.textContent = 'TEST DIALOG UI';
+  // testUI.style.cssText = `
+  //   background: purple;
+  //   color: white;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // testUI.onclick = () => {
+  //   console.log('Testing dialog UI directly');
+  //   if (window.dialogUI) {
+  //     window.dialogUI.showDialog({
+  //       character: 'merchant',
+  //       emotion: 'neutral',
+  //       text: 'This is a test dialog message. Can you see this UI?',
+  //       choices: [
+  //         { text: 'Choice 1', enabled: true },
+  //         { text: 'Choice 2', enabled: true }
+  //       ]
+  //     });
+  //   } else {
+  //     console.error('dialogUI not available');
+  //   }
+  // };
 
-  dialogDebugContainer.appendChild(merchantButton);
-  dialogDebugContainer.appendChild(banditButton);
-  dialogDebugContainer.appendChild(statusButton);
-  dialogDebugContainer.appendChild(testUI);
-  document.body.appendChild(dialogDebugContainer);
+  // const testEncounterButton = document.createElement('button');
+  // testEncounterButton.textContent = 'TEST RANDOM ENCOUNTER';
+  // testEncounterButton.style.cssText = `
+  //   background: red;
+  //   color: white;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // testEncounterButton.onclick = () => {
+  //   console.log('Testing random encounter system');
+  //   if (window.encounterService) {
+  //     window.encounterService.forceEncounter('march_event');
+  //   } else {
+  //     console.error('encounterService not available');
+  //   }
+  // };
+
+  // const encounterStatusButton = document.createElement('button');
+  // encounterStatusButton.textContent = 'ENCOUNTER STATUS';
+  // encounterStatusButton.style.cssText = `
+  //   background: cyan;
+  //   color: black;
+  //   padding: 8px;
+  //   border: none;
+  //   cursor: pointer;
+  //   font-size: 12px;
+  // `;
+  // encounterStatusButton.onclick = () => {
+  //   console.log('Encounter system status:', window.encounterService?.getDebugInfo());
+  // };
+
+  // dialogDebugContainer.appendChild(merchantButton);
+  // dialogDebugContainer.appendChild(banditButton);
+  // dialogDebugContainer.appendChild(statusButton);
+  // dialogDebugContainer.appendChild(testUI);
+  // dialogDebugContainer.appendChild(testEncounterButton);
+  // dialogDebugContainer.appendChild(encounterStatusButton);
+  // document.body.appendChild(dialogDebugContainer);
 
   // Add global R key handler as backup for returning to overworld
   document.addEventListener('keydown', (e) => {

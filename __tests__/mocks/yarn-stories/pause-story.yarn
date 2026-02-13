@@ -1,0 +1,6 @@
+title: pause-story
+---
+This is a pause test.
+<<pause>>
+After pause, continue.
+<<stop>>

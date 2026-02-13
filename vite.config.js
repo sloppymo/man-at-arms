@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     port: 3005,
     open: false,
+    watch: null
   },
   
   build: {

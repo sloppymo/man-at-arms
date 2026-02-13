@@ -1,0 +1,380 @@
+EXTERNAL advanceTime(minutes)
+EXTERNAL getSupplies()
+EXTERNAL consumeSupply(type, amount)
+EXTERNAL showImage(imagePath)
+EXTERNAL removeItem(itemId, quantity)
+EXTERNAL hasItem(itemId)
+EXTERNAL addHeat(amount)
+EXTERNAL changeStat(stat, delta)
+EXTERNAL discoverHex(q, r)
+EXTERNAL rollDice(modifier)
+EXTERNAL doCheck(stat, difficulty, bonus)
+EXTERNAL triggerSkirmish(skirmishType)
+EXTERNAL markChapterCompleted(chapterId)
+
+== start
+{showImage("artwork/seige.jpg")}
+
+The French have finally organized their response. Your scouts report a large force approaching - five hundred men-at-arms, crossbowmen, and knights, led by the Seigneur de Valmont himself. They're determined to crush your raiding force.
+
+{advanceTime(30)}
+
+{addHeat(10)}
+
+Sir Robert gathers his commanders. "This is it. The French are serious now. They know we're a real threat, and they're sending proper soldiers to deal with us."
+
+Your force is battered from weeks of raiding - down to four hundred men, low on supplies, and exhausted. The French are fresh, well-equipped, and fighting on their home ground.
+
+* "We should retreat to the coast!"
+  "And abandon all the plunder we've gathered?" Sir Robert shakes his head. "Never. We came here for wealth, and we'll leave with it."
+
+  {advanceTime(15)}
+  -> stand_and_fight
+
+* "Make for the nearest castle!"
+  "Which one? They're all French," Sir Robert points out. "We'd be trading one trap for another."
+
+  {advanceTime(10)}
+  -> strategic_options
+
+* "Find defensible ground and make our stand!"
+  "Good thinking," Sir Robert agrees. "We need every advantage we can get."
+
+  {changeStat("stress", -1)}
+  {advanceTime(20)}
+  -> defensive_position
+
+== defensive_position
+You lead the force to a ridge overlooking a narrow valley - perfect defensive ground. The French will have to attack uphill, and your archers will have clear shots.
+
+{advanceTime(45)}
+
+{addHeat(3)}
+
+The French army appears in the valley below - a impressive sight of professional soldiers, colorful banners, and gleaming armor. They form up for battle.
+
+{triggerSkirmish("crisis_battle")}
+
+"Remember why we're here!" Sir Robert shouts to your men. "Everything we've fought for, everything we've gained - it all comes down to this!"
+
+* "Archers! Loose arrows when they're in range!"
+  The English longbowmen nock their arrows, waiting for the French to enter effective range.
+
+  {advanceTime(15)}
+  -> arrow_volley
+
+* "Prepare for cavalry charge!"
+  French knights are forming up for a charge. Your men brace their spears.
+
+  {changeStat("stress", 2)}
+  {advanceTime(10)}
+  -> cavalry_defense
+
+* "Send skirmishers to harass their advance!"
+  "Good idea," Sir Robert agrees. "Disrupt their formation before they can properly form up."
+
+  {advanceTime(20)}
+  -> skirmish_harassment
+
+== arrow_volley
+The French advance into the valley, their crossbowmen in front. Your archers wait patiently until they're in perfect range.
+
+{advanceTime(20)}
+
+"LOOSE!" Sir Robert commands.
+
+Hundreds of arrows arc through the air, raining death on the French crossbowmen. The first rank goes down, chaos spreading through their formation.
+
+{addHeat(2}
+
+* "Again! Keep the pressure on!"
+  Another volley follows, more French soldiers falling. Their advance falters.
+
+  {advanceTime(15}
+  -> continued_barrage
+
+* "Charge! While they're disorganized!"
+  Sir Robert leads the charge down the hill. The French are vulnerable.
+
+  {changeStat("stress", 2)}
+  {advanceTime(10}
+  -> downhill_charge
+
+* "Hold position! Let them come to us!"
+  "Patience," Sir Robert cautions. "Let them exhaust themselves attacking uphill."
+
+  {advanceTime(20}
+  -> defensive_patience
+
+== downhill_charge
+The charge is devastating. Your men smash into the disorganized French formation, swords and axes finding gaps in armor. The French crossbowmen, caught in the open, are cut down in droves.
+
+{advanceTime(25}
+
+{addHeat(1}
+
+The French knights, seeing their infantry breaking, charge forward to save the day. Heavy cavalry against your men-at-arms.
+
+* "Form shield wall! Stop the cavalry!"
+  Your men quickly form a defensive line, spears braced to receive the cavalry charge.
+
+  {advanceTime(15}
+  -> cavalry_repulse
+
+* "Meet their charge with our own!"
+  "Madness," Sir Robert counters. "We'd be throwing away our advantage."
+
+  {advanceTime(10}
+  -> defensive_stance
+
+* "Target their horses! Disable the cavalry!"
+  "Good thinking," Sir Robert agrees. "A knight without a horse is just heavy infantry."
+
+  {changeStat("stress", 1)}
+  {advanceTime(15}
+  -> horse_targeting
+
+== cavalry_repulse
+The French cavalry charge slams into your shield wall. Horses scream and men shout as the two forces collide. Your line holds, but barely.
+
+{advanceTime(30}
+
+{triggerSkirmish("cavalry_assault")}
+
+The French knights are formidable - heavy armor, big horses, and years of training. But your men are fighting for their lives and their plunder.
+
+{addHeat(2}
+
+* "Push them back! Show them English determination!"
+  You lead the counter-charge, your men following with desperate courage.
+
+  {advanceTime(15}
+  -> counter_charge
+
+* "Fall back! Regroup on the ridge!"
+  "No!" Sir Robert shouts. "If we break now, we're finished!"
+
+  {changeStat("stress", 2)}
+  {advanceTime(10}
+  -> desperate_defense
+
+* "Target the French commander! Break their leadership!"
+  You spot the Seigneur de Valmont leading the charge. "Take him down!"
+
+  {advanceTime(15}
+  -> commander_target
+
+== commander_target
+You fight your way through the melee toward the French commander. He's a formidable opponent - big, experienced, and deadly with his sword.
+
+{advanceTime(20}
+
+The Seigneur de Valmont sees you coming. "English dog! Face me!"
+
+{addHeat(3}
+
+* "Accept his challenge! Single combat!"
+  "Don't be a fool," Sir Robert warns. "He's trying to isolate you."
+
+  {changeStat("stress", 2)}
+  {advanceTime(10}
+  -> single_combat
+
+* "Let your men handle him! Focus on the battle!"
+  "Smart," Sir Robert agrees. "Four of you, take that French lord!"
+
+  {advanceTime(15}
+  -> group_assault
+
+* "Shoot him down! Arrows!"
+  "Dishonorable," some of your men mutter, but effective. The archers turn their attention to the French commander.
+
+  {advanceTime(10}
+  -> arrow_assassination
+
+== group_assault
+Four of your best men-at-arms engage the Seigneur de Valmont. He's good, but four against one is too much even for him.
+
+{advanceTime(25}
+
+{triggerSkirmish("commander_defeat")}
+
+The French lord goes down under a rain of blows. Seeing their commander fall, the French knights lose heart.
+
+{addHeat(1}
+
+* "Press the advantage! Break their morale!"
+  The French forces waver as news of their commander's death spreads.
+
+  {advanceTime(15}
+  -> french_break
+
+* "Capture the French standard!"
+  The French standard bearer goes down, and your men seize their colors.
+
+  {advanceTime(10}
+  -> standard_capture
+
+* "Offer quarter! End this slaughter!"
+  Some French soldiers throw down their weapons. "Mercy! We surrender!"
+
+  {changeStat("stress", -1)}
+  {advanceTime(15}
+  -> french_surrender
+
+== french_break
+The French army breaks completely. Knights flee, crossbowmen throw down their weapons, and the orderly formation dissolves into a rout.
+
+{advanceTime(20}
+
+{addHeat(2}
+
+"Victory!" Sir Robert shouts, raising his sword. "We've done it!"
+
+* "Pursue the fugitives! Don't let them escape!"
+  Your men roar approval and charge after the fleeing French.
+
+  {changeStat("stress", 2)}
+  {advanceTime(25}
+  -> french_pursuit
+
+* "Secure the prisoners and loot!"
+  "Good thinking," Sir Robert agrees. "The living are more valuable than the dead."
+
+  {advanceTime(15}
+  -> prisoner_processing
+
+* "Check our casualties and regroup!"
+  "Important," Sir Robert nods. "We need to know what we've lost in this victory."
+
+  {advanceTime(20}
+  -> casualty_assessment
+
+== prisoner_processing
+The French prisoners are gathered - about a hundred men, including several knights. They're terrified but defiant.
+
+{advanceTime(30}
+
+{addHeat(1}
+
+"What do we do with them?" one of your men asks. "We can't take them all with us."
+
+* "Execute the knights, ransom the rest!"
+  "Standard practice," Sir Robert agrees. "The knights are too dangerous to keep as prisoners."
+
+  {advanceTime(15}
+  -> selective_execution
+
+* "Take everyone prisoner! We need the labor!"
+  "Too risky," Sir Robert cautions. "They'd escape at the first opportunity."
+
+  {advanceTime(10}
+  -> mass_capture
+
+* "Let them go! They're broken anyway!"
+  "Never," Sir Robert says firmly. "They'd just raise another army to hunt us."
+
+  {advanceTime(10}
+  -> prisoner_dilemma
+
+== victory_aftermath
+The battlefield is littered with bodies - French and English both. Your victory is costly, but complete. The French army is shattered, their commander dead, their morale broken.
+
+{advanceTime(60}
+
+{addHeat(5}
+
+Sir Robert gathers the survivors. "We've won a great victory today, but the battle isn't over. We still need to get home with our plunder."
+
+{markChapterCompleted("chevauchee")}
+
+* "How much plunder did we capture?"
+  "Enough to make every man rich," Sir Robert smiles. "The French camp had everything - silver, food, wine, armor."
+
+  {advanceTime(15}
+  -> plunder_count
+
+* "How many men did we lose?"
+  "A hundred good men," Sir Robert says grimly. "But they died for England and for wealth. Their families will be provided for."
+
+  {changeStat("stress", 3)}
+  {advanceTime(10}
+  -> losses_assessment
+
+* "What's our next move?"
+  "Home," Sir Robert says simply. "We've done what we came to do. Now we need to get our plunder and our men back to England."
+
+  {advanceTime(20}
+  -> homeward_bound
+
+== homeward_bound
+The journey back to the coast is different. You're no longer raiders but conquerors, laden with plunder and driving prisoners before you. The French countryside is quiet - everyone knows what happened to the army that tried to stop you.
+
+{advanceTime(240}
+
+{addHeat(2}
+
+The coastal village where you landed is still there, but transformed. Your longboats wait, and the villagers watch with fear as you approach.
+
+* "Load the plunder quickly! We need to sail before the French regroup!"
+  Your men work efficiently, loading weeks of plunder into the boats.
+
+  {advanceTime(45}
+  -> loading_plunder
+
+* "Say goodbye to Normandy!"
+  You look back at the land you've ravaged. Smoke still rises from distant villages.
+
+  {changeStat("stress", 1)}
+  {advanceTime(10}
+  -> final_look
+
+* "We'll be back next year!"
+  Sir Robert laughs. "If the King wills it! There's always more French wealth to take!"
+
+  {advanceTime(15}
+  -> future_plans
+
+== loading_plunder
+The boats are laden with wealth - silver plate, jewelry, fine cloth, wine, armor, weapons, and even furniture taken from French manors. Every man will return to England rich.
+
+{advanceTime(60}
+
+{addHeat(1}
+
+The prisoners are loaded last - valuable hostages who will bring even more wealth in ransom.
+
+* "This is incredible! We're all going to be rich!"
+  "That's the point of a chevauchée," Sir Robert reminds you. "War for profit."
+
+  {advanceTime(10}
+  -> wealth_realization
+
+* "I can't believe we actually did it!"
+  "Believe it," Sir Robert says. "You're now a wealthy man and a veteran of successful campaign."
+
+  {changeStat("stress", -2)}
+  {advanceTime(15}
+  -> success_realization
+
+* "What will the French do next year?"
+  "Build bigger armies, stronger fortresses," Sir Robert shrugs. "And we'll come back with more men and take even more."
+
+  {advanceTime(10}
+  -> future_implications
+
+== DONE
+{addHeat(10)}
+{advanceTime(120)}
+
+The longboats push off from the Norman shore, leaving behind a ravaged landscape and broken enemies. You're heading home to England - not as you left, but as a wealthy veteran of a successful chevauchée.
+
+{changeStat("stress", 2)}
+
+The campaign is over, but its effects will ripple through both kingdoms for years. The French are poorer, weaker, and more determined. The English are richer, more confident, and hungry for more.
+
+This is the Hundred Years' War in microcosm - not glorious battles for honor, but ruthless economic warfare that bleeds the enemy dry and enriches the victors.
+
+You've done your duty to King and country, and you've been well paid for it. But as you look back at the burning shores of Normandy, you wonder about the cost - not just in lives, but in souls.
+
+The chevauchée is complete. You survived, you prospered, and you'll never forget the price of your wealth.

@@ -1,0 +1,9 @@
+title: command-story
+---
+Testing commands:
+<<advanceTime 30>>
+<<changeStat "strength" 5>>
+<<showImage "test.png">>
+<<addItem "sword" 1>>
+Commands executed.
+<<stop>>

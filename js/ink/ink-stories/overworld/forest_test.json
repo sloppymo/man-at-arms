@@ -1,9 +1,0 @@
-{
-  "inkVersion": 19,
-  "root": [
-    [
-      "== forest_test\n\nYou venture into the dense forest. The trees tower above you, and the path ahead is uncertain.\n\n{advanceTime(60)}\n\nAn hour passes as you traverse the undergrowth.\n\nCurrent supplies: {getSupplies()}\n\n-> END",
-      null
-    ]
-  ]
-}

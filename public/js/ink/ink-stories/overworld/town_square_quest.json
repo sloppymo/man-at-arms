@@ -1,0 +1,42 @@
+{
+  "inkVersion": 21,
+  "root": [
+    "^You approach the bustling town square. A nervous-looking merchant waves you over.",
+    "\n",
+    "^\"Ah, a man-at-arms! Just the person I need. I have an urgent message that must be delivered to the castle gate immediately. It's a matter of great importance!\"",
+    "\n",
+    "^The merchant continues, \"I can't leave my stall, but you look trustworthy. Deliver this scroll to the guard at the castle gate, and I'll reward you handsomely.\"",
+    "\n",
+    "^The merchant hands you a sealed scroll. \"Thank you! The guard at the castle gate is expecting it. Hurry now!\"",
+    "\n",
+    "^-> DONE",
+    "\n",
+    "^\"I'll pay you 5 silver pieces for your trouble. It's not far, just to the castle gate.\"",
+    "\n",
+    "^The merchant counts out 5 silver pieces and presses them into your hand along with the scroll. \"Godspeed, soldier!\"",
+    "\n",
+    "^-> DONE",
+    "\n",
+    "^The merchant sighs. \"Very well, 8 silver pieces, but that's my final offer.\"",
+    "\n",
+    "^You take the coins and scroll. \"Thank you for your understanding.\"",
+    "\n",
+    "^-> DONE",
+    "\n",
+    "^The merchant shrugs. \"Then I'll find someone else. Good day.\"",
+    "\n",
+    "^-> DONE",
+    "\n",
+    "^The merchant looks disappointed. \"Very well. I'll find someone else.\"",
+    "\n",
+    "^-> DONE",
+    "\n",
+    [
+      "done",
+      {
+        "#n": "g-0"
+      }
+    ],
+    null
+  ]
+}

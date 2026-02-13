@@ -5,6 +5,7 @@
 // ============================================
 
 import { EVENT_TYPES } from '../core/dispatcher.js';
+import { TagRouter } from '../ink/tag-router.js';
 
 /**
  * Dialogue Service class that handles all Ink.js external function bindings
@@ -17,6 +18,15 @@ export class DialogueService {
     this.equipmentManager = equipmentManager;
     this.stories = {};
     this.currentStory = null;
+
+    // Prevent race conditions in story initialization
+    this._initializationStarted = false;
+
+    // Initialize TagRouter for tag-based system
+    this.tagRouter = new TagRouter(dispatcher);
+
+    // Track subscriptions for cleanup (Issue #4)
+    this._unsubscribeHandles = [];
 
     // Initialize inkReady promise
     this.readyPromise = this.initializeStories();
@@ -81,6 +91,18 @@ export class DialogueService {
         dawn: ['patrol'],
         dusk: ['patrol']
       },
+      chevauchee: {
+        day: ['march_event', 'raid_village', 'patrol_spotted', 'forage'],
+        night: ['camp_event', 'sentry_duty', 'ambush'],
+        dawn: ['march_depart', 'french_scouts'],
+        dusk: ['make_camp', 'late_raid']
+      },
+      normandy_raids: {
+        day: ['march_event', 'raid_village', 'patrol_spotted', 'forage'],
+        night: ['camp_event', 'sentry_duty', 'ambush'],
+        dawn: ['march_depart', 'french_scouts'],
+        dusk: ['make_camp', 'late_raid']
+      },
       default: {
         day: ['bandits', 'merchants', 'peasants', 'patrol'],
         night: ['bandits', 'patrol', 'nothing'],
@@ -104,9 +126,59 @@ export class DialogueService {
   }
 
   /**
-   * Initialize stories by loading JSON files
+   * Get a story by name, loading it on demand if not already loaded
+   * @param {string} storyName - Name of the story to load
+   * @returns {Promise<Object|null>} Story data or null if failed
    */
+  async getStory(storyName) {
+    // Return cached story if already loaded
+    if (this.stories[storyName]) {
+      return this.stories[storyName];
+    }
+
+    // Ensure initialization is complete
+    if (!this._initializationStarted) {
+      await this.initializeStories();
+    }
+
+    // Check again after initialization
+    if (this.stories[storyName]) {
+      return this.stories[storyName];
+    }
+
+    // Load story on demand
+    const sanitizedPath = this.sanitizeStoryPath(storyName);
+    if (!sanitizedPath) {
+      console.error(`DialogueService: Invalid story name: ${storyName}`);
+      return null;
+    }
+
+    try {
+      console.log(`DialogueService: Lazy loading story: ${storyName}`);
+      const response = await fetch(`/js/ink/ink-stories/${sanitizedPath}.json`);
+
+      if (response.ok) {
+        const storyData = await response.json();
+        this.stories[storyName] = storyData;
+        console.log(`DialogueService: Successfully loaded story: ${storyName}`);
+        return storyData;
+      } else {
+        console.error(`DialogueService: Failed to load story ${storyName}: HTTP ${response.status}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`DialogueService: Error loading story ${storyName}:`, error.message);
+      return null;
+    }
+  }
   async initializeStories() {
+    // Prevent race conditions - if already initializing, return existing promise
+    if (this._initializationStarted) {
+      return this.readyPromise;
+    }
+
+    this._initializationStarted = true;
+
     console.log('DialogueService: Loading stories...');
     
     try {
@@ -115,29 +187,62 @@ export class DialogueService {
         'overworld/forest_test',
         'overworld/town_square_quest',
         'overworld/castle_gate_delivery',
-        'overworld/town_square_complete'
+        'overworld/town_square_complete',
+        'chevauchee/01_march_events',
+        'chevauchee/02_raid_encounters',
+        'chevauchee/03_combat',
+        'chevauchee/04_crisis',
+        'chevauchee/00_arrival'
       ];
       
       let loadedCount = 0;
+      const failedStories = [];
       
       for (const storyPath of storyFiles) {
+        const sanitizedPath = this.sanitizeStoryPath(storyPath);
+        if (!sanitizedPath) {
+          failedStories.push({ path: storyPath, error: 'Invalid path after sanitization' });
+          continue;
+        }
+
         try {
-          const response = await fetch(`/stories/${storyPath}.json`);
+          const response = await fetch(`/js/ink/ink-stories/${sanitizedPath}.json`);
           if (response.ok) {
             const storyData = await response.json();
             this.stories[storyPath] = storyData;
             console.log(`DialogueService: Loaded story "${storyPath}"`);
             loadedCount++;
           } else {
-            console.warn(`DialogueService: Failed to load story ${storyPath}:`, response.status);
+            const errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+            console.warn(`DialogueService: Failed to load story ${storyPath}: ${errorMsg}`);
+            failedStories.push({ path: storyPath, error: errorMsg });
           }
         } catch (error) {
-          console.warn(`DialogueService: Error loading story ${storyPath}:`, error.message);
+          const errorMsg = error.message || 'Unknown error';
+          console.warn(`DialogueService: Error loading story ${storyPath}: ${errorMsg}`);
+          failedStories.push({ path: storyPath, error: errorMsg });
         }
       }
       
       console.log(`DialogueService: Stories loaded successfully (${loadedCount}/${storyFiles.length} stories)`);
-      return loadedCount > 0;
+      
+      // Report aggregate failures
+      if (failedStories.length > 0) {
+        console.warn(`DialogueService: ${failedStories.length} stories failed to load`);
+        this.dispatcher.dispatch('STORIES_LOAD_PARTIAL', {
+          loaded: loadedCount,
+          failed: failedStories.length,
+          failures: failedStories,
+          total: storyFiles.length
+        }, 'dialogue-service');
+      } else {
+        this.dispatcher.dispatch('STORIES_LOAD_SUCCESS', {
+          loaded: loadedCount,
+          total: storyFiles.length
+        }, 'dialogue-service');
+      }
+      
+      return loadedCount > 0 && failedStories.length < storyFiles.length; // Success if at least one loaded and not all failed
     } catch (error) {
       console.error('DialogueService: Error loading stories:', error);
       return false;
@@ -145,11 +250,22 @@ export class DialogueService {
   }
 
   /**
-   * Switch to a specific story
+   * Switch to a specific story (Issue #13)
    */
   switchStory(storyName) {
     if (this.stories[storyName]) {
       try {
+        // Cleanup previous story before creating new one
+        if (this.currentStory) {
+          this.unbindExternals(this.currentStory);  // Fix memory leak - unbind external functions
+          try {
+            this.currentStory.onError = null;
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+          this.currentStory = null;
+        }
+
         // Create Ink.js story from JSON data
         const Story = window.inkjs?.Story;
         if (!Story) {
@@ -167,6 +283,33 @@ export class DialogueService {
         });
         
         this.currentStory = new Story(this.stories[storyName]);
+        
+        // Runtime verification: ensure story has actual content
+        const canContinue = this.currentStory.canContinue;
+        const currentChoices = this.currentStory.currentChoices || [];
+        const hasChoices = currentChoices.length > 0;
+        const currentText = this.currentStory.currentText || '';
+        
+        console.log('DialogueService: Story verification:', {
+          storyName,
+          canContinue,
+          hasChoices,
+          choicesCount: currentChoices.length,
+          hasCurrentText: !!currentText.trim(),
+          currentTextLength: currentText.length
+        });
+        
+        // Warn if story appears to be empty or invalid
+        if (!canContinue && !hasChoices && !currentText.trim()) {
+          console.warn(`DialogueService: Story "${storyName}" appears to be empty or invalid - no content, choices, or continuations available`);
+          this.dispatcher.dispatch('SHOW_NOTIFICATION', {
+            title: 'Story Warning',
+            message: `Story "${storyName}" appears to be empty or invalid`,
+            type: 'warning',
+            source: 'dialogue-service'
+          });
+          // Don't return false - let the story load but warn the user
+        }
         
         console.log('DialogueService: Story created successfully:', {
           hasCurrentStory: !!this.currentStory,
@@ -209,23 +352,32 @@ export class DialogueService {
   setupEventListeners() {
     if (!this.dispatcher) return;
 
+    // Clear any existing handles
+    this._unsubscribeHandles = [];
+
     // Listen for stat changes from Ink
-    this.dispatcher.subscribe(EVENT_TYPES.STAT_CHANGE, (event) => {
+    const statHandle = this.dispatcher.subscribe(EVENT_TYPES.STAT_CHANGE, (event) => {
       this.handleStatChange(event);
     });
+    if (statHandle) this._unsubscribeHandles.push(statHandle);
 
     // Listen for UI requests from Ink
-    this.dispatcher.subscribe('OPEN_EQUIPMENT', (event) => {
+    const openEqHandle = this.dispatcher.subscribe('OPEN_EQUIPMENT', (event) => {
       this.handleOpenEquipment(event);
     });
+    if (openEqHandle) this._unsubscribeHandles.push(openEqHandle);
 
-    this.dispatcher.subscribe('START_DIALOGUE', (event) => {
+    const startDialogHandle = this.dispatcher.subscribe('START_DIALOGUE', (event) => {
       this.handleStartDialogue(event);
     });
+    if (startDialogHandle) this._unsubscribeHandles.push(startDialogHandle);
 
     // Listen for combat requests from Ink
-    this.dispatcher.subscribe('TRIGGER_ENCOUNTER', async (event) => {
+    const triggerEncHandle = this.dispatcher.subscribe('TRIGGER_ENCOUNTER', async (event) => {
       console.log('DialogueService: TRIGGER_ENCOUNTER received:', event);
+      
+      // Get story name from event (standardized nested format)
+      const storyName = event.payload?.story;
       
       // Wait for stories to load if needed
       if (!this.readyPromise) {
@@ -236,29 +388,32 @@ export class DialogueService {
       let retryCount = 0;
       const maxRetries = 5;
       
-      while (!this.stories[event.story] && retryCount < maxRetries) {
+      while (!this.stories[storyName] && retryCount < maxRetries) {
         console.log(`DialogueService: Story not loaded yet, retry ${retryCount + 1}/${maxRetries}`);
         await new Promise(resolve => setTimeout(resolve, 100));
         retryCount++;
       }
       
-      if (!this.stories[event.story]) {
-        console.error('DialogueService: Story still not found after retries:', event.story);
+      if (!this.stories[storyName]) {
+        console.error('DialogueService: Story still not found after retries:', storyName);
         return;
       }
       
-      console.log('DialogueService: About to switchStory:', event.story);
-      this.switchStory(event.story);
+      console.log('DialogueService: About to switchStory:', storyName);
       this.dispatcher.dispatch(EVENT_TYPES.MODE_CHANGE, 'dialogue');
+      this.switchStory(storyName);
     });
+    if (triggerEncHandle) this._unsubscribeHandles.push(triggerEncHandle);
 
-    this.dispatcher.subscribe('TRIGGER_COMBAT', (event) => {
+    const combatHandle = this.dispatcher.subscribe('TRIGGER_COMBAT', (event) => {
       this.handleTriggerCombat(event);
     });
+    if (combatHandle) this._unsubscribeHandles.push(combatHandle);
 
-    this.dispatcher.subscribe('TRIGGER_SKIRMISH', (event) => {
+    const skirmishHandle = this.dispatcher.subscribe('TRIGGER_SKIRMISH', (event) => {
       this.handleTriggerSkirmish(event);
     });
+    if (skirmishHandle) this._unsubscribeHandles.push(skirmishHandle);
   }
 
   /**
@@ -337,8 +492,62 @@ export class DialogueService {
   }
 
   /**
-   * Bind all external functions to a story instance with comprehensive debuggingject} story - Ink.js story instance
+   * Unbind all external functions from a story instance to prevent memory leaks
+   * @param {Object} story - Ink.js story instance
    */
+  unbindExternals(story) {
+    if (!story || !story.UnbindExternalFunction) {
+      return; // Nothing to unbind
+    }
+
+    // List of all external functions that may be bound
+    const externalNames = [
+      'advanceTime', 'getSupplies', 'consumeSupply', 'showImage',
+      'changeStat', 'applyStatChange', 'formatCurrency',
+      'addCondition', 'removeCondition', 'hasCondition',
+      'triggerCombat', 'triggerSkirmish', 'showNotification',
+      'openEquipment', 'getEffectiveStat', 'rollDice',
+      'resolveAction', 'doCheck', 'hasShieldEquipped',
+      'markChapterStarted', 'markChapterCompleted', 'addHeat',
+      'discoverHex', 'addItem', 'removeItem', 'hasItem', 'getItemCount'
+    ];
+
+    externalNames.forEach(name => {
+      try {
+        story.UnbindExternalFunction(name);
+      } catch (e) {
+        // Function may not be bound, ignore
+      }
+    });
+
+    console.log('DialogueService: Unbound all external functions to prevent memory leaks');
+  }
+
+  /**
+   * Sanitize story path to prevent path traversal attacks
+   * @param {string} storyPath - Raw story path
+   * @returns {string} Sanitized path
+   */
+  sanitizeStoryPath(storyPath) {
+    if (!storyPath || typeof storyPath !== 'string') {
+      return '';
+    }
+
+    // Remove dangerous characters and patterns
+    let sanitized = storyPath
+      .replace(/[^a-zA-Z0-9_\-\/]/g, '') // Only allow alphanumeric, underscore, dash, and forward slash
+      .replace(/\.\./g, '') // Remove directory traversal (..)
+      .replace(/\/\/+/g, '/') // Replace multiple slashes with single slash
+      .replace(/^\/+/, '') // Remove leading slashes
+      .replace(/\/+$/, ''); // Remove trailing slashes
+
+    // Ensure path doesn't start with dangerous patterns
+    if (sanitized.startsWith('/') || sanitized.startsWith('.')) {
+      sanitized = '';
+    }
+
+    return sanitized;
+  }
   bindExternals(story) {
     if (!story || !story.BindExternalFunction) {
       console.error('DialogueService: Invalid story instance for external binding');
@@ -424,40 +633,6 @@ export class DialogueService {
       }
     });
 
-    safeBind('consumeSupply', (type, amount) => {
-      const supplyType = String(type || '').trim();
-      const consumeAmount = parseInt(amount) || 0;
-      
-      if (!supplyType || consumeAmount <= 0) {
-        console.warn('DialogueService: consumeSupply called with invalid args:', { type, amount });
-        return false;
-      }
-      
-      try {
-        const supplies = this.gameState.overworld?.supplies || {};
-        if (!supplies[supplyType] || supplies[supplyType] < consumeAmount) {
-          console.log(`DialogueService: Not enough ${supplyType} (have: ${supplies[supplyType]}, need: ${consumeAmount})`);
-          return false;
-        }
-        
-        supplies[supplyType] -= consumeAmount;
-        console.log(`DialogueService: Consumed ${consumeAmount} ${supplyType}, remaining: ${supplies[supplyType]}`);
-        
-        this.dispatcher.dispatch('SUPPLY_CONSUMED', {
-          type: supplyType,
-          amount: consumeAmount,
-          remaining: supplies[supplyType],
-          source: 'ink'
-        }, 'dialogue-service');
-        
-        return true;
-        
-      } catch (error) {
-        console.error('DialogueService: Error in consumeSupply:', error);
-        return false;
-      }
-    });
-
     safeBind('showImage', (imagePath) => {
       if (!imagePath || typeof imagePath !== 'string') {
         console.warn('DialogueService: Invalid image path provided to showImage:', imagePath);
@@ -486,7 +661,7 @@ export class DialogueService {
     });
 
     console.log(`DialogueService: External function binding complete. Bound functions:`, [
-      'advanceTime', 'getSupplies', 'consumeSupply', 'showImage'
+      'advanceTime', 'getSupplies', 'showImage'
     ]);
 
     // Stat modifications - dispatch events instead of direct calls
@@ -703,24 +878,46 @@ export class DialogueService {
       return true;
     });
 
-    story.BindExternalFunction('removeItem', (itemId, quantity = 1) => {
-      const itemIndex = this.gameState.inventory.findIndex(item => item.id === itemId);
-      if (itemIndex !== -1) {
-        const item = this.gameState.inventory[itemIndex];
-        if (item.stackCount <= quantity) {
-          this.gameState.inventory.splice(itemIndex, 1);
-        } else {
-          item.stackCount -= quantity;
-        }
-        this.dispatcher.dispatch('INVENTORY_UPDATE', {
-          action: 'remove',
-          itemId,
-          quantity
-        }, 'dialogue-service');
-        return true;
+    story.BindExternalFunction('consumeSupply', (type, amount) => {
+      const supplyType = String(type || '').trim();
+      const changeAmount = parseInt(amount) || 0;
+
+      if (!supplyType) {
+        console.warn('DialogueService: consumeSupply called with invalid args:', { type, amount });
+        return false;
       }
-      return false;
+
+      try {
+        const supplies = (this.gameState.overworld && this.gameState.overworld.supplies) || {};
+        if (changeAmount > 0) {
+          // add
+          supplies[supplyType] = (supplies[supplyType] || 0) + changeAmount;
+          console.log(`DialogueService: Added ${changeAmount} ${supplyType}, now: ${supplies[supplyType]}`);
+        } else if (changeAmount < 0) {
+          // consume
+          const consumeAmount = -changeAmount;
+          if (!supplies[supplyType] || supplies[supplyType] < consumeAmount) {
+            console.log(`DialogueService: Not enough ${supplyType} (have: ${supplies[supplyType]}, need: ${consumeAmount})`);
+            return false;
+          }
+          supplies[supplyType] -= consumeAmount;
+          console.log(`DialogueService: Consumed ${consumeAmount} ${supplyType}, remaining: ${supplies[supplyType]}`);
+          this.dispatcher.dispatch('SUPPLY_CONSUMED', {
+            type: supplyType,
+            amount: consumeAmount,
+            remaining: supplies[supplyType],
+            source: 'ink'
+          }, 'dialogue-service');
+        } else {
+          return true; // amount 0, do nothing
+        }
+        return true;
+      } catch (error) {
+        console.error('DialogueService: Error in consumeSupply:', error);
+        return false;
+      }
     });
+
 
     story.BindExternalFunction('hasItem', (itemId) => {
       return this.gameState.inventory.some(item => item.id === itemId);
@@ -783,10 +980,22 @@ export class DialogueService {
       return;
     }
 
+    // Advance the story until we reach a choice point or the end
+    while (this.currentStory.canContinue && this.currentStory.currentChoices.length === 0) {
+      console.log('Continuing story to find choices...');
+      this.currentStory.Continue();
+    }
+
     try {
       // Get current story text
-      const currentText = this.currentStory.currentText || this.currentStory.Continue() || "The story begins...";
+      const currentText = this.currentStory.currentText || "The story begins...";
       console.log('Story text:', currentText);
+      
+      // Process tags from the current story content
+      if (this.currentStory.currentTags && this.currentStory.currentTags.length > 0) {
+        console.log('Processing tags:', this.currentStory.currentTags);
+        this.tagRouter.processTags(this.currentStory.currentTags);
+      }
       
       // Get choices if available
       const choices = [];
@@ -813,6 +1022,36 @@ export class DialogueService {
       console.log('Updated DialogUI with story content');
     } catch (error) {
       console.error('Error updating DialogUI:', error);
+    }
+  }
+
+  /**
+   * Handle choice selection in the current story
+   * @param {number} choiceIndex - Index of the choice to select
+   */
+  selectChoice(choiceIndex) {
+    if (!this.currentStory || !this.currentStory.currentChoices) {
+      console.error('DialogueService: No current story or choices available');
+      return false;
+    }
+
+    if (choiceIndex < 0 || choiceIndex >= this.currentStory.currentChoices.length) {
+      console.error(`DialogueService: Invalid choice index: ${choiceIndex}`);
+      return false;
+    }
+
+    try {
+      // Make the choice
+      this.currentStory.ChooseChoiceIndex(choiceIndex);
+      console.log(`DialogueService: Selected choice ${choiceIndex}`);
+
+      // Continue the story to get next content and process tags
+      this.updateDialogUI();
+
+      return true;
+    } catch (error) {
+      console.error('DialogueService: Error selecting choice:', error);
+      return false;
     }
   }
 
@@ -880,13 +1119,32 @@ export class DialogueService {
   }
 
   /**
-   * Clean up resources
+   * Clean up resources (Issue #4)
    */
   destroy() {
-    // Dispatcher listeners are managed by dispatcher itself
+    // Unsubscribe all dispatcher handlers
+    if (this._unsubscribeHandles) {
+      this._unsubscribeHandles.forEach(unsub => {
+        if (typeof unsub === 'function') unsub();
+      });
+      this._unsubscribeHandles = [];
+    }
+
+    // Cleanup previous story if exists (Issue #13)
+    if (this.currentStory) {
+      try {
+        this.currentStory.onError = null;
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+      this.currentStory = null;
+    }
+
+    // Null out references
     this.dispatcher = null;
     this.gameState = null;
     this.equipmentManager = null;
+    this.tagRouter = null;
   }
 }
 

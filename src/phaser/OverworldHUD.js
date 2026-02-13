@@ -163,34 +163,52 @@ export class OverworldHUD extends Phaser.Scene {
     }
 
     /**
-     * Check if emoji rendering is supported
+     * Check if emoji rendering is supported (improved detection)
      */
     emojiSupported() {
         if (this._emojiSupported !== null) return this._emojiSupported;
-        
-        // Canvas check for emoji support
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
+
+        try {
+            // Method 1: Check if emoji renders as single character (more reliable than canvas)
+            const emoji = '🌅';
+            const text = 'test';
+
+            // Create temporary elements to measure
+            const div = document.createElement('div');
+            div.style.fontSize = '16px';
+            div.style.position = 'absolute';
+            div.style.left = '-9999px';
+            div.style.visibility = 'hidden';
+
+            const emojiSpan = document.createElement('span');
+            emojiSpan.textContent = emoji;
+            emojiSpan.style.fontFamily = 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif';
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = text;
+            textSpan.style.fontFamily = 'Georgia, serif';
+
+            div.appendChild(emojiSpan);
+            div.appendChild(textSpan);
+            document.body.appendChild(div);
+
+            // Check if emoji renders (width should be reasonable for a single emoji)
+            const emojiWidth = emojiSpan.offsetWidth;
+            const textWidth = textSpan.offsetWidth;
+
+            document.body.removeChild(div);
+
+            // Emoji should be roughly square-ish and not too wide compared to text
+            const isEmoji = emojiWidth > 8 && emojiWidth < 24 && emojiWidth < textWidth * 2;
+
+            this._emojiSupported = isEmoji;
+            return isEmoji;
+
+        } catch (error) {
+            console.warn('Emoji detection failed, falling back to false:', error);
             this._emojiSupported = false;
             return false;
         }
-        
-        ctx.fillStyle = '#000';
-        ctx.textBaseline = 'middle';
-        ctx.font = '16px Georgia, serif';
-        ctx.fillText('🌅', 0, 0); // Sunrise emoji
-        
-        // Check if glyph was actually rendered (pixels changed)
-        const imageData = ctx.getImageData(0, 0, 16, 16);
-        for (let i = 0; i < imageData.data.length; i += 4) {
-            if (imageData.data[i + 3] > 0) {
-                this._emojiSupported = true;
-                return true;
-            }
-        }
-        this._emojiSupported = false;
-        return false;
     }
 
     /**

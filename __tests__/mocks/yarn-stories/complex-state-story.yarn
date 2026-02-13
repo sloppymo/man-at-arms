@@ -1,0 +1,24 @@
+title: complex-state-story
+---
+Testing state persistence:
+<<set $stats.someStat 25>>
+<<set $overworld.someValue 100>>
+
+Your stat is now {stats.someStat}.
+Your overworld value is {stats.someValue}.
+
+-> "Change values"
+    <<set $stats.someStat 50>>
+    <<set $overworld.someValue 200>>
+    Values changed!
+    <<jump END>>
+-> "Keep values"
+    Values unchanged.
+    <<jump END>>
+
+===
+
+title: END
+---
+State test complete.
+<<stop>>

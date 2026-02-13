@@ -178,7 +178,14 @@ export function makeDefaultGameState() {
         forage: 5
       },
       discovered: [], // Discovered hexes as "q,r" strings
-      position: { q: 0, r: 0 } // Current hex position
+      position: { q: 0, r: 0 }, // Current hex position
+      // Chevauchée-specific progress tracking
+      chevauchee: {
+        raidsCompleted: 0,        // Count (0-5)
+        wealthAccumulated: 0,     // Running total
+        daysInField: 0,          // Time tracker
+        lastEncounterTime: null   // Cooldown management
+      }
     }
   };
 }
@@ -208,6 +215,15 @@ export function hydrateLoadedState(loaded) {
   const base = makeDefaultGameState();
 
   if (!loaded || typeof loaded !== "object") return base;
+
+  // Apply version-based migrations if loaded state has older schema
+  const loadedVersion = loaded.schemaVersion || 1;
+  const currentVersion = base.schemaVersion;
+
+  if (loadedVersion < currentVersion) {
+    console.log(`Migrating game state from v${loadedVersion} to v${currentVersion}`);
+    migrateState(loaded, loadedVersion, currentVersion);
+  }
 
   // Top-level primitives/arrays/objects (shallow)
   Object.assign(base, loaded);
@@ -373,13 +389,65 @@ export function hydrateLoadedState(loaded) {
     water: Math.max(0, Number(base.overworld.supplies.water) || 0),
     forage: Math.max(0, Number(base.overworld.supplies.forage) || 0)
   } : { food: 10, water: 10, forage: 5 };
+  
+  // Chevauchée progress hydration
+  base.overworld.chevauchee = base.overworld.chevauchee && typeof base.overworld.chevauchee === "object" ? base.overworld.chevauchee : {};
+  base.overworld.chevauchee.raidsCompleted = Math.max(0, Number(base.overworld.chevauchee.raidsCompleted) || 0);
+  base.overworld.chevauchee.wealthAccumulated = Math.max(0, Number(base.overworld.chevauchee.wealthAccumulated) || 0);
+  base.overworld.chevauchee.daysInField = Math.max(0, Number(base.overworld.chevauchee.daysInField) || 0);
+  base.overworld.chevauchee.lastEncounterTime = base.overworld.chevauchee.lastEncounterTime || null;
 
   return base;
 }
 
 // ============================================
-// Equipment Migration Helpers
+// Migration System
 // ============================================
+
+/**
+ * Migration functions for schema version changes
+ */
+const MIGRATIONS = {
+  1: (state) => {
+    // Migrate v1 to v2: Add layered equipment system
+    console.log('Applying migration v1 -> v2: Layered equipment system');
+    if (!state.equipment || typeof state.equipment !== 'object') {
+      state.equipment = makeDefaultGameState().equipment;
+    }
+    // Convert old flat equipment to layered format if needed
+    // (implementation depends on old format)
+    return state;
+  },
+  2: (state) => {
+    // Migrate v2 to v3: Future migrations can be added here
+    console.log('Applying migration v2 -> v3: Placeholder');
+    return state;
+  }
+  // Add more migrations as schema versions increase
+};
+
+/**
+ * Apply migrations to bring state up to current version
+ * @param {Object} state - State to migrate
+ * @param {number} fromVersion - Starting version
+ * @param {number} toVersion - Target version
+ */
+function migrateState(state, fromVersion, toVersion) {
+  for (let version = fromVersion + 1; version <= toVersion; version++) {
+    if (MIGRATIONS[version]) {
+      try {
+        state = MIGRATIONS[version](state);
+        state.schemaVersion = version;
+        console.log(`Successfully migrated to version ${version}`);
+      } catch (error) {
+        console.error(`Failed to migrate to version ${version}:`, error);
+        // Continue with best effort
+      }
+    } else {
+      console.warn(`No migration function found for version ${version}`);
+    }
+  }
+}
 
 /**
  * Deep merge equipment objects (for v2+)
@@ -417,23 +485,73 @@ function calculateLevel(state) {
 }
 
 function recalculateFromPriorities(state) {
-  // Placeholder - will be implemented in Phase 2+
-  // For now, just reset stats to base values
+  if (!state.priorities) return;
+
+  // Reset stats to base values first
+  const baseStats = {
+    strength: 5,
+    agility: 5,
+    endurance: 5,
+    charisma: 5,
+    luck: 5,
+    wits: 5,
+    morale: 5,
+    stress: 0,
+    wealth: 120 // 10 shillings
+  };
+
+  // Apply priority bonuses (each priority gives +2 to related stats, +1 to secondary)
+  const priorityBonuses = {
+    might: { strength: 2, endurance: 2, agility: 1 },
+    finesse: { agility: 2, wits: 1, strength: 1 },
+    wits: { wits: 2, charisma: 1, luck: 1 },
+    presence: { charisma: 2, morale: 2, wits: 1 },
+    fortune: { luck: 2, morale: 1, wealth: 60 } // Extra wealth for fortune priority
+  };
+
+  // Apply bonuses for each set priority
+  ['might', 'finesse', 'wits', 'presence', 'fortune'].forEach(priority => {
+    if (state.priorities[priority]) {
+      const bonuses = priorityBonuses[priority];
+      Object.keys(bonuses).forEach(stat => {
+        if (stat === 'wealth') {
+          baseStats.wealth += bonuses.wealth;
+        } else {
+          baseStats[stat] += bonuses[stat];
+        }
+      });
+    }
+  });
+
+  // Update state stats
+  Object.assign(state.stats, baseStats);
 }
 
 function clampStat(key, value) {
-  // Import from utils if available
-  if (typeof window !== 'undefined' && window.clampStat) {
-    return window.clampStat(key, value);
+  // Import statLimits from constants if available
+  let limits;
+  try {
+    // Try to import from constants module
+    if (typeof statLimits !== 'undefined') {
+      limits = statLimits[key];
+    } else if (typeof window !== 'undefined' && window.statLimits) {
+      limits = window.statLimits[key];
+    }
+  } catch (e) {
+    // Fallback if import fails
   }
-  return value;
+
+  if (!limits) return value;
+  return Math.max(limits.min, Math.min(limits.max, value));
 }
 
 function normalizeRegion(location) {
-  // Import from utils if available
-  if (typeof window !== 'undefined' && window.normalizeRegion) {
-    return window.normalizeRegion(location);
-  }
+  if (!location) return 'England';
+  const loc = String(location).toLowerCase();
+  if (loc.includes('england') || loc.includes('portsmouth') || loc.includes('london')) return 'England';
+  if (loc.includes('france') || loc.includes('normandy') || loc.includes('caen') || loc.includes('calais')) return 'France';
+  if (loc.includes('flanders')) return 'Flanders';
+  if (loc.includes('italy') || loc.includes('milan')) return 'Northern Italy';
   return 'England';
 }
 
@@ -458,6 +576,83 @@ function createEmptyEquipment() {
 
 // Export placeholder functions for use in other modules
 export { calculateLevel, recalculateFromPriorities, clampStat, normalizeRegion, createEmptyEquipment };
+
+// ============================================
+// Flag Access Helpers
+// ============================================
+
+/**
+ * Safely get a game flag with validation
+ * @param {Object} gameState - Game state object
+ * @param {string} flagName - Name of the flag to get
+ * @param {*} defaultValue - Default value if flag doesn't exist
+ * @returns {*} Flag value or default
+ */
+export function getFlag(gameState, flagName, defaultValue = false) {
+  if (!gameState || !gameState.flags) {
+    console.warn(`getFlag: Invalid gameState or missing flags object`);
+    return defaultValue;
+  }
+
+  if (typeof flagName !== 'string' || flagName.trim() === '') {
+    console.warn(`getFlag: Invalid flag name: ${flagName}`);
+    return defaultValue;
+  }
+
+  // Log access in development
+  if (import.meta.env?.DEV) {
+    console.log(`Flag access: ${flagName} = ${gameState.flags[flagName]}`);
+  }
+
+  return gameState.flags[flagName] !== undefined ? gameState.flags[flagName] : defaultValue;
+}
+
+/**
+ * Safely set a game flag with validation
+ * @param {Object} gameState - Game state object
+ * @param {string} flagName - Name of the flag to set
+ * @param {*} value - Value to set
+ * @returns {boolean} Success status
+ */
+export function setFlag(gameState, flagName, value) {
+  if (!gameState || !gameState.flags) {
+    console.warn(`setFlag: Invalid gameState or missing flags object`);
+    return false;
+  }
+
+  if (typeof flagName !== 'string' || flagName.trim() === '') {
+    console.warn(`setFlag: Invalid flag name: ${flagName}`);
+    return false;
+  }
+
+  // Log changes in development
+  if (import.meta.env?.DEV) {
+    const oldValue = gameState.flags[flagName];
+    console.log(`Flag change: ${flagName} = ${oldValue} -> ${value}`);
+  }
+
+  gameState.flags[flagName] = value;
+  return true;
+}
+
+/**
+ * Check if a game flag exists
+ * @param {Object} gameState - Game state object
+ * @param {string} flagName - Name of the flag to check
+ * @returns {boolean} True if flag exists
+ */
+export function hasFlag(gameState, flagName) {
+  if (!gameState || !gameState.flags) {
+    return false;
+  }
+
+  if (typeof flagName !== 'string' || flagName.trim() === '') {
+    console.warn(`hasFlag: Invalid flag name: ${flagName}`);
+    return false;
+  }
+
+  return flagName in gameState.flags;
+}
 
 // Export default for convenience
 export default gameState;

@@ -112,21 +112,25 @@ export const PATRONS = {
   }
 };
 
-// Stat limits
+// Chevauchée zone definitions for overworld
+export const CHEVAUCHEE_ZONES = {
+  normandy_raids: {
+    qMin: -5, qMax: 15,
+    rMin: -3, rMax: 12,
+    name: 'normandy_raids',
+    description: 'Normandy Raiding Zone'
+  }
+};
+
+// Stat limits for character attributes
 export const statLimits = {
-  strength: { min: 0, max: 10 },
-  agility: { min: 0, max: 10 },
-  endurance: { min: 0, max: 10 },
-  charisma: { min: 0, max: 10 },
-  luck: { min: 0, max: 10 },
-  wits: { min: 0, max: 10 },
-  morale: { min: 0, max: 10 },
-  stress: { min: 0, max: 10 },
-  initiative: { min: 5, max: 10 },
-  wealth: { min: 0, max: 24000 }, // Max 100 pounds (24000 pence)
-  reputation: { min: -20, max: 50 },
-  experience: { min: 0, max: 1000 },
-  patronFavor: { min: 0, max: 20 }
+  strength: { min: 1, max: 100 },
+  agility: { min: 1, max: 100 },
+  endurance: { min: 1, max: 100 },
+  morale: { min: 1, max: 100 },
+  stress: { min: 0, max: 100 },
+  wits: { min: 1, max: 100 },
+  reputation: { min: 1, max: 100 }
 };
 
 // ============================================

@@ -1,0 +1,15 @@
+title: choice-story
+---
+Choose your path:
+-> "Option 1"
+    You chose option 1.
+    <<jump END>>
+-> "Option 2"
+    You chose option 2.
+    <<jump END>>
+
+===
+title: END
+---
+Story complete.
+<<stop>>
