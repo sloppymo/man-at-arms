@@ -11,7 +11,7 @@ import { EVENT_TYPES } from '../core/dispatcher.js';
  */
 const ENCOUNTER_RATES = {
   'chevauchee': 0.30,       // 30% in chevauchée zones
-  'normandy_raids': 0.30,   // 30% in Normandy raid zones
+  'normandy_raids': 0.60,   // 60% in Normandy raid zones (increased frequency)
   'forest': 0.15,           // 15% in forests
   'road': 0.05,            // 5% on roads
   null: 0                  // Safe zones

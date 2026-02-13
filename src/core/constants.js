@@ -115,10 +115,10 @@ export const PATRONS = {
 // Chevauchée zone definitions for overworld
 export const CHEVAUCHEE_ZONES = {
   normandy_raids: {
-    qMin: -5, qMax: 15,
-    rMin: -3, rMax: 12,
+    qMin: -10, qMax: 20,
+    rMin: -5, rMax: 15,
     name: 'normandy_raids',
-    description: 'Normandy Raiding Zone'
+    description: 'Extended Normandy Raiding Zone'
   }
 };
 
