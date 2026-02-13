@@ -19,7 +19,8 @@ You take the scroll from the merchant.
 "Good man! Take this directly to the guard captain at the castle gate. Tell him it's from Merchant Elias."
 <<addItem scroll, 1>>
 <<addItem coins, 5>>
-<<stop>>
+-> "Very well."
+    <<stop>>
 
 == ask_reward
 <<showImage artwork/supplyshortage.jpg>>
@@ -39,12 +40,14 @@ The merchant sighs heavily.
 "Fine, 15 coins it is. But don't make me regret this."
 <<addItem scroll, 1>>
 <<addItem coins, 15>>
-<<stop>>
+-> "Very well."
+    <<stop>>
 
 == refuse_delivery
 <<showImage artwork/supplyshortage.jpg>>
 The merchant looks disappointed.
 "Very well. Perhaps another time."
 The merchant turns back to his wares, clearly unhappy with your decision.
-<<stop>>
+-> "Goodbye."
+    <<stop>>
 ===

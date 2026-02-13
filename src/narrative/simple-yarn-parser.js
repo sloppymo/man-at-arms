@@ -113,11 +113,27 @@ export default class SimpleYarnParser {
     } else {
       // No choices - story continues or ends
       const hasMoreContent = lines.some(line => line.trim() && !line.startsWith('<<'));
-      return {
-        text: text,
-        hasChoices: false,
-        isEnd: !hasMoreContent
-      };
+      const isEnd = !hasMoreContent;
+      
+      if (isEnd) {
+        // End of story, add goodbye choice
+        return {
+          text: text,
+          options: [{
+            text: "Goodbye",
+            isAvailable: true,
+            index: 0
+          }],
+          hasChoices: true
+        };
+      } else {
+        // Story continues
+        return {
+          text: text,
+          hasChoices: false,
+          isEnd: false
+        };
+      }
     }
   }
 
