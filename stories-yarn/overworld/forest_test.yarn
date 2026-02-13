@@ -125,6 +125,6 @@ Your foot catches on a root and you stumble with a loud crash! The sounds ahead 
 == forest_exit
 <<advanceTime 30>>
 You emerge from the forest onto familiar ground. The encounter has changed you somehow - for better or worse.
--> "Continue"
+-> "Very well."
     <<stop>>
 ===

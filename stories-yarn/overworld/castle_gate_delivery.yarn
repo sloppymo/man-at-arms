@@ -11,17 +11,21 @@ The guard examines the seal and nods. "From the merchant, I presume. Let me see 
 The guard breaks the seal and reads quickly, then looks at you with approval. "Excellent work. This confirms the merchant's report about suspicious activity near the forest. You've done the realm a service."
 <<advanceTime 10>>
 "Return to the merchant and tell him the matter is being handled. He'll have your reward."
-<<stop>>
+-> "Very well."
+    <<stop>>
 else:
 "I said, state your business. If you have no official business here, move along."
 * "I'm just passing through."
 The guard eyes you suspiciously. "Move along then."
-<<stop>>
+-> "Goodbye."
+    <<stop>>
 * "I'm looking for work."
 "The castle isn't hiring today. Try the town square."
-<<stop>>
+-> "Goodbye."
+    <<stop>>
 * "Never mind."
 You back away slowly from the intimidating guard.
-<<stop>>
+-> "Goodbye."
+    <<stop>>
 }
 ===
