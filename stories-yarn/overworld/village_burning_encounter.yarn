@@ -1,0 +1,56 @@
+title: Village Burning Order
+---
+== start
+<<showImage artwork/village_fire.jpg>>
+The afternoon sun beats down on the thatched roofs of a quiet French village as your company approaches. Farmers scatter into their homes, women clutching children. Your lord, Sir Geoffrey, reins in his destrier, his armor gleaming. "This village shelters French raiders. Burn it all. Leave no survivors. That's the price of resistance." The air already smells of smoke from distant fires. A young girl peeks from a doorway, her eyes wide with terror. Your men shift uncomfortably, but await your command as lieutenant.
+<<advanceTime 15>>
+What do you do?
+-> "My lord, the villagers are innocent. Spare them." (Defy orders - risk execution)
+    <<jump defy_orders>>
+-> "Burn only the suspected houses." (Compromise - partial destruction)
+    <<jump selective_burn>>
+-> "As you command, my lord." (Obey - become monster, gain favor)
+    <<jump obey_orders>>
+-> "Let me scout first for proof." (Delay - might find evidence either way)
+    <<jump scout_first>>
+
+== defy_orders
+<<showImage artwork/village_fire.jpg>>
+The lord's face turns crimson beneath his visor. "Defy me? You forget your place, lieutenant!" He draws his sword, and your men step back. The fight is short and brutal. You disarm him but spare his life. "Traitor!" he screams as guards seize you. The villagers watch in stunned silence as you're bound. The lord recovers and orders the burning anyway. Your defiance saved no one.
+<<addFlag defied_lord, 1>>
+<<addFlag imprisoned, 1>>
+<<addFlag lord_enemy, 1>>
+<<advanceTime 360>>
+-> "Better to die standing."
+    <<stop>>
+
+== selective_burn
+<<showImage artwork/village_fire.jpg>>
+You order only three houses burned - those where "suspects" were seen. Screams echo as families flee the flames. The lord nods grudgingly. "Acceptable. But next time, follow orders completely." The villagers curse you in French as you ride away. Some soldiers mutter about your weakness.
+<<addFlag partial_burner, 1>>
+<<addFlag lord_disappointed, 1>>
+<<addFlag villagers_curse, 1>>
+<<advanceTime 240>>
+-> "Some lives saved, at least."
+    <<stop>>
+
+== obey_orders
+<<showImage artwork/village_fire.jpg>>
+Torches are distributed. The village erupts in screams and smoke as thatched roofs ignite. A mother runs from her burning home, child in arms, begging in French. You turn away as arrows silence her pleas. The lord claps your shoulder. "Well done, lieutenant. Loyalty like yours is rare." But the acrid smoke clings to your soul.
+<<addFlag village_destroyer, 1>>
+<<addFlag lord_favored, 1>>
+<<addFlag children_slain, 1>>
+<<advanceTime 300>>
+-> "Orders followed."
+    <<stop>>
+
+== scout_first
+<<showImage artwork/village_fire.jpg>>
+You search the village quickly. In a barn, you find hidden weapons and French uniforms. "My lord, they do shelter raiders!" But the lord shakes his head. "Doesn't matter. Burn it anyway. Make an example." The weapons were planted - you realize too late. The burning proceeds. Your hesitation damned them all.
+<<addFlag discovered_deception, 1>>
+<<addFlag lord_manipulated, 1>>
+<<addFlag guilty_accomplice, 1>>
+<<advanceTime 270>>
+-> "I should have acted sooner."
+    <<stop>>
+===

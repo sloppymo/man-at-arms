@@ -1,0 +1,60 @@
+title: Corrupt Quartermaster Encounter
+---
+== start
+<<showImage artwork/quartermaster.jpg>>
+The supply tent reeks of leather, oil, and hidden vices as you enter for your rations. Quartermaster Hale looks up from counting coins, his face flushed. Stacks of army bread and salted meat sit untouched while your men starve outside. He slides a small pouch across the table. "50 coins. For your silence. I've been... reallocating supplies. To the highest bidders." French gold coins glint inside. Outside, you hear soldiers complaining about empty bellies. The quartermaster's eyes dart nervously.
+<<advanceTime 20>>
+What do you do?
+-> "Take the bribe and stay silent." (Corrupt - profit but betray comrades)
+    <<jump accept_bribe>>
+-> "Report him to the captain." (Honorable - justice but risk retaliation)
+    <<jump report_corruption>>
+-> "Blackmail him for more." (Opportunistic - double profit but dangerous)
+    <<jump blackmail_more>>
+-> "Kill him and take everything." (Ruthless - eliminate the problem permanently)
+    <<jump eliminate_threat>>
+
+== accept_bribe
+<<showImage artwork/quartermaster.jpg>>
+You pocket the coins, nodding silently. The quartermaster relaxes visibly. "Smart man." Outside, your men continue starving, unaware. But you eat well tonight. Later, you wonder how many died because of men like him. The guilt gnaws, but the coins are real.
+<<addItem coins, 50>>
+<<addFlag corrupt_accomplice, 1>>
+<<addFlag guilty_feast, 1>>
+<<addFlag quartermaster_ally, 1>>
+<<advanceTime 90>>
+-> "Survival first."
+    <<stop>>
+
+== report_corruption
+<<showImage artwork/quartermaster.jpg>>
+You confront the captain with the evidence. Hale is arrested, screaming accusations. The captain rewards you, but Hale's allies spread rumors that you're a troublemaker. Supplies improve slightly, but you notice some men giving you cold looks. Justice served, but at what cost?
+<<addItem food, 2>>
+<<addFlag corruption_exposer, 1>>
+<<addFlag captain_respects, 1>>
+<<addFlag enemies_made, 1>>
+<<advanceTime 180>>
+-> "Someone had to do it."
+    <<stop>>
+
+== blackmail_more
+<<showImage artwork/quartermaster.jpg>>
+You lean in close. "100 coins. Or I go straight to the captain." Hale's face pales, but he pays up. "You'll regret this," he hisses. You leave with double the profit, but know he's a dangerous enemy now. Supplies mysteriously go missing from your own kit later.
+<<addItem coins, 100>>
+<<addFlag blackmailer, 1>>
+<<addFlag quartermaster_enemy, 1>>
+<<addFlag supplies_stolen, 1>>
+<<advanceTime 120>>
+-> "Greed pays."
+    <<stop>>
+
+== eliminate_threat
+<<showImage artwork/quartermaster.jpg>>
+Your knife finds his throat in the dim tent. Blood sprays across the supply crates. You arrange it to look like suicide, taking his keys and the hidden gold. The men get better rations for a while, but the captain investigates the "accident." You live in fear of discovery, every knock at night a potential arrest.
+<<addItem coins, 200>>
+<<addFlag murderer_again, 1>>
+<<addFlag supplies_improved, 1>>
+<<addFlag paranoid, 1>>
+<<advanceTime 300>>
+-> "Problem solved."
+    <<stop>>
+===

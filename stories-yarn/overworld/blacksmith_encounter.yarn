@@ -1,0 +1,83 @@
+title: Blacksmith Encounter
+---
+== start
+<<showImage artwork/blacksmith.jpg>>
+The blacksmith hammers furiously at a red-hot horseshoe, sparks flying like angry fireflies. The air is thick with the acrid stench of hot metal, coal smoke, and burnt leather.
+
+<<if hasFlag betrayed_merchant>>
+The blacksmith pauses his hammering, giving you a cold stare over the anvil. "Heard you sold out that merchant to the bailiffs. Fine work for a 'soldier.' What do you want?"
+<<elseif hasFlag honorable>>
+The blacksmith's eyes soften slightly. "You're the one who stood up for that French peasant in the square. Not many Englishmen would do that. Respect."
+<<elseif hasFlag dishonorable>>
+The blacksmith spits into the forge fire. "You're the type who beats defenseless folk for grain. My kind don't forget faces like yours."
+<<elseif hasFlag french_ally>>
+The blacksmith leans in, his voice dropping. "Word is you helped the French resistance. Dangerous talk, but... I know men who've lost everything to this war."
+<<else>>
+A hooded figure slips into the forge, glancing over his shoulder repeatedly like a hunted animal. "You. Soldier. I need armor repaired. But quietly. No questions."
+<<endif>>
+
+<<advanceTime 20>>
+What do you do?
+-> "What's the rush? What's really going on?"
+    <<jump confront_stranger>>
+-> "Fine, but it'll cost extra for the secrecy."
+    <<jump charge_extra>>
+-> "Show me what needs fixing."
+    <<jump help_quietly>>
+
+== confront_stranger
+<<showImage artwork/blacksmith.jpg>>
+The stranger's eyes dart around nervously, his hands trembling. "French partisans. They're hunting me. I stole this armor from one of their dead." He pulls back his hood, revealing a bloodied face with a fresh cut across his cheek. His voice drops to a whisper. "Help me or leave me to die."
+What do you do?
+-> "I'll help you escape." (Risky - French might see you as traitor)
+    <<jump help_escape>>
+-> "Turn him over to the authorities." (Safe but morally gray)
+    <<jump turn_him_in>>
+-> "Walk away - not my problem."
+    <<jump walk_away>>
+
+== charge_extra
+<<showImage artwork/blacksmith.jpg>>
+The stranger pays double without complaint, his coins cold and heavy in your palm. As you work, you overhear him muttering about "the resistance" and "English dogs." The hammer rings echo through the forge, masking his words.
+<<addItem coins, 15>>
+<<addFlag suspicious_repair, 1>>
+<<addFlag partisan_connection, 1>>
+-> "Done. Stay out of trouble."
+    <<stop>>
+
+== help_quietly
+<<showImage artwork/blacksmith.jpg>>
+You repair the dented breastplate in silence, the metal warm under your hands. The stranger pays and slips away into the shadows, his footsteps fading into the night.
+<<addItem coins, 8>>
+<<addFlag quiet_helper, 1>>
+-> "Good luck."
+    <<stop>>
+
+== help_escape
+<<showImage artwork/blacksmith.jpg>>
+You help the man slip out the back door, the cool night air a relief from the forge's heat. Later, you hear rumors of a French spy who got away. Some soldiers give you suspicious looks, whispering about "traitors in our midst."
+<<addFlag helped_spy, 1>>
+<<addFlag french_ally, 1>>
+<<addFlag soldier_suspicion, 1>>
+<<advanceTime 180>>
+-> "Hope I didn't make a mistake."
+    <<stop>>
+
+== turn_him_in
+<<showImage artwork/blacksmith.jpg>>
+You alert the guards. The man is dragged away screaming curses in French, his blood staining the forge floor. The captain rewards you with extra rations, but the blacksmith gives you a cold look. "Justice served," he says flatly.
+<<addItem food, 2>>
+<<addFlag turned_in_spy, 1>>
+<<addFlag captain_loyal, 1>>
+<<addFlag blacksmith_cold, 1>>
+-> "Justice is served."
+    <<stop>>
+
+== walk_away
+<<showImage artwork/blacksmith.jpg>>
+You leave the forge. Later, you hear screams in the distance - the partisans found him. The blacksmith avoids your eyes when you return. "Should've helped," he mutters.
+<<addFlag ignored_spy, 1>>
+<<addFlag blacksmith_disapproves, 1>>
+-> "Not my concern."
+    <<stop>>
+===
