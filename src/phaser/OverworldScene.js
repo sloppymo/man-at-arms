@@ -241,32 +241,6 @@ export class OverworldScene extends Scene {
             this.hotspotCooldown.clear();
         });
 
-        // Subscribe to combat minigame trigger
-        this.dispatcher.subscribe('TRIGGER_COMBAT_MINIGAME', (data) => {
-            console.log('Launching combat minigame:', data);
-            this.scene.start('CombatMinigame', {
-                dispatch: this.dispatch,
-                getGameState: this.getGameState,
-                setMode: this.setMode,
-                enemy: data.enemy,
-                difficulty: data.difficulty,
-                onComplete: (result) => {
-                    console.log('Combat minigame completed:', result);
-                    // Start back the OverworldScene
-                    this.scene.start('OverworldScene', {
-                        dispatch: this.dispatch,
-                        getGameState: this.getGameState,
-                        setMode: this.setMode
-                    });
-                    // Dispatch the result
-                    this.dispatch({
-                        type: 'COMBAT_RESULT',
-                        payload: result
-                    });
-                }
-            });
-        });
-
         // Define hotspots (example: simple circular areas)
         this.hotspots = [
             { id: 'town-square', x: 400, y: 300, radius: 80 }, // Town area - more central
