@@ -15,3 +15,15 @@ Monk: "Welcome, traveler, to our humble monastery. In these times of war and str
     Monk: "We have little to spare, but we can offer you some bread and water for your travels. May it sustain you on your path."
     <<addItem bread, 1>>
     <<stop>>
+
+-> I wish to negotiate sparing your monastery from raids.
+    Monk: "You speak of mercy in times of war? Our gardens feed the hungry, and our cellars store the fruits of our labor. What terms do you propose?"
+    
+    -> I promise to spare your gardens and cellars.
+        Monk: "A solemn vow. We accept your word, warrior. May it weigh heavily on your conscience if broken."
+        <<addFlag spared_monastery, 1>>
+        <<stop>>
+    
+    -> I cannot make such promises.
+        Monk: "Then go with God, but know that mercy is the highest virtue."
+        <<stop>>
