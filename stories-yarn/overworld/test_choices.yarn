@@ -1,0 +1,12 @@
+title: TestChoices
+---
+== start
+This is a test story with choices.
+Choose an option:
+-> "Option A"
+    You chose A.
+    <<stop>>
+-> "Option B"
+    You chose B.
+    <<stop>>
+===

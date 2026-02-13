@@ -235,20 +235,7 @@ function saveGame() {
             enteredScenes: Array.from(window.gameState.enteredScenes)
         };
         
-        // Add Ink state preservation if available
-        if (window.inkStory && window.inkIntegration.isInkReady()) {
-            try {
-                saveData.inkState = {
-                    storyJson: window.inkStory.state.toJson(),
-                    currentPath: window.inkStory.currentPathString,
-                    visitCounts: window.inkStory.state.visitCounts,
-                    turnIndices: window.inkStory.state.turnIndices
-                };
-            } catch (inkError) {
-                console.warn("Failed to save Ink state:", inkError);
-                // Continue without Ink state
-            }
-        }
+        // Ink state preservation removed - Ink system no longer available
         
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
         window.showNotification("Game Saved", "Your progress has been saved!", "success");
@@ -323,22 +310,7 @@ function loadGame() {
         window.gameState.characterName = window.escapeHTML(String(window.gameState.characterName));
     }
     
-    // Restore Ink state if available and Ink is ready
-    if (loaded.inkState && window.inkReady) {
-        window.inkReady.then(() => {
-            if (window.inkStory) {
-                try {
-                    window.inkStory.state.LoadJson(loaded.inkState.storyJson);
-                    console.log("Ink state restored successfully");
-                } catch (inkError) {
-                    console.warn("Failed to restore Ink state:", inkError);
-                    // Continue without Ink state
-                }
-            }
-        }).catch(error => {
-            console.warn("Ink not available for state restoration:", error);
-        });
-    }
+    // Ink state restoration removed - Ink system no longer available
     
     // Reinitialize equipment manager if it exists (will migrate old format)
     if (typeof EquipmentManager !== 'undefined') {
@@ -2274,56 +2246,17 @@ function showStats() {
     });
     
     // ============================================
-    // Ink.js Initialization
+    // Ink.js Initialization - REMOVED
     // ============================================
     
-    // Initialize Ink.js system when DOM is ready
-    async function initializeInkSystem() {
-        if (window.inkIntegration && window.storyLoader) {
-            console.log("Initializing Ink.js system...");
-            
-            try {
-                // Preload core stories
-                await window.storyLoader.preloadStories(['main', 'character-creation', 'training']);
-                console.log("Ink stories preloaded successfully");
-                
-                // Load appropriate story based on current scene
-                const currentScene = window.gameState.currentScene;
-                if (currentScene === 'character_creation') {
-                    await window.inkIntegration.loadStory('character-creation');
-                } else {
-                    await window.inkIntegration.loadStory('main');
-                }
-            } catch (error) {
-                console.error("Failed to initialize Ink system:", error);
-            }
-        } else {
-            console.warn("Ink integration not available");
-        }
-    }
-    
-    // Initialize when DOM is loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeInkSystem);
-    } else {
-        initializeInkSystem();
-    }
+    // Ink system has been removed from project
     
     // Global combat state flag
     window.isCombatActive = false;
     
-    // Debug tools shortcut
+    // Debug tools shortcut removed
     window.addEventListener('keydown', (event) => {
-        // Ctrl+Shift+D for debug panel
-        if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-            if (window.inkDebugTools) {
-                if (document.getElementById('ink-debug-panel')) {
-                    window.inkDebugTools.removeDebugPanel();
-                } else {
-                    window.inkDebugTools.createDebugPanel();
-                }
-            }
-        }
+        // Debug functionality removed
     });
     
 })();

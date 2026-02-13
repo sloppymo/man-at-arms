@@ -111,10 +111,7 @@ class ErrorHandler {
       });
     }
 
-    // Listen for Ink.js errors
-    if (typeof window.inkStory !== 'undefined') {
-      // Could add Ink-specific error handling here
-    }
+    // Ink.js error handling removed - system no longer available
   }
 
   /**
@@ -212,9 +209,6 @@ class ErrorHandler {
 
     // UI errors are usually recoverable
     if (context.source === 'ui') return true;
-
-    // Ink.js errors might be recoverable
-    if (context.source === 'ink') return true;
 
     // Default to not recoverable for unknown errors
     return false;
@@ -604,7 +598,6 @@ export class DebugTools {
 
     // Check for loaded modules
     const moduleChecks = {
-      inkjs: typeof window.inkjs !== 'undefined',
       dispatcher: typeof window.dispatcher !== 'undefined',
       gameState: typeof window.gameState !== 'undefined',
       equipment: typeof window.equipmentManager !== 'undefined',

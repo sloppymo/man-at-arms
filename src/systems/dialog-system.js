@@ -335,10 +335,16 @@ export class DialogSystem {
     if (success) {
       const currentNode = this.currentDialog.getCurrentNode();
       
-      // Notify UI of update
+      // Notify UI of update with correct data structure
       this.dispatcher.dispatch('DIALOG_UPDATED', {
-        node: currentNode,
-        canContinue: this.currentDialog.canContinue(this.gameState)
+        text: currentNode.text,
+        choices: currentNode.getAvailableChoices(this.gameState).map(choice => ({
+          text: choice.text,
+          disabled: false
+        })),
+        canContinue: this.currentDialog.canContinue(this.gameState),
+        character: currentNode.character,
+        emotion: currentNode.emotion
       });
 
       // Check if dialog should end

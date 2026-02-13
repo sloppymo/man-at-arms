@@ -71,19 +71,6 @@
                 return `Equipment system loaded with ${slots.length} slots`;
             });
             
-            // Test 4: Ink integration
-            this.test('Ink Integration', () => {
-                if (typeof window.inkjs === 'undefined') {
-                    throw new Error('inkjs not loaded');
-                }
-                
-                if (typeof window.inkReady === 'undefined') {
-                    throw new Error('inkReady promise not available');
-                }
-                
-                return 'Ink.js integration available';
-            });
-            
             // Test 5: Save/Load functions
             this.test('Save/Load Functions', () => {
                 const requiredFunctions = ['saveGame', 'loadGame', 'resetGame'];
@@ -106,20 +93,7 @@
                 return 'UI functions available';
             });
             
-            // Test 7: Validation suite
-            this.test('Validation Suite', () => {
-                if (typeof window.InkValidationSuite === 'undefined') {
-                    throw new Error('InkValidationSuite not available');
-                }
-                
-                if (typeof window.InkBatchRunner === 'undefined') {
-                    throw new Error('InkBatchRunner not available');
-                }
-                
-                return 'Validation suite loaded';
-            });
-            
-            // Test 9: Save Schema Migration (Phase 2)
+            // Test 8: Save Schema Migration (Phase 2)
             this.test('Save Schema Migration', () => {
                 if (typeof window.migrateSavePayload === 'undefined') {
                     throw new Error('migrateSavePayload not available');

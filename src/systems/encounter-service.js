@@ -10,8 +10,8 @@ import { EVENT_TYPES } from '../core/dispatcher.js';
  * Encounter rates by zone type
  */
 const ENCOUNTER_RATES = {
-  'chevauchee': 0.00,       // TEMPORARILY DISABLED - stories have JSON parsing errors
-  'normandy_raids': 0.00,   // TEMPORARILY DISABLED - stories have JSON parsing errors
+  'chevauchee': 0.30,       // 30% in chevauchée zones
+  'normandy_raids': 0.30,   // 30% in Normandy raid zones
   'forest': 0.15,           // 15% in forests
   'road': 0.05,            // 5% on roads
   null: 0                  // Safe zones
@@ -49,10 +49,10 @@ const ENCOUNTER_STORIES = {
  * Encounter Service class that handles random encounters based on hex movement
  */
 export class EncounterService {
-  constructor(dispatcher, gameState, dialogueService) {
+  constructor(dispatcher, gameState, narrativeService) {
     this.dispatcher = dispatcher;
     this.gameState = gameState;
-    this.dialogueService = dialogueService;
+    this.narrativeService = narrativeService;
     
     // Track subscriptions for cleanup
     this._unsubscribeHandles = [];
@@ -60,6 +60,9 @@ export class EncounterService {
     // Cooldown tracking
     this.lastEncounterTime = 0;
     this.lastCombatTime = 0;
+    
+    // Skip encounters on first hex entry to allow welcome dialog
+    this.skipFirstHex = true;
     
     // Debug mode flag
     this.debugMode = typeof window !== 'undefined' && 
@@ -139,6 +142,13 @@ export class EncounterService {
   shouldTriggerEncounter(event) {
     const { zone } = event;
     
+    // Skip encounters on first hex entry to allow welcome dialog
+    if (this.skipFirstHex) {
+      console.log('EncounterService: Skipping encounter on first hex entry');
+      this.skipFirstHex = false;
+      return false;
+    }
+    
     // Check if zone has encounters
     const encounterRate = ENCOUNTER_RATES[zone] || ENCOUNTER_RATES[null];
     if (encounterRate === 0) {
@@ -187,8 +197,8 @@ export class EncounterService {
     const gameTime = this.gameState.overworld?.time || 0;
     const seed = `${q}_${r}_${gameTime}`;
     
-    // Roll encounter using dialogue service
-    const encounterResult = this.dialogueService.rollEncounter(seed, zone || 'default', timeOfDay.period);
+    // Roll encounter using narrative service
+    const encounterResult = this.narrativeService.rollEncounter(seed, zone || 'default', timeOfDay.period);
     
     console.log('EncounterService: Rolled encounter:', encounterResult);
     
@@ -279,7 +289,7 @@ export class EncounterService {
     // Null out references
     this.dispatcher = null;
     this.gameState = null;
-    this.dialogueService = null;
+    this.narrativeService = null;
     
     console.log('EncounterService: Cleanup complete');
   }
