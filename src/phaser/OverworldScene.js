@@ -249,7 +249,8 @@ export class OverworldScene extends Scene {
             { id: 'market', x: 500, y: 450, radius: 45 }, // Market area
             { id: 'tavern', x: 350, y: 500, radius: 40 }, // Tavern
             { id: 'church', x: 650, y: 400, radius: 45 }, // Church
-            { id: 'blacksmith', x: 250, y: 250, radius: 35 } // Blacksmith
+            { id: 'blacksmith', x: 250, y: 250, radius: 35 }, // Blacksmith
+            { id: 'monastery-grounds', x: 900, y: 900, radius: 50 } // Monastery Grounds - lower right corner
         ];
 
         // Add visual indicators for hotspots (always enabled for now)
@@ -534,6 +535,10 @@ export class OverworldScene extends Scene {
             case 'blacksmith':
                 console.log('Entering blacksmith - triggering spy encounter');
                 this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'blacksmith_encounter', character: 'stranger' } });
+                break;
+            case 'monastery-grounds':
+                console.log('Entering monastery grounds - triggering monk encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'monastery_grounds_encounter', character: 'monk' } });
                 break;
         }
 

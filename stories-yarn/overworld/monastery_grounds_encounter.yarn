@@ -1,0 +1,17 @@
+=== Monastery Grounds ===
+The monastery grounds are quiet and peaceful, surrounded by ancient stone walls and fragrant gardens. A monk in simple robes approaches you with a serene expression.
+
+Monk: "Welcome, traveler, to our humble monastery. In these times of war and strife, we offer sanctuary to those seeking peace and reflection. What brings you to our sacred grounds?"
+
+-> I seek wisdom and guidance.
+    Monk: "Wisdom comes not from words alone, but from the quiet contemplation of one's actions. Remember that every choice carries consequences, and mercy often outweighs vengeance."
+    <<stop>>
+
+-> I am just passing through.
+    Monk: "May your journey bring you safely to your destination. Take this blessing with you: 'Peace be upon you and all you meet.'"
+    <<stop>>
+
+-> I need supplies or aid.
+    Monk: "We have little to spare, but we can offer you some bread and water for your travels. May it sustain you on your path."
+    <<addItem bread, 1>>
+    <<stop>>
