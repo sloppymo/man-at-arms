@@ -12,10 +12,12 @@ Follow the journey of a common soldier through the Crécy-Calais campaign (1346-
 - **Interactive Narrative**: Branching storylines powered by Yarn scripting
 - **Equipment System**: Layered armor system with historical tradeoffs and progression
 - **Character Development**: Stats, skills, and relationships that evolve based on choices
-- **Overworld Exploration**: Hex-based movement system with random encounters
+- **Overworld Exploration**: Hex-based movement system with 9 hotspots and extended raid zones
+- **Quest System**: Flag-based quest tracking with meaningful consequences
 - **Combat System**: Timing-based combat minigames
 - **Multiple Endings**: Different paths through history based on your decisions
 - **Save/Load System**: Persistent game state with automatic migration support
+- **Optimized Assets**: JPEG conversion for faster loading and smaller file sizes
 - **Responsive Design**: Optimized for both desktop and mobile browsers
 
 ## 🚀 Technology Stack

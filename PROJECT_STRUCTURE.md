@@ -29,7 +29,7 @@
 ├── dist/                   # Built application (generated)
 ├── stories-yarn/           # Yarn narrative scripts
 ├── portraits/              # Character portrait images
-├── artwork/                # Game artwork and images
+├── artwork/                # Game artwork and images (converted to JPEG for optimization)
 ├── __tests__/              # Test suites
 ├── scripts/                # Build and utility scripts
 ├── assets/                 # Built asset bundles
@@ -88,6 +88,7 @@
   - Hex-based movement system
   - Random encounter triggers (30% chance per hex)
   - Scene transitions between overworld and dialog modes
+- **Hotspots**: 9 interactive locations (town-square, castle-gate, monastery-grounds, walled-town, etc.)
 
 ### 6. Equipment System (`src/systems/equipment-system.js`)
 - **Purpose**: Complex equipment management with tiered progression
@@ -101,7 +102,7 @@
 ### 7. Encounter System (`src/systems/encounter-service.js`)
 - **Purpose**: Random encounter management and narrative triggers
 - **Features**:
-  - Location-based encounter chances
+  - Location-based encounter chances (60% in extended raid zones)
   - Cooldown systems to prevent spam
   - Integration with narrative service
   - Debug tools for encounter testing
@@ -133,7 +134,7 @@
 ### Constants & Configuration (`src/core/constants.js`)
 - **Game Constants**: Stat limits, chapter definitions, patron characters
 - **Equipment**: Slot definitions, layer types, kit tiers
-- **World Data**: Regions, social classes, time periods
+- **World Data**: Regions, social classes, time periods, chevauchée zones (extended Normandy raid area q -10 to 20, r -5 to 15)
 
 ## UI Components
 
