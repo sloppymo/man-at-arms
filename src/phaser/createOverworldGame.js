@@ -1,6 +1,5 @@
 import { Game, Scale, AUTO, Math } from '../vendor/phaser.js';
 import { OverworldScene } from './OverworldScene.js';
-import { CombatMinigame } from './CombatMinigame.js';
 
 /**
  * Creates and manages a Phaser overworld game instance
@@ -54,7 +53,7 @@ export function createOverworldGame({ parentId, dispatch, getGameState, setMode,
                 parent: parentElement, // Use the parent element for proper containment
                 expandParent: false // Don't expand parent, let CSS handle layout
             },
-            scene: [OverworldScene, CombatMinigame]
+            scene: [OverworldScene]
         };
 
         // Create the Phaser game instance
