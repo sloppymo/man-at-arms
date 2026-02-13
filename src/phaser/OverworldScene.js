@@ -157,7 +157,7 @@ export class OverworldScene extends Scene {
         console.log('Loading overworld assets...');
         
         // Load the actual map image
-        this.load.image('overworld-map', '/map.png');
+        this.load.image('overworld-map', './map.png');
         
         this.load.on('filecomplete', (key) => {
             console.log(`Loaded asset: ${key}`);
