@@ -1,0 +1,25 @@
+=== Walled Town ===
+You approach the imposing stone walls of a fortified town. A stern guard stands at the gate, his armor gleaming in the sunlight. He eyes you suspiciously as you approach.
+
+Guard: "Halt! This is the walled town of [Town Name]. State your business, traveler. The gates are closed to suspicious folk in these troubled times."
+
+-> I seek entry to the town.
+    Guard: "Entry requires a toll of 10 gold pieces, or proof that you're not here to cause trouble. What say you?"
+    -> Pay the toll.
+        <<changeStat gold, -10>>
+        Guard: "Very well. Enter and behave yourself."
+        <<stop>>
+    -> I have no gold.
+        Guard: "Then begone! We don't harbor beggars."
+        <<stop>>
+    -> I am on official business.
+        Guard: "Official business, eh? Prove it or leave."
+        <<stop>>
+
+-> I need information about the area.
+    Guard: "Information costs. The French forces are massing to the east, and bandits roam the roads. Stay alert, and don't trust strangers."
+    <<stop>>
+
+-> I'm just passing through.
+    Guard: "Then keep moving. The road is that way."
+    <<stop>>

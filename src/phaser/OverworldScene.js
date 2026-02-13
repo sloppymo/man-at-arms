@@ -250,7 +250,8 @@ export class OverworldScene extends Scene {
             { id: 'tavern', x: 350, y: 500, radius: 40 }, // Tavern
             { id: 'church', x: 650, y: 400, radius: 45 }, // Church
             { id: 'blacksmith', x: 250, y: 250, radius: 35 }, // Blacksmith
-            { id: 'monastery-grounds', x: 900, y: 900, radius: 50 } // Monastery Grounds - lower right corner
+            { id: 'monastery-grounds', x: 900, y: 900, radius: 50 }, // Monastery Grounds - lower right corner
+            { id: 'walled-town', x: 125, y: 899, radius: 50 } // Walled Town - lower left corner, 2-3 hexes up and right
         ];
 
         // Add visual indicators for hotspots (always enabled for now)
@@ -539,6 +540,10 @@ export class OverworldScene extends Scene {
             case 'monastery-grounds':
                 console.log('Entering monastery grounds - triggering monk encounter');
                 this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'monastery_grounds_encounter', character: 'monk' } });
+                break;
+            case 'walled-town':
+                console.log('Entering walled town - triggering guard encounter');
+                this.dispatch({ type: 'START_DIALOG', payload: { dialogId: 'walled_town_encounter', character: 'guard' } });
                 break;
         }
 
