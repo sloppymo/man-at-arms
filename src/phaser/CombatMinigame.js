@@ -140,7 +140,7 @@ export class CombatMinigame extends Scene {
     }
 
     spawnProjectile() {
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 20; i++) {
             const x = Phaser.Math.Between(50, 750);
             const projectile = this.add.circle(x, 0, 8, 0xff0000);
             this.projectiles.add(projectile);
