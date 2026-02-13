@@ -574,11 +574,10 @@ export class NarrativeService {
         break;
 
       case 'triggerCombat':
-        this.dispatcher.dispatch('TRIGGER_COMBAT', { enemyId: args[0] });
-        break;
-
-      case 'triggerSkirmish':
-        this.dispatcher.dispatch('TRIGGER_SKIRMISH', { skirmishType: args[0] });
+        this.dispatcher.dispatch('TRIGGER_COMBAT_MINIGAME', {
+          enemy: args[0] || 'unknown',
+          difficulty: args[1] || 'normal'
+        });
         break;
 
       case 'addHeat':
