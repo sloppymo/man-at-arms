@@ -1,4 +1,4 @@
-import { Scene, Math as PhaserMath, Input } from '../vendor/phaser.js';
+import { Scene, Math as PhaserMath, Input } from 'phaser';
 import { setMode, GameMode } from '../core/game-modes.js';
 import { OverworldHUD } from './OverworldHUD.js';
 import { CHEVAUCHEE_ZONES } from '../core/constants.js';
