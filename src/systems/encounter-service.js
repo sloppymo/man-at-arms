@@ -42,6 +42,13 @@ const ENCOUNTER_STORIES = {
   'french_scouts': 'chevauchee/02_raid_encounters',
   'make_camp': 'chevauchee/01_march_events',
   'late_raid': 'chevauchee/02_raid_encounters',
+  // New moral dilemma encounters
+  'prisoner_execution': 'overworld/prisoner_execution_encounter',
+  'deserter_bribe': 'overworld/deserter_encounter',
+  'french_mother_boy': 'overworld/french_mother_encounter',
+  'village_burning_order': 'overworld/village_burning_encounter',
+  'wounded_enemy': 'overworld/wounded_enemy_encounter',
+  'corrupt_quartermaster': 'overworld/corrupt_quartermaster_encounter',
   'default': 'chevauchee/01_march_events'
 };
 
@@ -69,7 +76,7 @@ export class EncounterService {
       (window.location.hostname === 'localhost' || window.location.search.includes('debug=true'));
     
     // TEMPORARY: Disable random encounters for development
-    this.enableRandomEncounters = false;
+    this.enableRandomEncounters = true;
   }
 
   /**
