@@ -48,7 +48,7 @@ export class CombatMinigame extends Scene {
         this.maxHealth = 3;
         this.gameTime = 0;
         this.gameDuration = 15000; // 15 seconds (reduced duration)
-        this.projectileSpeed = 200; // pixels per second (faster projectiles)
+        this.projectileSpeed = 300; // pixels per second (3x faster)
         this.spawnRate = 1000; // milliseconds between spawns (increased frequency)
 
         // Projectiles group
