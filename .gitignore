@@ -1,3 +1,20 @@
+# Build artifacts and generated files
+node_modules/
+dist/
+coverage/
+*.dll
+inklecate*
+test.ink
+test.json
+
+# Package files (keep for JS version)
+package.json
+package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # Test files and scripts
 test*.js
 test*.html
@@ -41,11 +58,6 @@ README_PLAYTEST.md
 # Artwork prompt files (keep actual images, ignore prompts)
 artwork/*.md
 artwork/*.txt
-
-# Package files
-package.json
-package-lock.json
-
-# OS files
-.DS_Store
-Thumbs.db
+node_modules
+node_modules
+# Force deployment Thu Feb 12 05:35:28 PM PST 2026
