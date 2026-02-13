@@ -202,6 +202,9 @@ export class OverworldScene extends Scene {
         // Setup camera to follow player
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.startFollow(this.player, false, 0.15, 0.15);
+        
+        // Zoom in for better mobile viewing (map appears larger)
+        this.cameras.main.setZoom(1.5);
 
         console.log('Input setup complete:', {
             cursors: !!this.cursors,
