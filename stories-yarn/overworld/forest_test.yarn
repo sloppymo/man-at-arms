@@ -1,7 +1,7 @@
 title: Start
 ---
 == start
-<<showImage artwork/Wat.png>>
+<<showImage artwork/Wat.jpg>>
 Welcome to the game!
 -> "Okay!"
     <<stop>>
