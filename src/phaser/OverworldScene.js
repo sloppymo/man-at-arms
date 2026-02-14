@@ -2,6 +2,7 @@ import { Scene, Math as PhaserMath, Input } from 'phaser';
 import { setMode, GameMode } from '../core/game-modes.js';
 import { OverworldHUD } from './OverworldHUD.js';
 import { CHEVAUCHEE_ZONES } from '../core/constants.js';
+import { dispatcher } from '../core/dispatcher.js';
 
 /**
  * Phaser scene for the overworld map exploration
@@ -61,6 +62,36 @@ export class OverworldScene extends Scene {
         if (!this.setGameMode && window.setMode) {
             this.setGameMode = window.setMode;
         }
+
+        // Subscribe to TRIGGER_COMBAT events
+        if (this.dispatch) {
+            dispatcher.subscribe('TRIGGER_COMBAT', (event) => {
+                this.handleCombatTrigger(event.payload || {});
+            });
+        }
+        
+        // Add movement pause state for dialogs
+        this.isMovementPaused = false;
+        
+        // Subscribe to dialog events to pause/resume movement
+        dispatcher.subscribe('MODE_CHANGE', (event) => {
+            const newMode = event.payload;
+            if (newMode === 'dialogue') {
+                this.isMovementPaused = true;
+                // Clear any click-to-move target when dialog starts
+                this.targetPosition = null;
+                console.log('Movement paused due to dialog');
+            } else if (newMode === 'overworld') {
+                this.isMovementPaused = false;
+                console.log('Movement resumed - MODE_CHANGE to overworld');
+            }
+        });
+        
+        // Also listen for DIALOG_ENDED to resume movement
+        dispatcher.subscribe('DIALOG_ENDED', () => {
+            this.isMovementPaused = false;
+            console.log('Movement resumed - DIALOG_ENDED');
+        });
         
         console.log('OverworldScene init() called with dependencies:', {
             dispatch: !!this.dispatch,
@@ -70,8 +101,42 @@ export class OverworldScene extends Scene {
     }
 
     /**
-     * Check if current hex is in chevauchée zone
+     * Handle TRIGGER_COMBAT events by launching the melee combat scene
      */
+    handleCombatTrigger(payload) {
+        console.log('OverworldScene: Handling TRIGGER_COMBAT event:', payload);
+
+        const { enemyId = 'bandits' } = payload;
+        const gameState = this.getGameState ? this.getGameState() : window.gameState;
+
+        if (!gameState) {
+            console.error('OverworldScene: No gameState available for combat');
+            return;
+        }
+
+        // Determine difficulty based on enemy type and player stats
+        let difficulty = 'normal';
+        if (enemyId.includes('elite') || enemyId.includes('boss')) {
+            difficulty = 'hard';
+        } else if (enemyId.includes('weak') || enemyId.includes('grunt')) {
+            difficulty = 'easy';
+        }
+
+        // Launch the melee combat scene
+        this.scene.launch('MeleeCombatScene', {
+            dispatch: this.dispatch,
+            gameState: gameState,
+            onComplete: (result) => {
+                console.log('OverworldScene: Combat completed with result:', result);
+                // The scene will handle dispatching COMBAT_END and updating gameState
+            },
+            difficulty: difficulty,
+            weapon: gameState.equipment.weapon.main
+        });
+
+        // Pause the overworld scene while combat is active
+        this.scene.pause();
+    }
     isInChevaucheeZone(q, r) {
         return q >= this.CHEVAUCHEE_ZONE.qMin && 
                q <= this.CHEVAUCHEE_ZONE.qMax &&
@@ -359,8 +424,10 @@ export class OverworldScene extends Scene {
      * Handle WASD/Arrow key movement
      */
     handleKeyboardMovement() {
-        // Don't move if in dialog mode
-        if (this.isInDialogMode) return;
+        // Don't move if not in overworld mode or movement is paused
+        const gameState = this.getGameState ? this.getGameState() : null;
+        if (gameState && gameState.mode !== 'overworld') return;
+        if (this.isMovementPaused) return;
         // Debug: Check if input is working
         if (!this.cursors || !this.wasdKeys) {
             console.log('ERROR: cursors or wasdKeys not available');
@@ -417,6 +484,9 @@ export class OverworldScene extends Scene {
      * Handle click/tap-to-move functionality
      */
     handlePointerDown(pointer) {
+        // Don't allow new movement targets if movement is paused
+        if (this.isMovementPaused) return;
+        
         // Convert screen coordinates to world coordinates
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
 
@@ -431,8 +501,10 @@ export class OverworldScene extends Scene {
      * Move toward click target position
      */
     handleClickToMove() {
-        // Don't move if in dialog mode
-        if (this.isInDialogMode) return;
+        // Don't move if not in overworld mode or movement is paused
+        const gameState = this.getGameState ? this.getGameState() : null;
+        if (gameState && gameState.mode !== 'overworld') return;
+        if (this.isMovementPaused) return;
         if (!this.targetPosition) return;
 
         const distance = PhaserMath.Distance.Between(
@@ -470,7 +542,9 @@ export class OverworldScene extends Scene {
      * Check if player overlaps with any hotspots
      */
     checkHotspotOverlaps() {
-        if (!this.player || this.isInDialogMode) return;
+        // Don't check hotspots if not in overworld mode
+        const gameState = this.getGameState ? this.getGameState() : null;
+        if (gameState && gameState.mode !== 'overworld') return;
 
         this.hotspots.forEach(hotspot => {
             const distance = PhaserMath.Distance.Between(
@@ -601,24 +675,6 @@ export class OverworldScene extends Scene {
         }
 
         console.log('Overworld scene resumed successfully');
-    }
-
-    /**
-     * Override pause to track dialog mode
-     */
-    pause() {
-        super.pause();
-        this.isInDialogMode = true;
-        console.log('Overworld scene paused - entering dialog mode');
-    }
-
-    /**
-     * Override resume to track dialog mode
-     */
-    resume() {
-        super.resume();
-        this.isInDialogMode = false;
-        console.log('Overworld scene resumed - exiting dialog mode');
     }
 
     /**

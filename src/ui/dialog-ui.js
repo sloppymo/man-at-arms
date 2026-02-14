@@ -846,6 +846,39 @@ export class DialogUI {
     this.choicesElement.innerHTML = '';
     this.choices = [];
     
+    // If there are no choices but canContinue is true, add a Continue button
+    if (!choices || choices.length === 0) {
+      if (this.canContinue) {
+        const continueButton = document.createElement('button');
+        continueButton.className = 'dialog-choice continue-button';
+        continueButton.innerHTML = `
+          <span class="choice-text">Continue...</span>
+        `;
+        
+        // Add click handler
+        continueButton.addEventListener('click', () => {
+          this.continueDialog();
+        });
+        
+        // Add keyboard navigation
+        continueButton.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this.continueDialog();
+          }
+        });
+        
+        this.choicesElement.appendChild(continueButton);
+        this.choices.push(continueButton);
+        
+        // Set focus to continue button
+        this.currentChoiceIndex = 0;
+        continueButton.classList.add('focus');
+        continueButton.focus();
+      }
+      return;
+    }
+    
     choices.forEach((choice, loopIndex) => {
       const choiceElement = document.createElement('button');
       choiceElement.className = 'dialog-choice';

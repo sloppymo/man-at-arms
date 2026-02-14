@@ -1,5 +1,6 @@
 import { Game, Scale, AUTO, Math } from '../vendor/phaser.js';
 import { OverworldScene } from './OverworldScene.js';
+import { MeleeCombatScene } from './MeleeCombatScene.js';
 
 /**
  * Creates and manages a Phaser overworld game instance

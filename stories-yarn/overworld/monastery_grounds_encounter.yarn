@@ -1,4 +1,6 @@
-=== Monastery Grounds ===
+title: Monastery Grounds
+---
+== start
 The monastery grounds are quiet and peaceful, surrounded by ancient stone walls and fragrant gardens. A monk in simple robes approaches you with a serene expression.
 
 Monk: "Welcome, traveler, to our humble monastery. In these times of war and strife, we offer sanctuary to those seeking peace and reflection. What brings you to our sacred grounds?"
@@ -27,3 +29,5 @@ Monk: "Welcome, traveler, to our humble monastery. In these times of war and str
     -> I cannot make such promises.
         Monk: "Then go with God, but know that mercy is the highest virtue."
         <<stop>>
+
+===
