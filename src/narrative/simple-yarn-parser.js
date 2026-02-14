@@ -7,6 +7,7 @@ export default class SimpleYarnParser {
     this.dialogueText = dialogueText;
     this.nodes = {};
     this.currentNode = null;
+    this.currentLineIndex = 0; // Track position in node
     this.variables = {};
     this.commandHistory = [];
 
@@ -58,6 +59,7 @@ export default class SimpleYarnParser {
   startAt(nodeName) {
     if (this.nodes[nodeName]) {
       this.currentNode = nodeName;
+      this.currentLineIndex = 0; // Reset line index when starting new node
       return this.getCurrentResult();
     }
     throw new Error(`Node "${nodeName}" not found`);
@@ -71,8 +73,8 @@ export default class SimpleYarnParser {
     const choices = [];
     let text = '';
 
-    // Parse content for text and choices
-    for (let i = 0; i < lines.length; i++) {
+    // Parse content for text and choices starting from currentLineIndex
+    for (let i = this.currentLineIndex; i < lines.length; i++) {
       const line = lines[i].trim();
 
       if (line.startsWith('-> ')) {
@@ -99,6 +101,9 @@ export default class SimpleYarnParser {
       }
     }
 
+    // Update currentLineIndex to where we actually stopped processing
+    this.currentLineIndex = i;
+
     if (choices.length > 0) {
       // Has choices - return options result
       return {
@@ -111,23 +116,19 @@ export default class SimpleYarnParser {
         hasChoices: true
       };
     } else {
-      // No choices - story continues or ends
-      const hasMoreContent = lines.some(line => line.trim() && !line.startsWith('<<'));
-      const isEnd = !hasMoreContent;
+      // No choices - check if this is the end of story
+      // If we've processed all content and reached the end, this is the end
+      const isEnd = this.currentLineIndex >= lines.length;
       
       if (isEnd) {
-        // End of story, add goodbye choice
+        // End of story - return a special result
         return {
-          text: text,
-          options: [{
-            text: "Goodbye",
-            isAvailable: true,
-            index: 0
-          }],
-          hasChoices: true
+          text: '',
+          hasChoices: false,
+          isEnd: true
         };
       } else {
-        // Story continues
+        // Story continues with text
         return {
           text: text,
           hasChoices: false,

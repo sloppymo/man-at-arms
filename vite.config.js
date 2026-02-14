@@ -9,7 +9,9 @@ export default defineConfig({
   server: {
     port: 3005,
     open: false,
-    watch: null
+    watch: {
+      usePolling: true
+    }
   },
   
   build: {

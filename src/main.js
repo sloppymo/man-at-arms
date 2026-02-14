@@ -359,11 +359,10 @@ function bootGame() {
   console.log('setMode result:', result);
   console.log('Current gameState.mode:', gameState.mode);
   
-  // Immediately trigger the welcome encounter
-  console.log('Triggering initial welcome encounter...');
-  setTimeout(() => {
-    dispatcher.dispatch('START_DIALOG', { payload: { dialogId: 'forest_encounter' } });
-  }, 100); // Small delay to ensure everything is initialized
+  // TEMPORARILY DISABLE auto-trigger for testing overworld
+  // setTimeout(() => {
+  //   dispatcher.dispatch('START_DIALOG', { dialogId: 'forest_encounter' });
+  // }, 100); // Small delay to ensure everything is initialized
   
   // Add debug controls in development only
   const enableDebugControls = isDevelopment && (window.DEBUG_DIALOGS || window.location.search.includes('debug=true'));
@@ -412,7 +411,7 @@ function bootGame() {
     `;
     banditButton.onclick = () => {
       console.log('Testing bandit dialog');
-      window.dispatcher.dispatch('START_DIALOG', { payload: { dialogId: 'forest_encounter', character: 'bandit' } });
+      window.dispatcher.dispatch('START_DIALOG', { dialogId: 'forest_encounter', character: 'bandit' });
     };
 
     const statusButton = document.createElement('button');
@@ -560,23 +559,23 @@ function bootGame() {
   // dialogDebugContainer.appendChild(encounterStatusButton);
   // document.body.appendChild(dialogDebugContainer);
 
-  // Add global R key handler as backup for returning to overworld
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'r' || e.key === 'R') {
-      console.log('Global R key pressed - forcing return to overworld');
-      const gameState = window.gameState || gameState;
-      if (gameState && setMode) {
-        // Always try to resume the scene, even if mode doesn't change
-        if (overworldGame && overworldGame.resume) {
-          console.log('Force resuming overworld scene via global R key');
-          overworldGame.resume();
-        }
-        
-        // Also try to set mode (in case we're not in overworld)
-        setMode(gameState, GameMode.OVERWORLD);
-      }
-    }
-  });
+  // Add global key handler for debugging (R key handled in createOverworldGame.js)
+  // document.addEventListener('keydown', (e) => {
+  //   if (e.key === 'r' || e.key === 'R') {
+  //     console.log('Global R key pressed - forcing return to overworld');
+  //     const gameState = window.gameState || gameState;
+  //     if (gameState && setMode) {
+  //       // Always try to resume the scene, even if mode doesn't change
+  //       if (overworldGame && overworldGame.resume) {
+  //         console.log('Force resuming overworld scene via global R key');
+  //         overworldGame.resume();
+  //       }
+  //       
+  //       // Also try to set mode (in case we're not in overworld)
+  //       setMode(gameState, GameMode.OVERWORLD);
+  //     }
+  //   }
+  // });
 }
 
 // Initialize when DOM is ready

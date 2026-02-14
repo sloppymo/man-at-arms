@@ -625,6 +625,13 @@ export class NarrativeService {
     console.log(`NarrativeService: Result text: ${result?.text}`);
     console.log(`NarrativeService: Result options:`, result?.options);
 
+    // Check if story has ended first - this should take priority
+    if (result && result.isEnd) {
+      console.log('NarrativeService: Story ended, dispatching MODE_CHANGE to overworld');
+      this.dispatcher.dispatch('MODE_CHANGE', 'overworld');
+      return;
+    }
+
     if (hasText && !hasOptions) {
       // Text result - show dialog text with continue option
       console.log('NarrativeService: Sending text-only result to UI');
