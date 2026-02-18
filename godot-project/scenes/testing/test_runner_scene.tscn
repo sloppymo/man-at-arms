@@ -1,0 +1,101 @@
+[gd_scene load_steps=5 format=3 uid="uid://bqxn8y7xk2q3r"]
+
+[ext_resource type="Script" path="res://scripts/test_runner_coordinator.gd" id="1_coord"]
+[ext_resource type="Script" path="res://scripts/comprehensive_test_suite.gd" id="2_suite"]
+[ext_resource type="Script" path="res://scripts/automated_ci_tests.gd" id="3_ci"]
+[ext_resource type="Script" path="res://scripts/test_runner_ui.gd" id="4_ui"]
+
+[node name="TestRunnerScene" type="Node"]
+script = ExtResource("1_coord")
+
+[node name="ComprehensiveTests" type="Node" parent="."]
+script = ExtResource("2_suite")
+
+[node name="AutomatedCITests" type="Node" parent="."]
+script = ExtResource("3_ci")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_ui")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+
+[node name="Title" type="Label" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Priority 1 Implementation Test Suite"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/VBoxContainer"]
+layout_mode = 2
+
+[node name="RunComprehensiveButton" type="Button" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Run Comprehensive Tests"
+
+[node name="RunEdgeCaseButton" type="Button" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Run Edge Case Tests"
+
+[node name="RunPerformanceButton" type="Button" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Run Performance Benchmarks"
+
+[node name="RunCIPipelineButton" type="Button" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Run CI Pipeline"
+
+[node name="HSeparator2" type="HSeparator" parent="UI/VBoxContainer"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="UI/VBoxContainer"]
+layout_mode = 2
+text = "Ready to run tests"
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="UI/VBoxContainer"]
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+
+[node name="ResultsPanel" type="Panel" parent="UI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -200.0
+offset_bottom = 0.0
+grow_vertical = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="UI/ResultsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ResultsLabel" type="RichTextLabel" parent="UI/ResultsPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+text = "Test results will appear here..."
+
+[connection signal="pressed" from="UI/VBoxContainer/RunComprehensiveButton" to="UI" method="_on_run_comprehensive_pressed"]
+[connection signal="pressed" from="UI/VBoxContainer/RunEdgeCaseButton" to="UI" method="_on_run_edge_case_pressed"]
+[connection signal="pressed" from="UI/VBoxContainer/RunPerformanceButton" to="UI" method="_on_run_performance_pressed"]
+[connection signal="pressed" from="UI/VBoxContainer/RunCIPipelineButton" to="UI" method="_on_run_ci_pipeline_pressed"]
