@@ -35,7 +35,7 @@
 ├── assets/                 # Built asset bundles
 ├── maps/                   # Map-related files
 ├── css/                    # Legacy CSS files
-├── js/                     # Legacy JavaScript files (Phase 1)
+├── js/                     # Legacy JavaScript tree (read-only reference)
 ├── playwright-tests/       # End-to-end tests
 └── [config files]          # package.json, vite.config.js, jest configs
 ```
@@ -165,8 +165,9 @@ main.js (entry point)
 ```
 
 ### Legacy vs Modern Code
-- **Legacy**: `js/` directory contains Phase 1 implementation
+- **Legacy**: `js/` directory is retained for Phase 1 reference only (no new edits)
 - **Modern**: `src/` directory contains Phase 2+ ES6 module architecture
+- **Boundary Guard**: CI enforces `src/` does not import from `js/` via `guard:legacy-imports`
 - **Migration**: Equipment and save systems include backward compatibility
 
 ## Development Workflow
@@ -177,10 +178,10 @@ main.js (entry point)
 3. **Testing**: Jest unit tests + Playwright E2E tests
 
 ### Key Scripts
-- `compile-stories`: Compile Yarn narrative files
-- `unit-tests`: Run Jest test suite
-- `smoke-test`: Validate story compilation
-- `test`: Run full test pipeline
+- `test`: Canonical Jest test entrypoint
+- `unit-tests`: Compatibility alias for `test --runInBand`
+- `test:smoke`: Active-story Yarn smoke harness
+- `guard:legacy-imports`: Prevent `src/` imports from `js/`
 
 ## Game Modes
 

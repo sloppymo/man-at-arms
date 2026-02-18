@@ -155,11 +155,14 @@ npm run preview          # Preview production build
 npm run test             # Run Jest unit tests
 npm run test:watch       # Run tests in watch mode
 npm run test:coverage    # Run tests with coverage report
-npm test:basic           # Run basic functionality tests
-npm test:smoke           # Run smoke tests for story validation
+npm run test:basic       # Run basic functionality tests
+npm run test:working     # Run working baseline tests
+npm run test:smoke       # Run active-story smoke validation harness
 
 # Legacy/compatibility
-npm run unit-tests       # Legacy unit test runner
+npm run unit-tests       # Alias for canonical Jest run (--runInBand)
+npm run test:cjs         # Alias lane for narrative-service unit subset
+npm run guard:legacy-imports  # Block src/ -> js/ legacy imports
 ```
 
 ### Development Workflow
@@ -287,7 +290,7 @@ npm run build
 
 - Edit `.yarn` files in `stories-yarn/` directory
 - Use Yarn Spinner syntax with custom commands
-- Test stories with `npm run test:smoke`
+- Test active runtime stories with `npm run test:smoke`
 - Ensure choices end appropriately (no hanging narratives)
 
 ### Asset Guidelines
@@ -306,7 +309,7 @@ npm run build
 - Verify all dependencies are installed
 
 **Stories not loading:**
-- Run `npm run test:smoke` to validate Yarn files
+- Run `npm run test:smoke` to validate active runtime story files
 - Check console for parsing errors
 - Ensure `.yarn` files are in correct directory
 

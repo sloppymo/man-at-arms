@@ -6,6 +6,7 @@
 // Import YarnBound runtime
 // import { YarnBound } from 'yarn-bound';
 // import SimpleYarnParser from './simple-yarn-parser.js';
+import { viteStoryModules } from './story-modules.js';
 
 /**
  * Simple Yarn Parser - Alternative to YarnBound
@@ -262,6 +263,10 @@ class SimpleYarnParser {
   }
 }
 
+const STATS_PREFIX = 'stats.';
+const OVERWORLD_PREFIX = 'overworld.';
+const STORY_GLOB_PATTERN = '../../stories-yarn/**/*.yarn';
+
 export class NarrativeService {
   constructor(dispatcher, gameState) {
     this.dispatcher = dispatcher;
@@ -270,11 +275,25 @@ export class NarrativeService {
     this.currentStory = null;
     this.currentResult = null; // Add result caching property
 
-    // Vite glob for story loading - supports hot reload
-    this.storyModules = import.meta.glob('../../stories-yarn/**/*.yarn', { as: 'raw' });
+    // Story modules source: Vite first, then test/runtime fallback.
+    this.storyModules = this.resolveStoryModules();
 
     // Set up event listeners
     this.setupEventListeners();
+  }
+
+  resolveStoryModules() {
+    if (viteStoryModules && typeof viteStoryModules === 'object' && Object.keys(viteStoryModules).length > 0) {
+      return viteStoryModules;
+    }
+
+    const fallbackGlob = globalThis.import?.meta?.glob;
+    if (typeof fallbackGlob === 'function') {
+      return fallbackGlob(STORY_GLOB_PATTERN, { as: 'raw' });
+    }
+
+    console.warn('NarrativeService: No story glob resolver available; storyModules is empty.');
+    return {};
   }
 
   setupEventListeners() {
@@ -466,12 +485,12 @@ export class NarrativeService {
         // Strip $ prefix if present (Yarn variables are $name)
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
 
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           return this.gameState.stats[statName] || 0;
         }
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           return this.gameState.overworld?.[prop] || 0;
         }
         return 0;
@@ -481,14 +500,14 @@ export class NarrativeService {
         // Strip $ prefix if present
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
 
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           this.gameState.stats[statName] = value;
           this.dispatcher.dispatch('STAT_UPDATE', { stat: statName, value });
           return;
         }
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           if (!this.gameState.overworld) this.gameState.overworld = {};
           this.gameState.overworld[prop] = value;
           return;
@@ -726,9 +745,9 @@ export class NarrativeService {
   rollEncounter(seed, zone, timeOfDay) {
     // Simple encounter rolling based on seed and zone
     const encounterTypes = {
-      'chevauchee': ['march_event', 'raid_village', 'patrol_spotted', 'forage', 'camp_event'],
-      'normandy_raids': ['ambush', 'french_scouts', 'late_raid', 'prisoner_execution', 'deserter_bribe', 'french_mother_boy', 'village_burning_order', 'wounded_enemy', 'corrupt_quartermaster'],
-      'forest': ['forest_encounter'],
+      'chevauchee': ['march_event', 'raid_village', 'patrol_spotted', 'forage', 'camp_event', 'traveling_merchant', 'lost_child'],
+      'normandy_raids': ['ambush', 'french_scouts', 'late_raid', 'prisoner_execution', 'deserter_bribe', 'french_mother_boy', 'village_burning_order', 'wounded_enemy', 'corrupt_quartermaster', 'deserting_soldiers'],
+      'forest': ['forest_encounter', 'lost_child'],
       'default': ['march_event']
     };
     

@@ -2,6 +2,9 @@
 // Basic Working Test for Yarn-Bound Narrative Engine
 // ============================================
 
+const STATS_PREFIX = 'stats.';
+const OVERWORLD_PREFIX = 'overworld.';
+
 describe('Basic Narrative Engine Tests', () => {
   test('Jest configuration works', () => {
     expect(true).toBe(true);
@@ -122,13 +125,13 @@ describe('Basic Narrative Engine Tests', () => {
       get: (name) => {
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
         
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           return gameState.stats[statName] || 0;
         }
         
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           return gameState.overworld[prop] || 0;
         }
         
@@ -138,14 +141,14 @@ describe('Basic Narrative Engine Tests', () => {
       set: (name, value) => {
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
         
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           gameState.stats[statName] = value;
           return;
         }
         
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           gameState.overworld[prop] = value;
           return;
         }

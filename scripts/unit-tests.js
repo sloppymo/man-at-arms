@@ -6,6 +6,9 @@
 
 import YarnBound from 'yarn-bound';
 
+const STATS_PREFIX = 'stats.';
+const OVERWORLD_PREFIX = 'overworld.';
+
 class NarrativeServiceTester {
   constructor() {
     // Create a minimal mock NarrativeService for testing
@@ -102,12 +105,12 @@ class NarrativeServiceTester {
         // Strip $ prefix if present (Yarn variables are $name)
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
 
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           return service.gameState.stats[statName] || 0;
         }
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           return service.gameState.overworld?.[prop] || 0;
         }
         return 0;
@@ -117,14 +120,14 @@ class NarrativeServiceTester {
         // Strip $ prefix if present
         const cleanName = name.startsWith('$') ? name.substring(1) : name;
 
-        if (cleanName.startsWith('stats.')) {
-          const statName = cleanName.substring(6);
+        if (cleanName.startsWith(STATS_PREFIX)) {
+          const statName = cleanName.substring(STATS_PREFIX.length);
           service.gameState.stats[statName] = value;
           service.dispatcher.dispatch('STAT_UPDATE', { stat: statName, value });
           return;
         }
-        if (cleanName.startsWith('overworld.')) {
-          const prop = cleanName.substring(9);
+        if (cleanName.startsWith(OVERWORLD_PREFIX)) {
+          const prop = cleanName.substring(OVERWORLD_PREFIX.length);
           if (!service.gameState.overworld) service.gameState.overworld = {};
           service.gameState.overworld[prop] = value;
           return;

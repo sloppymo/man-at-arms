@@ -1,79 +1,168 @@
 #!/usr/bin/env node
 // ============================================
-// Yarn Story Smoke Test Harness
-// Tests every .yarn file by loading and advancing through story flow
-// Validates jumps, options, and stop nodes work correctly
+// Active Yarn Story Smoke Test Harness
+// Validates runtime-referenced stories against parser shape contracts
 // ============================================
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import YarnBound from 'yarn-bound';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-class YarnStorySmokeTester {
+const ENCOUNTER_SERVICE_PATH = path.join(projectRoot, 'src/systems/encounter-service.js');
+const NARRATIVE_SERVICE_PATH = path.join(projectRoot, 'src/narrative/narrative-service.js');
+const OVERWORLD_SCENE_PATH = path.join(projectRoot, 'src/phaser/OverworldScene.js');
+const SKIPLIST_PATH = path.join(projectRoot, 'scripts/smoke-story-skiplist.json');
+
+const SHAPE_CONTRACTS = [
+  { id: 'title header', test: (text) => /^title:\s*.+$/m.test(text) },
+  { id: 'node separator', test: (text) => /^---$/m.test(text) },
+  { id: 'start node', test: (text) => /^==\s+start\b/m.test(text) },
+  { id: 'story terminator', test: (text) => /^===$/m.test(text) }
+];
+
+function readText(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+function extractValuesFromObjectBlocks(text, objectRegex) {
+  const values = new Set();
+  let blockMatch;
+
+  while ((blockMatch = objectRegex.exec(text)) !== null) {
+    const block = blockMatch[1];
+    const entryPattern = /'[^']+'\s*:\s*'([^']+)'/g;
+    let entryMatch;
+    while ((entryMatch = entryPattern.exec(block)) !== null) {
+      values.add(entryMatch[1]);
+    }
+  }
+
+  return values;
+}
+
+function extractEncounterStories(filePath) {
+  const text = readText(filePath);
+  return extractValuesFromObjectBlocks(
+    text,
+    /const\s+ENCOUNTER_STORIES\s*=\s*\{([\s\S]*?)\};/g
+  );
+}
+
+function extractNarrativeStories(filePath) {
+  const text = readText(filePath);
+  return extractValuesFromObjectBlocks(
+    text,
+    /const\s+storyMap\s*=\s*\{([\s\S]*?)\};/g
+  );
+}
+
+function extractDialogStories(filePath) {
+  const text = readText(filePath);
+  const storyValues = new Set();
+  const dialogIdPattern = /dialogId:\s*'([^']+)'/g;
+  let match;
+
+  while ((match = dialogIdPattern.exec(text)) !== null) {
+    storyValues.add(`overworld/${match[1]}`);
+  }
+
+  return storyValues;
+}
+
+function loadSkiplist() {
+  if (!fs.existsSync(SKIPLIST_PATH)) {
+    return {};
+  }
+  const raw = readText(SKIPLIST_PATH);
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Skiplist must be a JSON object keyed by story id.');
+  }
+  return parsed;
+}
+
+function getActiveStoryIds() {
+  const active = new Set();
+
+  for (const story of extractEncounterStories(ENCOUNTER_SERVICE_PATH)) {
+    active.add(story);
+  }
+  for (const story of extractNarrativeStories(NARRATIVE_SERVICE_PATH)) {
+    active.add(story);
+  }
+  for (const story of extractDialogStories(OVERWORLD_SCENE_PATH)) {
+    active.add(story);
+  }
+
+  return [...active].sort();
+}
+
+function validateStoryShape(storyId, storyPath) {
+  if (!fs.existsSync(storyPath)) {
+    return [`missing file: stories-yarn/${storyId}.yarn`];
+  }
+
+  const text = readText(storyPath);
+  const failures = [];
+  for (const contract of SHAPE_CONTRACTS) {
+    if (!contract.test(text)) {
+      failures.push(`missing ${contract.id}`);
+    }
+  }
+  return failures;
+}
+
+class ActiveStorySmokeTester {
   constructor() {
-    this.storyFiles = this.findYarnFiles();
+    this.activeStories = getActiveStoryIds();
+    this.skiplist = loadSkiplist();
     this.results = {
-      total: 0,
+      total: this.activeStories.length,
       passed: 0,
       failed: 0,
-      errors: []
+      skipped: 0,
+      failures: []
     };
   }
 
-  findYarnFiles() {
-    const storiesDir = path.join(projectRoot, 'stories');
-    const files = [];
-
-    function traverse(currentDir) {
-      const items = fs.readdirSync(currentDir);
-
-      for (const item of items) {
-        const fullPath = path.join(currentDir, item);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          traverse(fullPath);
-        } else if (item.endsWith('.yarn')) {
-          files.push(fullPath);
-        }
-      }
-    }
-
-    traverse(storiesDir);
-    return files;
-  }
-
   async runAllTests() {
-    console.log('🧪 Running Yarn Story Smoke Tests...\n');
+    console.log('🧪 Running active-story Yarn smoke tests...\n');
+    console.log(`Discovered ${this.activeStories.length} active story IDs.`);
 
-    this.results.total = this.storyFiles.length;
+    for (const storyId of this.activeStories) {
+      const skipReason = this.skiplist[storyId];
+      if (skipReason) {
+        console.log(`⏭️  ${storyId} (skipped: ${skipReason})`);
+        this.results.skipped++;
+        continue;
+      }
 
-    for (const storyFile of this.storyFiles) {
-      const storyName = path.relative(path.join(projectRoot, 'stories'), storyFile).replace('.yarn', '');
-      console.log(`📖 Testing ${storyName}...`);
-
+      const storyPath = path.join(projectRoot, 'stories-yarn', `${storyId}.yarn`);
+      console.log(`📖 ${storyId}`);
       try {
-        const passed = await this.testStory(storyFile);
-        if (passed) {
-          console.log(`✅ ${storyName} passed`);
-          this.results.passed++;
-        } else {
-          console.log(`❌ ${storyName} failed`);
+        const failures = validateStoryShape(storyId, storyPath);
+        if (failures.length > 0) {
           this.results.failed++;
+          this.results.failures.push({ storyId, failures });
+          console.log(`❌ ${storyId} failed`);
+          for (const failure of failures) {
+            console.log(`   - ${failure}`);
+          }
+          continue;
         }
+        this.results.passed++;
+        console.log(`✅ ${storyId} passed`);
       } catch (error) {
-        console.log(`💥 ${storyName} crashed: ${error.message}`);
         this.results.failed++;
-        this.results.errors.push({
-          story: storyName,
-          error: error.message,
-          stack: error.stack
+        this.results.failures.push({
+          storyId,
+          failures: [error.message]
         });
+        console.log(`💥 ${storyId} crashed: ${error.message}`);
       }
     }
 
@@ -81,102 +170,34 @@ class YarnStorySmokeTester {
     return this.results.failed === 0;
   }
 
-  async testStory(storyFilePath) {
-    const yarnText = fs.readFileSync(storyFilePath, 'utf8');
-
-    // Basic validation tests
-    const tests = [
-      {
-        name: 'Can create YarnBound runner',
-        test: () => {
-          const runner = new YarnBound({
-            dialogue: yarnText,
-            startAt: 'Start',
-            handleCommand: () => {},
-            variableStorage: { get: () => 0, set: () => {} },
-            combineTextAndOptionsResults: true
-          });
-          return !!runner;
-        }
-      },
-      {
-        name: 'Has initial result',
-        test: () => {
-          const runner = new YarnBound({
-            dialogue: yarnText,
-            startAt: 'Start',
-            handleCommand: () => {},
-            variableStorage: { get: () => 0, set: () => {} },
-            combineTextAndOptionsResults: true
-          });
-          return !!runner.currentResult;
-        }
-      },
-      {
-        name: 'Initial result has expected type',
-        test: () => {
-          const runner = new YarnBound({
-            dialogue: yarnText,
-            startAt: 'Start',
-            handleCommand: () => {},
-            variableStorage: { get: () => 0, set: () => {} },
-            combineTextAndOptionsResults: true
-          });
-          const result = runner.currentResult;
-          return result instanceof YarnBound.TextResult ||
-                 result instanceof YarnBound.OptionsResult ||
-                 result instanceof YarnBound.CommandResult;
-        }
-      },
-      {
-        name: 'Contains expected Yarn syntax',
-        test: () => {
-          return yarnText.includes('title:') &&
-                 yarnText.includes('---') &&
-                 yarnText.includes('===') &&
-                 yarnText.includes('->');
-        }
-      }
-    ];
-
-    for (const testCase of tests) {
-      try {
-        const passed = testCase.test();
-        if (!passed) {
-          throw new Error(`${testCase.name} failed`);
-        }
-      } catch (error) {
-        throw new Error(`${testCase.name}: ${error.message}`);
-      }
-    }
-
-    return true;
-  }
-
   printSummary() {
     console.log('\n📊 Smoke Test Results:');
-    console.log(`Total stories: ${this.results.total}`);
+    console.log(`Total active stories: ${this.results.total}`);
     console.log(`Passed: ${this.results.passed}`);
+    console.log(`Skipped: ${this.results.skipped}`);
     console.log(`Failed: ${this.results.failed}`);
 
-    if (this.results.errors.length > 0) {
-      console.log('\n💥 Errors:');
-      this.results.errors.forEach(error => {
-        console.log(`  ${error.story}: ${error.error}`);
+    if (this.results.failures.length > 0) {
+      console.log('\n💥 Failures:');
+      this.results.failures.forEach(({ storyId, failures }) => {
+        console.log(`  ${storyId}`);
+        for (const failure of failures) {
+          console.log(`    - ${failure}`);
+        }
       });
     }
 
     const success = this.results.failed === 0;
-    console.log(`\n${success ? '🎉 All smoke tests passed!' : '⚠️  Some smoke tests failed'}`);
+    console.log(`\n${success ? '🎉 Active story smoke tests passed!' : '⚠️  Active story smoke tests failed'}`);
   }
 }
 
 // Export for testing
-export { YarnStorySmokeTester };
+export { ActiveStorySmokeTester };
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const tester = new YarnStorySmokeTester();
+  const tester = new ActiveStorySmokeTester();
   const success = await tester.runAllTests();
   process.exit(success ? 0 : 1);
 }

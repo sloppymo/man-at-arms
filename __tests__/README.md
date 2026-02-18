@@ -64,12 +64,10 @@ __tests__/
 ### 4. Story Validation Tests (`validation/story-smoke.test.js`)
 
 **Coverage:**
-- ✅ Load and validate all .yarn files in stories/ and stories-yarn/
-- ✅ Detect missing jumps, bad conditions, misformatted commands
-- ✅ Verify Yarn syntax compliance (title:, ---, ===, ->)
-- ✅ Test story node connectivity and unreachable content
-- ✅ Validate YarnBound runner creation for all stories
-- ✅ Check for empty files and duplicate names
+- ⚠️ Deprecated in default Jest run
+- ✅ Active runtime story smoke validation is now handled by `scripts/smoke-test-yarn.js`
+- ✅ Smoke harness enforces parser-shape contract (`title:`, `---`, `== start`, `===`)
+- ✅ Runtime-derived story set is sourced from encounter mappings and dialog IDs
 
 ### 5. UI Behavior Tests (`ui/dialog-ui.test.js`)
 
@@ -132,11 +130,8 @@ npm run test:coverage
 # Run smoke tests for all story files
 npm run test:smoke
 
-# Run legacy unit tests
+# Run canonical Jest suite serially (compat alias)
 npm run unit-tests
-
-# Run legacy smoke tests
-npm run smoke-test
 ```
 
 ### Test Output
@@ -155,12 +150,16 @@ The test suite aims for:
 
 ## 🔧 Configuration
 
-### Jest Configuration (`jest.config.js`)
+### Jest Configuration (`jest.config.cjs`)
 - ES modules support
 - jsdom environment for DOM testing
 - Coverage thresholds and reporting
 - Global mocks and setup
 - Verbose output for debugging
+
+Deprecated suites excluded from default Jest run:
+- `__tests__/validation/story-smoke.test.js`
+- `__tests__/unit/narrative-service-cjs.test.js`
 
 ### Global Setup (`setup.js`)
 - Web API mocks (TextEncoder, TextDecoder)

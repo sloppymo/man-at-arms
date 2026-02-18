@@ -5,8 +5,8 @@
 **Run on every commit before deployment:**
 
 ```bash
-# 1. Smoke Tests - Validate all story files load correctly
-npm run smoke-test
+# 1. Smoke Tests - Validate active runtime stories
+npm run test:smoke
 
 # 2. Unit Tests - Core component functionality
 npm run unit-tests
@@ -16,8 +16,8 @@ npm run build && npm run preview
 ```
 
 **Expected Results:**
-- ✅ Smoke tests: All stories pass basic validation
-- ✅ Unit tests: Core functionality works (14/19 passing, 5 integration tests are non-blocking)
+- ✅ Smoke tests: Active runtime stories pass parser-shape validation (allowlist/skiplist aware)
+- ✅ Unit tests: Canonical Jest suite passes
 - ✅ Build: Completes without errors
 - ✅ Preview: Server starts and serves content correctly
 
@@ -37,10 +37,10 @@ npm run build && npm run preview
 - ✅ Choice selection calls `advance(choiceIndex)`
 
 **Build System:**
-- ✅ `import.meta.glob('../../stories/**/*.yarn', { as: 'raw' })` for hot-reload
+- ✅ `import.meta.glob('../../stories-yarn/**/*.yarn', { as: 'raw' })` for hot-reload
 - ✅ Multiple key fallback patterns for Vite glob resilience
 - ✅ No dynamic `import()` patterns that break in production
-- ✅ Clean package.json with only `yarn-bound` dependency
+- ✅ Canonical test/deploy scripts aligned in `package.json`
 
 ## ✅ Content Authoring Standards
 
@@ -106,17 +106,17 @@ npm run build && npm run preview
 **Content Workflow:**
 ```bash
 # Add new stories
-echo "title: NewStory\n---\nHello world!\n===" > stories/new_story.yarn
+echo "title: NewStory\n---\n== start\nHello world!\n===" > stories-yarn/new_story.yarn
 
 # Test changes
-npm run smoke-test
+npm run test:smoke
 
 # Deploy
 npm run build
 ```
 
 **Monitoring:**
-- Watch for yarn-bound updates (currently `^0.5.5`)
+- Watch for yarn-bound updates (currently `^0.4.3`)
 - Monitor story loading performance in production
 - Track authoring patterns for consistency
 
