@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://town_square_scene"]
+
+[ext_resource type="PackedScene" path="res://scenes/dialogue/dialogue_base.tscn" id="1_town_square"]
+[ext_resource type="Script" path="res://scenes/dialogue/town_square.gd" id="2_town_square"]
+
+[node name="TownSquareDialogue" instance=ExtResource("1_town_square")]
+script = ExtResource("2_town_square")

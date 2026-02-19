@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3 uid="uid://b8qk6x7m8x8x8"]
+
+[ext_resource type="Script" path="res://scenes/combat/player.gd" id="1_8qk6x"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player_idle.png" id="2_8qk6x"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8qk6x"]
+size = Vector2(32, 32)
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_8qk6x")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_8qk6x")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_8qk6x")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(1, 1)

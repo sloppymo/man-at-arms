@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://blacksmith_scene"]
+
+[ext_resource type="PackedScene" path="res://scenes/dialogue/dialogue_base.tscn" id="1_blacksmith"]
+[ext_resource type="Script" path="res://scenes/dialogue/blacksmith.gd" id="2_blacksmith"]
+
+[node name="BlacksmithDialogue" instance=ExtResource("1_blacksmith")]
+script = ExtResource("2_blacksmith")

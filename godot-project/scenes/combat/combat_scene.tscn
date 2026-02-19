@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://c8qk6x7m8x8x8"]
+
+[ext_resource type="PackedScene" path="res://scenes/combat/player.tscn" id="1_8qk6x"]
+[ext_resource type="Script" path="res://scenes/combat/combat_scene.gd" id="2_8qk6x"]
+
+[node name="CombatScene" type="Node2D"]
+script = ExtResource("2_8qk6x")
+
+[node name="Background" type="Sprite2D" parent="."]
+modulate = Color(0.8, 0.8, 0.8, 1)
+
+[node name="Player" parent="." instance=ExtResource("1_8qk6x")]
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Particles" type="Node2D" parent="."]

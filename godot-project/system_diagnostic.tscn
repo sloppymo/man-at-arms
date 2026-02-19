@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://system_diagnostic_root"]
+
+[ext_resource type="Script" path="res://system_diagnostic.gd" id="1_diagnostic"]
+
+[node name="SystemDiagnostic" type="Node"]
+script = ExtResource("1_diagnostic")

@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Godot Web to GitHub Pages
 
 on:
   push:
@@ -18,27 +18,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Enforce legacy import boundary
-        run: npm run guard:legacy-imports
-
-      - name: Build
-        run: npm run build
+      - name: Verify Godot Web Export Artifacts
+        run: |
+          test -f godot-project/build/web/index.html
+          test -f godot-project/build/web/index.js
+          test -f godot-project/build/web/index.wasm
+          test -f godot-project/build/web/index.side.wasm
+          test -f godot-project/build/web/index.pck
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,9 +38,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './godot-project/build/web'
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages

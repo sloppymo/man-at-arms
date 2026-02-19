@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://force_landing"]
+
+[ext_resource type="Script" path="res://scenes/force_landing.gd" id="1_force"]
+
+[node name="ForceLanding" type="Node"]
+script = ExtResource("1_force")

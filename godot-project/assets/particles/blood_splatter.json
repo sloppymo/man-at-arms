@@ -1,0 +1,1 @@
+{"speed":{"min":50,"max":200},"scale":{"start":0.5,"end":0},"lifespan":1000,"gravityY":200,"quantity":5,"emitZone":{"type":"edge","source":{"type":"circle","radius":10},"quantity":20}}

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bootstrap_landing"]
+
+[ext_resource type="Script" path="res://scenes/landing_bootstrap.gd" id="1_bootstrap"]
+
+[node name="LandingBootstrap" type="Node"]
+script = ExtResource("1_bootstrap")

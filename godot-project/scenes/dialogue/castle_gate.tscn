@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://castle_gate_scene"]
+
+[ext_resource type="PackedScene" path="res://scenes/dialogue/dialogue_base.tscn" id="1_castle_gate"]
+[ext_resource type="Script" path="res://scenes/dialogue/castle_gate.gd" id="2_castle_gate"]
+
+[node name="CastleGateDialogue" instance=ExtResource("1_castle_gate")]
+script = ExtResource("2_castle_gate")
