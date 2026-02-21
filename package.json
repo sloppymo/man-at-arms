@@ -15,7 +15,8 @@
     "test:basic": "jest --config jest.config.cjs --testPathPattern=basic.test.js",
     "test:cjs": "jest --config jest.config.cjs --testPathPattern=working.test.js",
     "test:smoke": "node scripts/smoke-test-yarn.js",
-    "guard:legacy-imports": "node scripts/guard-no-src-to-legacy-imports.js"
+    "guard:legacy-imports": "node scripts/guard-no-src-to-legacy-imports.js",
+    "ci:web": "npm run guard:legacy-imports && npm run unit-tests && npm run test:cjs && npm run test:smoke && npm run build"
   },
   "dependencies": {
     "phaser": "^3.75.1",

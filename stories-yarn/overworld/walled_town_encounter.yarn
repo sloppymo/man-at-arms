@@ -5,23 +5,29 @@ You approach the imposing stone walls of a fortified town. A stern guard stands 
 
 Guard: "Halt! This is the walled town of [Town Name]. State your business, traveler. The gates are closed to suspicious folk in these troubled times."
 
--> I seek entry to the town.
+* "[I seek entry to the town.]"
     Guard: "Entry requires a toll of 10 gold pieces, or proof that you're not here to cause trouble. What say you?"
-    -> Pay the toll.
+    * "[Pay the toll.]"
         <<changeStat gold, -10>>
         Guard: "Very well. Enter and behave yourself."
         <<stop>>
-    -> I have no gold.
+    * "[I have no gold.]"
         Guard: "Then begone! We don't harbor beggars."
         <<stop>>
-    -> I am on official business.
+    * "[I am on official business.]"
         Guard: "Official business, eh? Prove it or leave."
         <<stop>>
+    * "[Never mind.]"
+        <<jump leave_alone>>
+        Guard: "Suspicious. Very suspicious."
+        <<jump refuse_entry>>
+        <<stop>>
 
--> I need information about the area.
-    Guard: "Information costs. The French forces are massing to the east, and bandits roam the roads. Stay alert, and don't trust strangers."
-    <<stop>>
+=== leave_alone ===
+You walk away from the gates, the guard's suspicious eyes following you until you disappear from sight.
 
--> I'm just passing through.
-    Guard: "Then keep moving. The road is that way."
-    <<stop>>
+=== refuse_entry ===
+Guard: "I knew it! You're trouble. No entry for the likes of you!"
+The guard raises his voice, calling for reinforcements. You should probably leave before this gets worse.
+
+<<end>>    <<stop>>

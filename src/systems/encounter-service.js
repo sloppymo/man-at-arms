@@ -48,6 +48,10 @@ const ENCOUNTER_STORIES = {
   'french_mother_boy': 'overworld/french_mother_encounter',
   'village_burning_order': 'overworld/village_burning_encounter',
   'wounded_enemy': 'overworld/wounded_enemy_encounter',
+  // New content encounters
+  'traveling_merchant': 'overworld/traveling_merchant_encounter',
+  'lost_child': 'overworld/lost_child_encounter',
+  'deserting_soldiers': 'overworld/deserting_soldiers_encounter',
   'corrupt_quartermaster': 'overworld/corrupt_quartermaster_encounter',
   'default': 'chevauchee/01_march_events'
 };

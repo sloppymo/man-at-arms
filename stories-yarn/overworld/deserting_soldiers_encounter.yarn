@@ -1,0 +1,400 @@
+title: Start
+---
+== start
+<<showImage artwork/camp_at_night.jpg>>
+Late at night, you spot movement near the edge of camp. Two soldiers in English uniforms are quietly gathering supplies and weapons, clearly preparing to desert. They glance nervously around, making sure no one sees them.
+
+As you watch, one of them whispers, "The French have the right idea. This war is madness. We're dying for nothing."
+
+The other nods, tightening his pack. "My family needs me alive, not dead in some muddy field."
+
+<<setCharacter soldier>>
+<<advanceTime 5>>
+What do you do?
+-> Confront them directly
+    <<jump confront_deserters>>
+-> Report them to the commander
+    <<jump report_deserters>>
+-> Ignore them and walk away
+    <<jump ignore_deserters>>
+-> "Need some help?" (Offer to join them)
+    <<jump join_deserters>>
+
+== confront_deserters
+<<showImage artwork/camp_at_night.jpg>>
+You step out of the shadows. "Going somewhere, gentlemen?"
+
+Both soldiers jump, hands going to their weapons. When they see it's you, they relax slightly but remain tense.
+
+"Look, just let us go," one pleads. "We're not hurting anyone."
+
+<<advanceTime 15>>
+What do you do?
+-> "Desertion is punishable by death."
+    <<jump warn_consequences>>
+-> "Why are you doing this?"
+    <<jump ask_reasons>>
+-> "I can't let you leave."
+    <<jump try_stop>>
+
+== warn_consequences
+<<showImage artwork/camp_at_night.jpg>>
+"We know the risks," the other soldier says bitterly. "Anything's better than another winter campaign. We've seen what happens to soldiers who stay."
+
+<<advanceTime 10>>
+What do you do?
+-> "Turn yourselves in. Maybe the commander will be merciful."
+    <<jump suggest_mercy>>
+-> "Then I'll have to stop you."
+    <<jump fight_deserters>>
+-> "Fine. Go. But don't ever come back."
+    <<jump let_go>>
+
+== suggest_mercy
+<<showImage artwork/camp_at_night.jpg>>
+Both soldiers laugh harshly. "Mercy? From Commander Blackwood? You must be joking. He had a man flogged last week for falling asleep on watch."
+
+<<addFlag knows_commander_harsh, 1>>
+What do you do?
+-> "I'll speak to the chaplain instead."
+    <<jump chaplain_option>>
+-> "Then you're right - you're dead either way."
+    <<jump sympathetic_desertion>>
+
+== chaplain_option
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers exchange glances. "The chaplain... he's a good man. But even he can't save us from the gallows."
+
+One of them sighs. "Look, give us until morning. If we haven't left by then, turn us in. Just... let us say goodbye to our families in our hearts."
+
+<<addFlag compassionate_soldier, 1>>
+What do you do?
+-> "You have until dawn."
+    <<jump give_time>>
+-> "No. Now or never."
+    <<jump immediate_choice>>
+
+== give_time
+<<showImage artwork/camp_at_night.jpg>>
+"Thank you," one says quietly. "You're a good man."
+
+They slip back into the shadows. You wonder if you'll see them again.
+
+<<addFlag gave_deserters_time, 1>>
+-> Return to your duties
+    <<stop>>
+
+== immediate_choice
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers look at each other, then at you. One slowly lowers his pack.
+
+"You're right. We can't run forever."
+
+<<addFlag stopped_desertion, 1>>
+<<addFlag honorable, 1>>
+-> "Come with me. We'll face this together."
+    <<stop>>
+
+== sympathetic_desertion
+<<showImage artwork/camp_at_night.jpg>>
+The first soldier nods grimly. "Exactly. So are you going to turn us in, or are you going to pretend you never saw us?"
+
+<<advanceTime 10>>
+What do you do?
+-> "I never saw a thing."
+    <<jump let_desert>>
+-> "I have my duty."
+    <<jump arrest_them>>
+
+== let_desert
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers look at you with relief. "Thank you. We won't forget this."
+
+One of them presses something into your hand - a small silver coin. "For your silence, and for your conscience."
+
+<<addItem coins, 3>>
+<<addFlag let_deserters_go, 1>>
+<<addFlag pragmatic_soldier, 1>>
+-> Watch them disappear into the night
+    <<stop>>
+
+== arrest_them
+<<showImage artwork/camp_at_night.jpg>>
+"Please don't do this," one begs. "We have families!"
+
+The other draws his sword. "I'm not going to the gallows without a fight."
+
+<<addFlag arrest_attempt, 1>>
+What do you do?
+-> "Drop your weapons. Don't make this worse."
+    <<jump peaceful_arrest>>
+-> Draw your sword and prepare to fight
+    <<jump fight_arrest>>
+
+== peaceful_arrest
+<<showImage artwork/camp_at_night.jpg>>
+After a tense moment, both soldiers lower their weapons. "You're right. No point in making this bloodier than it has to be."
+
+<<addFlag peaceful_arrest_made, 1>>
+<<addFlag honorable, 1>>
+-> Take them to the commander
+    <<stop>>
+
+== fight_arrest
+<<showImage artwork/camp_at_night.jpg>>
+The fight is brief and brutal. You're trained and armed, while they're desperate and poorly equipped. You disarm both quickly, but not before taking a cut to your arm.
+
+<<applyDamage 5>>
+<<addFlag fought_deserters, 1>>
+-> Take your wounded prisoners to the commander
+    <<stop>>
+
+== fight_deserters
+<<showImage artwork/camp_at_night.jpg>>
+Both soldiers raise their weapons. "We're not going back!"
+
+The fight is desperate. They're fighting for their lives, and you're fighting for duty. You manage to wound one, but the other gets a lucky strike.
+
+<<applyDamage 10>>
+<<addFlag fought_deserters, 1>>
+What do you do?
+-> "Yield! I don't want to kill you!"
+    <<jump offer_yield>>
+-> Press the attack
+    <<jump press_attack>>
+
+== offer_yield
+<<showImage artwork/camp_at_night.jpg>>
+The wounded soldier nods. "We yield." The other throws down his sword.
+
+<<addFlag captured_deserters, 1>>
+<<addFlag merciful_fighter, 1>>
+-> Bind their wounds and take them prisoner
+    <<stop>>
+
+== press_attack
+<<showImage artwork/camp_at_night.jpg>>
+You press your advantage, and soon both soldiers lie wounded on the ground. One is seriously injured.
+
+<<addFlag brutal_fighter, 1>>
+<<addFlag captured_deserters, 1>>
+-> Call for the guards
+    <<stop>>
+
+== ask_reasons
+<<showImage artwork/camp_at_night.jpg>>
+The first soldier sighs. "Look around this camp. Men are dying from disease as much as from French arrows. We haven't been paid in three months. The winter's coming, and our families are starving."
+
+The other nods. "We signed up to fight for King and country, not to freeze to death in some muddy field while the commanders feast in warm castles."
+
+<<advanceTime 20>>
+What do you do?
+-> "I understand. But desertion isn't the answer."
+    <<jump sympathetic_but_duty>>
+-> "You're right. This war is madness."
+    <<jump agree_with_them>>
+-> "Many soldiers face these hardships. You're not special."
+    <<jump harsh_response>>
+
+== sympathetic_but_duty
+<<showImage artwork/camp_at_night.jpg>>
+"Then what is?" one asks bitterly. "Should we just die obediently?"
+
+<<advanceTime 10>>
+What do you do?
+-> "Come with me. We'll speak to the chaplain together."
+    <<jump chaplain_help>>
+-> "I don't have the answers, but I can't let you desert."
+    <<jump difficult_duty>>
+
+== chaplain_help
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers exchange glances. "The chaplain... he actually cares about us. Alright."
+
+<<addFlag compassionate_soldier, 1>>
+<<addFlag sought_peaceful_solution, 1>>
+-> Lead them toward the chaplain's tent
+    <<stop>>
+
+== difficult_duty
+<<showImage artwork/camp_at_night.jpg>>
+"Then you'll have to live with whatever happens next," one says grimly, raising his sword.
+
+<<addFlag difficult_choice_made, 1>>
+-> Prepare for the consequences
+    <<jump fight_deserters>>
+
+== agree_with_them
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers look at you in surprise. "You really think so too? Then why are you still here?"
+
+<<advanceTime 15>>
+What do you do?
+-> "I have my reasons. But I won't stop you."
+    <<jump let_desert>>
+-> "Because I still have hope things can get better."
+    <<jump hopeful_response>>
+-> "Maybe I'm a fool."
+    <<jump cynical_response>>
+
+== hopeful_response
+<<showImage artwork/camp_at_night.jpg>>
+The first soldier shakes his head. "Hope doesn't feed starving children."
+
+But they seem less tense now. "Look, we won't forget your understanding."
+
+<<addFlag showed_understanding, 1>>
+-> "Just go before I change my mind."
+    <<jump let_desert>>
+
+== cynical_response
+<<showImage artwork/camp_at_night.jpg>>
+"Maybe we're all fools," the second soldier says quietly. "But some of us are trying not to be dead fools."
+
+<<addFlag philosophical_moment, 1>>
+-> "Fair enough. Good luck."
+    <<jump let_desert>>
+
+== harsh_response
+<<showImage artwork/camp_at_night.jpg>>
+"Special? No. Just smart enough to know when to cut our losses," one retorts angrily. "You can keep your duty and your glory. We choose life."
+
+They raise their weapons.
+
+<<addFlag angered_deserters, 1>>
+-> "Then you'll face the consequences."
+    <<jump fight_deserters>>
+
+== try_stop
+<<showImage artwork/camp_at_night.jpg>>
+"Please don't make this difficult," one begs. "We don't want to hurt you, but we're not going back."
+
+<<advanceTime 10>>
+What do you do?
+-> "I'm giving you one chance to surrender peacefully."
+    <<jump final_warning>>
+-> Attack immediately
+    <<jump immediate_attack>>
+
+== final_warning
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers look at each other, then slowly lower their weapons. "You win. We'll come quietly."
+
+<<addFlag peaceful_resolution, 1>>
+<<addFlag honorable, 1>>
+-> Take them to the commander
+    <<stop>>
+
+== immediate_attack
+<<showImage artwork/camp_at_night.jpg>>
+The fight is quick and decisive. You're better trained and better armed. Both soldiers lie disarmed on the ground.
+
+<<addFlag efficient_fighter, 1>>
+-> Bind them and take them prisoner
+    <<stop>>
+
+== report_deserters
+<<showImage artwork/camp_at_night.jpg>>
+You slip away to the commander's tent. He listens grimly as you explain what you saw.
+
+"Deserters, eh?" He picks up his sword. "We'll make an example of them. Dawn execution, in front of the entire company."
+
+<<advanceTime 30>>
+What do you do?
+-> "Sir, perhaps there's a more merciful solution?"
+    <<jump plead_mercy>>
+-> "Yes, sir. I'll show you where they are."
+    <<jump obey_orders>>
+
+== plead_mercy
+<<showImage artwork/camp_at_night.jpg>>
+The commander glares at you. "Mercy? Mercy breeds weakness, soldier. These men are traitors to the Crown. Would you have us let every homesick soldier walk away?"
+
+<<advanceTime 10>>
+What do you do?
+-> "No, sir. But perhaps they're just desperate men."
+    <<jump explain_desperation>>
+-> "You're right, sir. I apologize."
+    <<jump back_down>>
+
+== explain_desperation
+<<showImage artwork/camp_at_night.jpg>>
+The commander's expression softens slightly. "Desperate... yes. I remember being desperate once. Very well. They'll receive flogging instead of death. But they'll wish they were dead afterward."
+
+<<addFlag pleaded_successfully, 1>>
+<<addFlag compassionate_soldier, 1>>
+-> "Thank you, sir."
+    <<stop>>
+
+== back_down
+<<showImage artwork/camp_at_night.jpg>>
+"Good. Now show me these traitors."
+
+You lead the commander and his guards to the deserters' location. The men are dragged away, their faces filled with despair.
+
+<<addFlag followed_orders, 1>>
+-> Return to your duties
+    <<stop>>
+
+== obey_orders
+<<showImage artwork/camp_at_night.jpg>>
+You lead the commander and his guards to where the deserters were packing. But they're gone - clearly someone warned them.
+
+The commander turns to you, his eyes cold. "They escaped. How unfortunate."
+
+<<addFlag deserters_escaped, 1>>
+-> "Yes, sir. Very unfortunate."
+    <<stop>>
+
+== ignore_deserters
+<<showImage artwork/camp_at_night.jpg>>
+You turn and walk away, pretending you saw nothing. Later, you notice two empty beds in the barracks.
+
+<<addFlag ignored_desertion, 1>>
+-> Continue with your duties
+    <<stop>>
+
+== join_deserters
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers stare at you in shock. "You... you want to come with us?"
+
+"Why not?" you say. "This war is a fool's game."
+
+<<advanceTime 30>>
+What do you do?
+-> "I've had enough of this madness."
+    <<jump commit_desertion>>
+-> "Actually, I was just testing you."
+    <<jump it_was_a_test>>
+
+== commit_desertion
+<<showImage artwork/camp_at_night.jpg>>
+The three of you slip away into the night, leaving behind the war, the army, and your duty.
+
+You're now a deserter, wanted by the Crown, but free.
+
+<<addFlag deserter, 1>>
+<<addFlag abandoned_duty, 1>>
+-> Begin your new life as a fugitive
+    <<stop>>
+
+== it_was_a_test
+<<showImage artwork/camp_at_night.jpg>>
+The soldiers' faces harden. "A test? You were testing us?" one snarls, raising his sword. "You won't live to report this!"
+
+Both attack you.
+
+<<addFlag betrayed_deserters, 1>>
+-> Fight for your life
+    <<jump fight_deserters>>
+
+== let_go
+<<showImage artwork/camp_at_night.jpg>>
+"You're making a mistake," you say, but you step aside and let them pass.
+
+They disappear into the darkness. You wonder if you've just doomed two men, or given them a chance at life.
+
+<<addFlag let_deserters_go, 1>>
+-> Return to your post, troubled
+    <<stop>>
+===

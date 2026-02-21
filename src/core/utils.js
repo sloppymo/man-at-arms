@@ -7,7 +7,91 @@ import { statLimits } from './constants.js';
 
 // Stub functions that will be properly implemented in later phases
 export function checkLevelUp() {
-  // Phase 2+ implementation
+  const currentState = window.gameState;
+  const currentLevel = currentState.level;
+  const currentExp = currentState.stats.experience;
+  
+  // Calculate experience needed for next level (100 * level)
+  const expNeeded = currentLevel * 100;
+  
+  if (currentExp >= expNeeded) {
+    // Level up!
+    const newLevel = Math.floor(currentExp / 100) + 1;
+    const levelUpPoints = currentState.levelUpPoints + (newLevel - currentLevel);
+    
+    // Update game state
+    currentState.level = newLevel;
+    currentState.levelUpPoints = levelUpPoints;
+    
+    // Dispatch level up event
+    if (window.dispatcher) {
+      window.dispatcher.dispatch(window.EVENT_TYPES.LEVEL_UP, {
+        oldLevel: currentLevel,
+        newLevel: newLevel,
+        pointsGained: newLevel - currentLevel,
+        totalPoints: levelUpPoints
+      });
+    }
+    
+    // Show notification
+    if (window.showNotification) {
+      window.showNotification(`Level Up! You are now level ${newLevel}!`, 'success', 5000);
+    }
+    
+    console.log(`Level up: ${currentLevel} -> ${newLevel}, Points: ${levelUpPoints}`);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Spend level-up points to improve character stats
+ * @param {string} stat - Stat to improve
+ * @param {number} points - Points to spend
+ * @returns {boolean} Success
+ */
+export function spendLevelUpPoints(stat, points = 1) {
+  const currentState = window.gameState;
+  
+  if (currentState.levelUpPoints < points) {
+    if (window.showNotification) {
+      window.showNotification('Not enough level-up points!', 'error');
+    }
+    return false;
+  }
+  
+  const currentStatValue = currentState.stats[stat];
+  const newStatValue = currentStatValue + points;
+  
+  // Check stat limits
+  if (newStatValue > statLimits[stat]) {
+    if (window.showNotification) {
+      window.showNotification(`${stat} is already at maximum!`, 'error');
+    }
+    return false;
+  }
+  
+  // Update stat and deduct points
+  currentState.stats[stat] = newStatValue;
+  currentState.levelUpPoints -= points;
+  
+  // Dispatch stat change event
+  if (window.dispatcher) {
+    window.dispatcher.dispatch(window.EVENT_TYPES.STAT_CHANGE, {
+      stat: stat,
+      oldValue: currentStatValue,
+      newValue: newStatValue,
+      pointsSpent: points
+    });
+  }
+  
+  if (window.showNotification) {
+    window.showNotification(`${stat} increased to ${newStatValue}!`, 'success');
+  }
+  
+  console.log(`Stat improved: ${stat} ${currentStatValue} -> ${newStatValue}, Points spent: ${points}`);
+  return true;
 }
 
 export function getEffectiveStat(stat) {

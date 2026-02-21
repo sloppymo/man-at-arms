@@ -1,0 +1,243 @@
+title: Start
+---
+== start
+<<showImage artwork/forest_path.jpg>>
+As you patrol through the dense forest, you hear a faint sound - crying. Following the noise, you discover a small French child, no older than seven, sitting alone on a mossy log. Her simple dress is torn and her face is streaked with tears.
+
+"Maman? Papa?" she calls out in French, her voice trembling. "Où êtes-vous?"
+
+She looks up at you with wide, frightened eyes. This is clearly a civilian child, lost and alone in dangerous territory.
+
+<<setCharacter child>>
+<<advanceTime 10>>
+What do you do?
+-> "Are you lost, little one?" (Approach gently)
+    <<jump approach_child>>
+-> Look around for signs of her parents
+    <<jump search_parents>>
+-> "This is no place for a child. Come with me."
+    <<jump take_child>>
+-> Leave her - this isn't your problem
+    <<jump abandon_child>>
+
+== approach_child
+<<showImage artwork/forest_path.jpg>>
+You kneel down slowly, trying to appear non-threatening. The child shrinks back but doesn't run away.
+
+"Je m'appelle Marie," she whispers. "Je me suis perdue."
+
+She explains in broken French that she was picking berries when she wandered away from her village. She doesn't know how to get back.
+
+<<advanceTime 15>>
+What do you do?
+-> "I'll help you find your village."
+    <<jump help_find_village>>
+-> "Which way did you come from?"
+    <<jump ask_directions>>
+-> Give her some of your rations
+    <<jump give_rations>>
+
+== help_find_village
+<<showImage artwork/forest_path.jpg>>
+You take the child's hand and begin searching. After an hour of walking, you spot smoke rising through the trees - a small farming village.
+
+As you approach, a woman comes running out, crying "Marie! Marie!" The child runs to her mother's arms.
+
+The village elder approaches you, his weathered face filled with gratitude. "You have saved our child, English soldier. We are in your debt."
+
+<<advanceTime 90>>
+<<addFlag child_rescuer, 1>>
+<<addFlag french_ally, 1>>
+What do you do?
+-> "I was just doing my duty."
+    <<jump modest_rescuer>>
+-> "Perhaps your village could help with some information?"
+    <<jump ask_for_info>>
+-> "A small reward would be appreciated."
+    <<jump ask_for_reward>>
+
+== modest_rescuer
+<<showImage artwork/forest_path.jpg>>
+The elder nods respectfully. "You are a man of honor. Remember, if you ever need shelter in these parts, our doors are open to you."
+
+<<addFlag honorable, 1>>
+<<addItem food, 2>>
+-> Continue your patrol
+    <<stop>>
+
+== ask_for_info
+<<showImage artwork/forest_path.jpg>>
+The elder considers this. "Fair enough. I heard that French soldiers passed through two days ago, heading north. They were looking for English patrols."
+
+<<addFlag french_patrols_info, 1>>
+<<addFlag french_ally, 1>>
+-> "Thank you for the information."
+    <<stop>>
+
+== ask_for_reward
+<<showImage artwork/forest_path.jpg>>
+The elder's expression cools slightly. "We are simple farmers, but..."
+
+He gives you a small pouch of coins and some bread.
+
+<<addItem coins, 5>>
+<<addItem food, 1>>
+<<addFlag pragmatic_soldier, 1>>
+-> Take the reward and leave
+    <<stop>>
+
+== search_parents
+<<showImage artwork/forest_path.jpg>>
+You spend nearly an hour searching the area, calling out, but find no signs of other people. The child grows more frightened as darkness approaches.
+
+<<advanceTime 60>>
+What do you do?
+-> Take her with you to the nearest garrison
+    <<jump take_to_garrison>>
+-> Leave her at the edge of the forest
+    <<jump leave_at_edge>>
+-> Continue searching until nightfall
+    <<jump search_until_dark>>
+
+== take_to_garrison
+<<showImage artwork/forest_path.jpg>>
+You carry the tired child to the English garrison. The commander is not pleased.
+
+"What are you doing with a French civilian?" he demands. "We're at war, not running a nursery!"
+
+<<advanceTime 120>>
+What do you do?
+-> "She was lost and alone. We can't just leave children to die."
+    <<jump defend_child>>
+-> "I found her wandering. What should I do?"
+    <<jump ask_commander>>
+
+== defend_child
+<<showImage artwork/forest_path.jpg>>
+The commander studies you for a long moment, then nods slowly. "You're right. We're soldiers, not monsters. We'll try to locate her family."
+
+<<addFlag honorable, 1>>
+<<addFlag commander_respect, 1>>
+-> "Thank you, sir."
+    <<stop>>
+
+== ask_commander
+<<showImage artwork/forest_path.jpg>>
+"Take her to the chaplain," the commander orders. "He can speak French and will know what to do."
+
+<<addFlag followed_orders, 1>>
+-> "Yes, sir."
+    <<stop>>
+
+== leave_at_edge
+<<showImage artwork/forest_path.jpg>>
+You leave the child at the forest edge with some food, pointing toward what you hope is the right direction. She looks at you with terrified eyes as you walk away.
+
+You wonder later if she made it back safely.
+
+<<addFlag abandoned_child, 1>>
+<<addFlag dishonorable, 1>>
+-> Continue patrol with heavy heart
+    <<stop>>
+
+== search_until_dark
+<<showImage artwork/forest_path.jpg>>
+As night falls, you're forced to make camp with the child. She's exhausted and falls asleep leaning against you.
+
+In the morning, French villagers find your camp. At first they're hostile, but when they see the child sleeping safely, their attitude changes.
+
+<<advanceTime 480>>
+What do you do?
+-> Explain what happened
+    <<jump explain_to_villagers>>
+-> Prepare for a fight
+    <<jump prepare_fight>>
+
+== explain_to_villagers
+<<showImage artwork/forest_path.jpg>>
+The villagers listen to your story, then the child's mother embraces you, weeping with gratitude. The village elder invites you to break bread with them.
+
+"You have shown us that not all English soldiers are monsters," he says.
+
+<<addFlag french_ally, 1>>
+<<addFlag honorable, 1>>
+<<addItem food, 3>>
+-> Accept their hospitality
+    <<stop>>
+
+== prepare_fight
+<<showImage artwork/forest_path.jpg>>
+The villagers see your hand on your sword and back away. The child's father steps forward.
+
+"We mean you no harm, English soldier. You saved our child."
+
+<<addFlag french_ally, 1>>
+<<addFlag peaceful_resolution, 1>>
+-> Lower your weapon
+    <<stop>>
+
+== take_child
+<<showImage artwork/forest_path.jpg>>
+The child screams and tries to run away when you reach for her. She clearly sees you as an enemy soldier.
+
+<<advanceTime 30>>
+What do you do?
+-> Let her go and try a gentler approach
+    <<jump approach_child>>
+-> Force her to come with you
+    <<jump force_child>>
+
+== force_child
+<<showImage artwork/forest_path.jpg>>
+You carry the struggling, crying child through the forest. When you finally reach your garrison, both you and the child are exhausted.
+
+The commander is furious. "What is this? You've kidnapped a French child?"
+
+<<addFlag child_kidnapper, 1>>
+<<addFlag dishonorable, 1>>
+-> "I was trying to help her!"
+    <<jump explain_kidnapping>>
+
+== explain_kidnapping
+<<showImage artwork/forest_path.jpg>>
+"Help her? You terrified her!" The commander shakes his head. "This could cause an incident. Take her back to where you found her - now."
+
+<<addFlag commander_disappointed, 1>>
+-> "Yes, sir."
+    <<stop>>
+
+== abandon_child
+<<showImage artwork/forest_path.jpg>>
+You walk away, leaving the crying child alone in the forest. Her sobs follow you for a long time.
+
+Later that night, you can't sleep. You keep wondering what happened to her.
+
+<<addFlag abandoned_child, 1>>
+<<addFlag dishonorable, 1>>
+<<addFlag guilt, 1>>
+-> Continue patrol, troubled by your decision
+    <<stop>>
+
+== ask_directions
+<<showImage artwork/forest_path.jpg>>
+The child points vaguely. "That way, I think. There are flowers near my village."
+
+You search in that direction and eventually find a small village with a garden of wild flowers.
+
+<<advanceTime 45>>
+<<jump help_find_village>>
+
+== give_rations
+<<showImage artwork/forest_path.jpg>>
+You share some of your hard bread with the child. She eats hungrily, her fear easing slightly.
+
+"Merci," she whispers.
+
+<<removeItem food, 1>>
+<<addFlag kind_soldier, 1>>
+What do you do next?
+-> "Now, let's find your home."
+    <<jump help_find_village>>
+-> "Which way is your village?"
+    <<jump ask_directions>>
+===

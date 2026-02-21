@@ -127,18 +127,21 @@ npm run test:watch
 # Run tests with coverage report
 npm run test:coverage
 
-# Run smoke tests for all story files
+# Run smoke tests for active runtime story IDs
 npm run test:smoke
 
 # Run canonical Jest suite serially (compat alias)
 npm run unit-tests
+
+# Run full web CI gate
+npm run ci:web
 ```
 
 ### Test Output
 
 - **Standard Output**: Jest test results with pass/fail status
 - **Coverage Report**: HTML report in `coverage/lcov-report/index.html`
-- **Smoke Test**: Validates all real .yarn files in project
+- **Smoke Test**: Validates active runtime `.yarn` stories (skiplist-aware)
 
 ## 📊 Coverage Goals
 

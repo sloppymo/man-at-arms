@@ -3,6 +3,7 @@ import { setMode, GameMode } from '../core/game-modes.js';
 import { OverworldHUD } from './OverworldHUD.js';
 import { CHEVAUCHEE_ZONES } from '../core/constants.js';
 import { dispatcher } from '../core/dispatcher.js';
+import { MeleeCombatScene } from './MeleeCombatScene.js';
 
 /**
  * Phaser scene for the overworld map exploration
@@ -675,6 +676,44 @@ export class OverworldScene extends Scene {
         }
 
         console.log('Overworld scene resumed successfully');
+    }
+
+    /**
+     * Handle combat trigger events
+     */
+    handleCombatTrigger(data) {
+        console.log('OverworldScene: Handling combat trigger:', data);
+        
+        // Prepare combat encounter data
+        const encounterData = {
+            difficulty: data.difficulty || 'normal',
+            enemyTypes: data.enemyTypes || ['soldier', 'archer'],
+            rewards: data.rewards || { xp: 10, gold: 5 },
+            zone: data.zone || 'default'
+        };
+        
+        console.log('OverworldScene: Starting combat with data:', encounterData);
+        
+        // Switch to combat mode
+        if (this.setGameMode && this.getGameState) {
+            this.setGameMode(this.getGameState(), 'combat');
+        }
+        
+        // Pause overworld scene
+        this.scene.pause();
+        
+        // Add combat scene if not already added
+        if (!this.scene.get('MeleeCombatScene')) {
+            this.scene.add('MeleeCombatScene', MeleeCombatScene);
+        }
+        
+        // Start combat scene with necessary data
+        this.scene.start('MeleeCombatScene', {
+            dispatch: this.dispatch,
+            gameState: this.getGameState(),
+            setMode: this.setGameMode,
+            encounter: encounterData
+        });
     }
 
     /**

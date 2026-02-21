@@ -17,7 +17,8 @@ import {
   normalizeSlot,
   hasShieldEquipped,
   checkLevelUp,
-  getEffectiveStat
+  getEffectiveStat,
+  spendLevelUpPoints
 } from './core/utils.js';
 import {
   EQUIPMENT_SLOTS,
@@ -69,6 +70,7 @@ window.getCharacter = getCharacter;
 window.gameState = gameState;
 window.setMode = setMode;
 window.GameMode = GameMode;
+window.spendLevelUpPoints = spendLevelUpPoints;
 
 // Story system helpers
 window.getStory = () => window.dialogSystem?.getCurrentState();
@@ -365,7 +367,7 @@ function bootGame() {
   // }, 100); // Small delay to ensure everything is initialized
   
   // Add debug controls in development only
-  const enableDebugControls = isDevelopment && (window.DEBUG_DIALOGS || window.location.search.includes('debug=true'));
+  const enableDebugControls = isDevelopment;
   
   if (enableDebugControls) {
     const debugContainer = document.createElement('div');
@@ -429,8 +431,32 @@ function bootGame() {
       console.log('Dialog system status:', window.dialogSystem?.getCurrentState());
     };
 
+    const combatButton = document.createElement('button');
+    combatButton.textContent = 'TEST COMBAT';
+    combatButton.style.cssText = `
+      background: red;
+      color: white;
+      padding: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      margin: 2px;
+    `;
+    combatButton.onclick = () => {
+      console.log('Testing combat system');
+      if (window.dispatcher) {
+        window.dispatcher.dispatch('TRIGGER_COMBAT', {
+          difficulty: 'normal',
+          enemyTypes: ['soldier', 'archer'],
+          rewards: { xp: 10, gold: 5 },
+          zone: 'test'
+        });
+      }
+    };
+
     debugContainer.appendChild(merchantButton);
     debugContainer.appendChild(banditButton);
+    debugContainer.appendChild(combatButton);
     debugContainer.appendChild(statusButton);
     document.body.appendChild(debugContainer);
   }

@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import DialogUI from '../../src/ui/dialog-ui.js';
+import { DialogUI } from '../../src/ui/dialog-ui.js';
 import { createMockDispatcher } from '../mocks/dispatcher.js';
 
 // Mock DOM environment

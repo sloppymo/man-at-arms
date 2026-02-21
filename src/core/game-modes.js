@@ -42,7 +42,7 @@ const ALLOWED_TRANSITIONS = {
   [GameMode.CAMP]: [GameMode.DIALOGUE, GameMode.EQUIPMENT],
   [GameMode.EQUIPMENT]: [GameMode.CAMP, GameMode.DIALOGUE],
   [GameMode.ENCOUNTER]: [GameMode.DIALOGUE, GameMode.COMBAT, GameMode.DEATH],
-  [GameMode.OVERWORLD]: [GameMode.ENCOUNTER, GameMode.DIALOGUE],
+  [GameMode.OVERWORLD]: [GameMode.ENCOUNTER, GameMode.DIALOGUE, GameMode.COMBAT],
   [GameMode.COMBAT]: [GameMode.DIALOGUE, GameMode.DEATH, GameMode.CAMP],
   [GameMode.DEATH]: [GameMode.TITLE],
   [GameMode.ENDING]: [GameMode.TITLE],

@@ -80,7 +80,7 @@ export class MeleeCombatScene extends Scene {
             this.gameState = data.gameState;
             this.onComplete = data.onComplete;
             this.difficulty = data.difficulty || 'normal';
-            this.equippedWeapon = data.weapon || this.gameState.equipment.weapon.main;
+            this.equippedWeapon = data.weapon || this.gameState.equipment?.weapon?.main || 'sword';
 
             // Scale difficulty based on stats
             this.scaleDifficultyFromStats();
@@ -183,34 +183,34 @@ export class MeleeCombatScene extends Scene {
         console.log('MeleeCombatScene: Preloading assets...');
 
         // Player sprites
-        this.load.image('player_idle', '/assets/player_idle.png');
-        this.load.image('player_walk', '/assets/player_walk.png');
-        this.load.image('player_attack', '/assets/player_attack.png');
-        this.load.image('player_dodge', '/assets/player_dodge.png');
+        this.load.image('player_idle', '/assets/combat/sprites/player_idle.png');
+        this.load.image('player_walk', '/assets/combat/sprites/player_walk.png');
+        this.load.image('player_attack', '/assets/combat/sprites/player_attack.png');
+        this.load.image('player_dodge', '/assets/combat/sprites/player_dodge.png');
 
         // Enemy sprites
-        this.load.image('enemy_grunt', '/assets/enemy_grunt.png');
-        this.load.image('enemy_heavy', '/assets/enemy_heavy.png');
-        this.load.image('enemy_archer', '/assets/enemy_archer.png');
+        this.load.image('enemy_grunt', '/assets/combat/sprites/enemy_grunt.png');
+        this.load.image('enemy_heavy', '/assets/combat/sprites/enemy_heavy.png');
+        this.load.image('enemy_archer', '/assets/combat/sprites/enemy_archer.png');
 
         // Weapons
-        this.load.image('sword', '/assets/sword.png');
-        this.load.image('axe', '/assets/axe.png');
-        this.load.image('mace', '/assets/mace.png');
+        this.load.image('sword', '/assets/combat/sprites/sword.png');
+        this.load.image('axe', '/assets/combat/sprites/axe.png');
+        this.load.image('mace', '/assets/combat/sprites/mace.png');
 
         // Effects
-        this.load.image('blood_particle', '/assets/blood_particle.png');
-        this.load.image('weapon_trail', '/assets/weapon_trail.png');
+        this.load.image('blood_particle', '/assets/combat/effects/blood_particle.png');
+        this.load.image('weapon_trail', '/assets/combat/effects/weapon_trail.png');
 
         // Audio
-        this.load.audio('swing', '/assets/audio/swing.wav');
-        this.load.audio('hit', '/assets/audio/hit.wav');
-        this.load.audio('death', '/assets/audio/death.wav');
-        this.load.audio('grunt', '/assets/audio/grunt.wav');
-        this.load.audio('combat_music', '/assets/audio/combat_music.mp3');
+        this.load.audio('swing', '/assets/combat/audio/swing.wav');
+        this.load.audio('hit', '/assets/combat/audio/hit.wav');
+        this.load.audio('death', '/assets/combat/audio/death.wav');
+        this.load.audio('grunt', '/assets/combat/audio/grunt.wav');
+        this.load.audio('combat_music', '/assets/combat/audio/combat_music.mp3');
 
         // Particle config
-        this.load.json('blood_particles', '/assets/particles/blood_splatter.json');
+        this.load.json('blood_particles', '/assets/combat/particles/blood_splatter.json');
     }
 
     /**
@@ -267,7 +267,7 @@ export class MeleeCombatScene extends Scene {
 
         // Player stats
         this.player.speed = 160;
-        this.player.attackRange = 60;
+        this.player.attackRange = 100; // Increased from 60 to 100 pixels
         this.player.attackArc = Math.PI / 2; // 90 degrees
         this.player.isAttacking = false;
         this.player.attackCooldown = 0;
@@ -310,11 +310,11 @@ export class MeleeCombatScene extends Scene {
             { x: 1200, y: 600 }
         ];
 
-        const spawnPoint = PhaserMath.RND.pick(spawnPoints);
+        const spawnPoint = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
 
         // Random enemy type (weighted towards grunts)
         const enemyTypes = ['grunt', 'grunt', 'grunt', 'heavy', 'archer'];
-        const enemyType = PhaserMath.RND.pick(enemyTypes);
+        const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
 
         const enemy = this.physics.add.sprite(spawnPoint.x, spawnPoint.y, `enemy_${enemyType}`);
         enemy.enemyType = enemyType;
@@ -536,69 +536,166 @@ export class MeleeCombatScene extends Scene {
     handleAttack() {
         if (this.player.isAttacking || this.player.attackCooldown > 0 || this.player.isDodging) return;
 
-        this.player.isAttacking = true;
-        this.player.attackCooldown = 500; // 0.5 second cooldown
+    // Update FPS counter
+    this.frameCount++;
+    if (time - this.lastTime >= 1000) {
+        this.fps = this.frameCount;
+        this.frameCount = 0;
+        this.lastTime = time;
+    }
 
-        // Calculate attack direction from player to mouse
-        const angle = PhaserMath.Angle.Between(
-            this.player.x, this.player.y,
-            this.mousePointer.worldX, this.mousePointer.worldY
+    // Update player
+    this.updatePlayer(delta);
+
+    // Update enemies
+    this.updateEnemies(delta);
+
+    // Update timers
+    this.updateTimers(delta);
+
+    // Update UI
+    this.updateUI();
+
+    // Check win/lose conditions
+    this.checkGameEnd();
+}
+
+/**
+ * Update player state
+ */
+updatePlayer(delta) {
+    if (!this.player || this.player.isDodging) return;
+
+    // Movement
+    const moveX = (this.keys.D.isDown || this.cursors.right.isDown ? 1 : 0) -
+                 (this.keys.A.isDown || this.cursors.left.isDown ? 1 : 0);
+    const moveY = (this.keys.S.isDown || this.cursors.down.isDown ? 1 : 0) -
+                 (this.keys.W.isDown || this.cursors.up.isDown ? 1 : 0);
+
+    if (moveX !== 0 || moveY !== 0) {
+        const angle = Math.atan2(moveY, moveX);
+        this.player.setVelocity(
+            Math.cos(angle) * this.player.speed,
+            Math.sin(angle) * this.player.speed
         );
 
-        // Play swing sound
-        if (this.swingSound) {
-            this.swingSound.play({ volume: 0.3 });
+        // Update sprite based on movement (simple animation)
+        this.player.setTexture('player_walk');
+    } else {
+        this.player.setVelocity(0, 0);
+        this.player.setTexture('player_idle');
+    }
+
+    // Update attack cooldown
+    if (this.player.attackCooldown > 0) {
+        this.player.attackCooldown -= delta;
+    }
+
+    // Update dodge
+    if (this.player.isDodging) {
+        this.player.dodgeTimer -= delta;
+        if (this.player.dodgeTimer <= 0) {
+            this.player.isDodging = false;
+            this.player.invincible = false;
+            this.player.setTexture('player_idle');
         }
+    }
 
-        // Check for hits
-        let hitCount = 0;
-        this.enemies.forEach(enemy => {
-            if (!enemy.isAlive) return;
+    // Update invincibility
+    if (this.player.invincible) {
+        this.player.invincibleTimer -= delta;
+        if (this.player.invincibleTimer <= 0) {
+            this.player.invincible = false;
+        }
+    }
 
-            const distance = PhaserMath.Distance.Between(
+    // Special ability cooldown
+    if (this.specialCooldown > 0) {
+        this.specialCooldown -= delta;
+    }
+}
+
+/**
+ * Handle player attack
+ */
+handleAttack() {
+    if (this.player.isAttacking || this.player.attackCooldown > 0 || this.player.isDodging) return;
+
+    this.player.isAttacking = true;
+    this.player.setTexture('player_attack');
+    this.player.attackCooldown = 500; // 0.5 second cooldown
+
+    // Calculate attack direction from player to mouse
+    const angle = PhaserMath.Angle.Between(
+        this.player.x, this.player.y,
+        this.mousePointer.worldX, this.mousePointer.worldY
+    );
+
+    // Create visual attack indicator (temporary arc)
+    const attackArc = this.add.graphics();
+    attackArc.lineStyle(2, 0xffff00, 0.8);
+    attackArc.beginPath();
+    attackArc.arc(this.player.x, this.player.y, this.player.attackRange, angle - this.player.attackArc/2, angle + this.player.attackArc/2);
+    attackArc.strokePath();
+
+    // Remove attack indicator after animation
+    this.time.delayedCall(200, () => {
+        attackArc.destroy();
+    });
+
+    // Play swing sound
+    if (this.swingSound) {
+        this.swingSound.play({ volume: 0.3 });
+    }
+
+    // Check for hits
+    let hitCount = 0;
+    this.enemies.forEach(enemy => {
+        if (!enemy.isAlive) return;
+
+        const distance = PhaserMath.Distance.Between(
+            this.player.x, this.player.y,
+            enemy.x, enemy.y
+        );
+
+        if (distance <= this.player.attackRange) {
+            const enemyAngle = PhaserMath.Angle.Between(
                 this.player.x, this.player.y,
                 enemy.x, enemy.y
             );
 
-            if (distance <= this.player.attackRange) {
-                const enemyAngle = PhaserMath.Angle.Between(
-                    this.player.x, this.player.y,
-                    enemy.x, enemy.y
-                );
+            // Check if enemy is within attack arc
+            const angleDiff = Math.abs(PhaserMath.Angle.ShortestBetween(angle, enemyAngle));
+            if (angleDiff <= this.player.attackArc / 2) {
+                this.damageEnemy(enemy, this.playerDamage);
+                hitCount++;
 
-                // Check if enemy is within attack arc
-                const angleDiff = Math.abs(PhaserMath.Angle.ShortestBetween(angle, enemyAngle));
-                if (angleDiff <= this.player.attackArc / 2) {
-                    this.damageEnemy(enemy, this.playerDamage);
-                    hitCount++;
-
-                    // Screen shake on hit
-                    this.cameras.main.shake(100, 0.005);
-                }
+                // Screen shake on hit
+                this.cameras.main.shake(100, 0.005);
             }
-        });
-
-        // Update combo
-        if (hitCount > 0) {
-            this.comboCounter += hitCount;
-            // Combo bonus: every 3 hits increases damage
-            if (this.comboCounter % 3 === 0) {
-                this.playerDamage = Math.floor(this.playerDamage * 1.1);
-            }
-        } else {
-            this.comboCounter = 0;
-            this.playerDamage = this.getBasePlayerDamage();
         }
+    });
 
-        // Reset attack state after animation time
-        this.time.delayedCall(200, () => {
-            this.player.isAttacking = false;
-        });
+    // Update combo
+    if (hitCount > 0) {
+        this.comboCounter += hitCount;
+        // Combo bonus: every 3 hits increases damage
+        if (this.comboCounter % 3 === 0) {
+            this.playerDamage = Math.floor(this.playerDamage * 1.1);
+        }
+    } else {
+        this.comboCounter = 0;
+        this.playerDamage = this.getBasePlayerDamage();
     }
 
-    /**
-     * Handle player dodge
-     */
+    // Reset attack state after animation time
+    this.time.delayedCall(200, () => {
+        this.player.isAttacking = false;
+        if (!this.player.isDodging) {
+            this.player.setTexture('player_idle');
+        }
+    });
+}
     handleDodge() {
         if (this.player.isDodging || this.dodgeCooldown > 0) return;
 
@@ -941,6 +1038,11 @@ export class MeleeCombatScene extends Scene {
         // Return to overworld scene
         this.scene.stop();
         this.scene.resume('OverworldScene');
+        
+        // Set game mode back to overworld
+        if (this.setMode) {
+            this.setMode('overworld');
+        }
     }
 
     /**

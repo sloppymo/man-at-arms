@@ -1,0 +1,219 @@
+title: Start
+---
+== start
+<<showImage artwork/merchant_caravan.jpg>>
+A colorful merchant caravan is stopped by the roadside, its canvas covers fluttering in the breeze. The merchant, a portly man with a waxed mustache and fine velvet clothes, calls out to you.
+
+"Ho there, soldier! Fine goods for sale! I have everything a fighting man might need - rations, wine, even a few luxury items from Paris!"
+
+<<setCharacter merchant>>
+<<advanceTime 15>>
+What do you do?
+* "[Browse his wares]"
+    <<jump browse_goods>>
+* "[What news from the south?]"
+    <<jump ask_news>>
+* "[Move along, I'm on duty.]"
+    <<move_on>>
+* "[Your papers, merchant.]"
+    <<jump check_papers>>
+
+== browse_goods
+<<showImage artwork/merchant_goods.jpg>>
+The merchant rubs his hands together eagerly. "Excellent! I have:
+
+- Salted beef: 5 coins each (lasts for weeks!)
+- Fine wine: 8 coins per bottle (much better than army swill!)
+- Leather gloves: 12 coins (protect your hands from sword calluses)
+- Silver crucifix: 25 coins (for protection, of course!)
+- French perfume: 30 coins (impress the ladies, eh?)"
+
+<<setCharacter merchant>>
+<<advanceTime 30>>
+What interests you?
+* Buy salted beef (5 coins)
+    <<if hasItem coins, 5>>
+        <<removeItem coins, 5>>
+        <<addItem salted_beef, 1>>
+        <<addFlag merchant_customer, 1>>
+        "A wise choice!" The merchant hands you a wrapped package. "This will keep you strong when army rations run low!"
+        <<jump finish_browsing>>
+    <<else>>
+        You check your coin pouch - not enough money.
+        <<jump browse_goods>>
+    <<endif>>
+* Buy fine wine (8 coins)
+    <<if hasItem coins, 8>>
+        <<removeItem coins, 8>>
+        <<addItem fine_wine, 1>>
+        <<addFlag merchant_customer, 1>>
+        "Ah, a man of taste!" The merchant winks. "This will make those long nights in camp much more pleasant."
+        <<jump finish_browsing>>
+    <<else>>
+        You check your coin pouch - not enough money.
+        <<jump browse_goods>>
+    <<endif>>
+* Buy leather gloves (12 coins)
+    <<if hasItem coins, 12>>
+        <<removeItem coins, 12>>
+        <<addItem leather_gloves, 1>>
+        <<addFlag merchant_customer, 1>>
+        "Quality craftsmanship!" The merchant holds up the gloves. "Your hands will thank you after a long day with your sword."
+        <<jump finish_browsing>>
+    <<else>>
+        You check your coin pouch - not enough money.
+        <<jump browse_goods>>
+    <<endif>>
+* "Nothing interests me."
+    <<jump finish_browsing>>
+
+== finish_browsing
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant bows deeply. "A pleasure doing business with you! Safe travels, soldier!"
+
+<<if hasFlag merchant_customer>>
+    <<addFlag merchant_friend, 1>>
+    "Come back anytime! I travel this road regularly."
+<<endif>>
+
+* Continue on your way
+    <<stop>>
+
+== ask_news
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant leans in conspiratorially. "News? I have plenty!
+
+The French are massing troops near Orleans - big trouble coming. English commanders are arguing about strategy again. And I heard the King himself may be coming to inspect the troops soon!"
+
+<<advanceTime 20>>
+What do you ask?
+* "Tell me more about the French troops"
+    <<jump french_troops_news>>
+* "What about the King's visit?"
+    <<jump king_visit_news>>
+* "Any news about supply lines?"
+    <<jump supply_news>>
+
+== french_troops_news
+<<showImage artwork/merchant_caravan.jpg>>
+"Rumors of heavy cavalry, maybe even some of those Scottish mercenaries they love so much. Farmers are fleeing the area. If I were you, I'd be careful traveling south of the Loire."
+
+<<addFlag knows_french_threat, 1>>
+* "Good to know. Anything else?"
+    <<jump ask_news>>
+* "I should be going."
+    <<stop>>
+
+== king_visit_news
+<<showImage artwork/merchant_caravan.jpg>>
+"Supposed to be next month! Everyone's scrambling to clean up the camps and make things look proper. I hear there might be promotions for soldiers who impress him."
+
+<<addFlag knows_king_visit, 1>>
+* "Interesting. What else do you know?"
+    <<jump ask_news>>
+* "Thank you for the information."
+    <<stop>>
+
+== supply_news
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant sighs. "Troubling news. The main supply convoy was attacked by bandits last week. Army's running short on everything - especially arrows and salt. That's why my prices are so high, you understand!"
+
+<<addFlag knows_supply_shortage, 1>>
+* "I see. Any other news?"
+    <<jump ask_news>>
+* "I should get moving."
+    <<stop>>
+
+== check_papers
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant pales and fumbles in his satchel. "Papers? Of course, of course! I have all the proper permits from the Sheriff of Kent..."
+
+He produces a slightly damp document with an official-looking seal. Everything appears to be in order.
+
+<<advanceTime 15>>
+What do you do?
+* "Everything seems fine. Carry on."
+    <<jump let_pass>>
+* "This seal looks suspicious."
+    <<jump suspicious_seal>>
+
+== let_pass
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant wipes sweat from his brow. "Thank you, sir! Much appreciated! Here, take this for your trouble."
+
+He presses a small coin into your hand before quickly packing up and moving on.
+
+<<addItem coins, 2>>
+<<addFlag merchant_bribe, 1>>
+* Continue patrol
+    <<stop>>
+
+== suspicious_seal
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant's eyes widen in panic. "Suspicious? No, no! It's perfectly legitimate! I paid good money for that seal!"
+
+He's sweating profusely and won't meet your eyes.
+
+<<advanceTime 20>>
+What do you do?
+* "I'm confiscating these goods until we verify the papers."
+    <<jump confiscate_goods>>
+* "Get out of my sight before I change my mind."
+    <<jump let_pass_angry>>
+
+== confiscate_goods
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant looks devastated. "Please, sir! That's my entire livelihood! I have a family to feed!"
+
+<<advanceTime 30>>
+What do you do?
+* "I can't help you. The goods stay here."
+    <<jump harsh_confiscation>>
+* "Fine. Take your papers and go, but leave the goods."
+    <<jump merciful_confiscation>>
+
+== harsh_confiscation
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant weeps openly as you begin unloading his cart. "You're ruining me! God have mercy on your soul!"
+
+You find several valuable items among his goods.
+
+<<addItem fine_wine, 2>>
+<<addItem silver_crucifix, 1>>
+<<addFlag harsh_confiscator, 1>>
+<<addFlag merchant_ruined, 1>>
+* Leave with the confiscated goods
+    <<stop>>
+
+== merciful_confiscation
+<<showImage artwork/merchant_caravan.jpg>>
+"Thank you, sir! Thank you!" The merchant bows repeatedly. "I won't forget your mercy!"
+
+He quickly packs up and flees, leaving behind a small token of his gratitude.
+
+<<addItem leather_gloves, 1>>
+<<addFlag merciful_soldier, 1>>
+* Let him go
+    <<stop>>
+
+== let_pass_angry
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant scrambles to pack up, nearly dropping several packages in his haste. "Yes, sir! Right away, sir!"
+
+He's gone in a cloud of dust, leaving behind a small pouch that fell from his belt.
+
+<<addItem coins, 5>>
+<<addFlag merchant_intimidated, 1>>
+* Take the coins and continue
+    <<stop>>
+
+== move_on
+<<showImage artwork/merchant_caravan.jpg>>
+The merchant shrugs. "Your loss, soldier! Fine goods for fine prices!"
+
+He calls out to the next soldiers passing by.
+
+<<addFlag merchant_ignored, 1>>
+* Continue on your way
+    <<stop>>
+===

@@ -3,12 +3,6 @@ import { createMockDispatcher } from '../mocks/dispatcher.js';
 import { createFakeGameState } from '../mocks/game-state.js';
 import { __mockedStories } from '../mocks/vite-glob.js';
 
-// Mock import.meta.glob
-jest.mock('virtual:glob-stories', () => {
-  const { importMetaGlobRaw } = require('../mocks/vite-glob.js');
-  return importMetaGlobRaw();
-});
-
 describe('NarrativeService Simple Tests', () => {
   let service, dispatcher, gameState;
 
