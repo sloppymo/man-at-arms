@@ -151,31 +151,31 @@ func _launch_overworld() -> void:
 	RuntimeLog.info("LandingScene: Launching overworld mode")
 	var game_modes = _get_game_modes()
 	if game_modes:
-		game_modes.set_mode(GameModes.GameMode.OVERWORLD)
+		game_modes.set_mode(GameModes.GameMode.OVERWORLD, true)
 
 func _launch_combat() -> void:
 	RuntimeLog.info("LandingScene: Launching combat mode")
 	var game_modes = _get_game_modes()
 	if game_modes:
-		game_modes.set_mode(GameModes.GameMode.COMBAT)
+		game_modes.set_mode(GameModes.GameMode.COMBAT, true)
 
 func _launch_dialogue() -> void:
 	RuntimeLog.info("LandingScene: Launching dialogue system")
 	var game_modes = _get_game_modes()
 	if game_modes:
-		game_modes.set_mode(GameModes.GameMode.DIALOGUE, false, "town_square")
+		game_modes.set_mode(GameModes.GameMode.DIALOGUE, true, "town_square")
 
 func _launch_character_creation() -> void:
 	RuntimeLog.info("LandingScene: Launching character creation")
 	var game_modes = _get_game_modes()
 	if game_modes:
-		game_modes.set_mode(GameModes.GameMode.CHARACTER_CREATION)
+		game_modes.set_mode(GameModes.GameMode.CHARACTER_CREATION, true)
 
 func _launch_full_game() -> void:
 	RuntimeLog.info("LandingScene: Launching full game loop")
 	var game_modes = _get_game_modes()
 	if game_modes:
-		game_modes.set_mode(GameModes.GameMode.CHARACTER_CREATION)
+		game_modes.set_mode(GameModes.GameMode.CHARACTER_CREATION, true)
 
 # Debug Tools
 func _open_performance_monitor() -> void:
