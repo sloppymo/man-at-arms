@@ -49,11 +49,14 @@ var shield_regen_delay_remaining: float = 0.0
 var block_started_ms: int = -1
 var last_block_event: Dictionary = {
 	"timestamp_ms": 0,
+	"block_quality_tier": "none",
 	"perfect_block": false,
 	"projectile_block": false,
 	"projectile_reflected": false,
+	"melee_counter_applied": false,
 	"shield_damage_applied": 0.0,
-	"block_window_age_ms": -1
+	"block_window_age_ms": -1,
+	"source_type": "unknown"
 }
 var move_intent_velocity: Vector2 = Vector2.ZERO
 
@@ -102,7 +105,7 @@ func _physics_process(delta: float) -> void:
 	if is_invincible and now - last_dodge_ms > CombatConstants.DODGE_INVINCIBILITY_TIME:
 		is_invincible = false
 
-	if combo_counter > 0 and now - last_combo_hit_ms > CombatConstants.COMBO_TIMEOUT_MS:
+	if combo_counter > 0 and now - last_combo_hit_ms > CombatConstants.get_combo_tier_timeout_ms(get_combo_tier()):
 		combo_counter = 0
 		_clear_combo_attack_context()
 
@@ -336,7 +339,8 @@ func handle_attack() -> void:
 		last_combo_hit_ms = now
 
 		if CombatConstants.HIT_STOP_ON_PLAYER_HIT:
-			_request_hit_stop(CombatConstants.HIT_STOP_PLAYER_HIT_DURATION_SEC)
+			var combo_hit_stop_tier: String = CombatConstants.get_combo_hit_stop_tier(get_combo_tier())
+			_request_hit_stop(CombatConstants.get_hit_stop_tier_duration(combo_hit_stop_tier))
 
 		# Play hit sound
 		if audio_manager:
@@ -431,7 +435,9 @@ func _build_combo_attack_context(projected_combo_count: int) -> Dictionary:
 		"damage_multiplier": CombatConstants.get_combo_tier_damage_multiplier(combo_tier),
 		"stagger_force_multiplier": CombatConstants.get_combo_tier_stagger_force_multiplier(combo_tier),
 		"stagger_duration_multiplier": CombatConstants.get_combo_tier_stagger_duration_multiplier(combo_tier),
-		"armor_break_level": CombatConstants.get_combo_tier_armor_break_level(combo_tier)
+		"armor_break_level": CombatConstants.get_combo_tier_armor_break_level(combo_tier),
+		"hit_stop_tier": CombatConstants.get_combo_hit_stop_tier(combo_tier),
+		"camera_shake_tier": CombatConstants.get_combo_camera_shake_tier(combo_tier)
 	}
 
 func _record_last_combo_attack_context(context: Dictionary) -> void:
@@ -482,7 +488,8 @@ func handle_dodge() -> void:
 	if is_dodging:
 		return
 
-	if last_dodge_ms > 0 and now - last_dodge_ms < int(dodge_cooldown * 1000):
+	var dodge_cooldown_ms: int = int(dodge_cooldown * 1000.0) + CombatConstants.DODGE_RECOVERY_MS
+	if last_dodge_ms > 0 and now - last_dodge_ms < dodge_cooldown_ms:
 		return
 
 	var input_direction: Vector2 = Input.get_vector("move_left", "move_right", "move_up", "move_down")
@@ -547,12 +554,17 @@ func handle_special_ability() -> void:
 	damage = int(damage / CombatConstants.SPECIAL_ABILITY_MULTIPLIER)
 	modulate = Color.WHITE
 
-func take_damage(amount: int, attack_source_position: Vector2 = Vector2.INF, source_projectile: CombatProjectile = null) -> void:
+func take_damage(
+	amount: int,
+	attack_source_position: Vector2 = Vector2.INF,
+	source_projectile: CombatProjectile = null,
+	source_enemy: CombatEnemy = null
+) -> void:
 	if is_dead or is_invincible:
 		return
 
 	if is_blocking and _is_attack_blocked(attack_source_position):
-		take_shield_hit(amount, attack_source_position, false, source_projectile)
+		take_shield_hit(amount, attack_source_position, false, source_projectile, source_enemy)
 		return
 
 	combo_counter = 0
@@ -562,7 +574,11 @@ func take_damage(amount: int, attack_source_position: Vector2 = Vector2.INF, sou
 		_request_hit_stop(CombatConstants.HIT_STOP_PLAYER_DAMAGED_DURATION_SEC)
 
 	health -= amount
-	apply_shake(CombatConstants.CAMERA_SHAKE_DAMAGE_INTENSITY, CombatConstants.CAMERA_SHAKE_DAMAGE_DURATION)
+	var damage_shake: Dictionary = CombatConstants.get_camera_shake_profile("heavy")
+	apply_shake(
+		float(damage_shake.get("intensity", CombatConstants.CAMERA_SHAKE_DAMAGE_INTENSITY)),
+		float(damage_shake.get("duration", CombatConstants.CAMERA_SHAKE_DAMAGE_DURATION))
+	)
 
 	if health <= 0:
 		die()
@@ -596,11 +612,12 @@ func take_shield_hit(
 	amount: int,
 	attack_source_position: Vector2 = Vector2.INF,
 	apply_hit_stop: bool = false,
-	source_projectile: CombatProjectile = null
+	source_projectile: CombatProjectile = null,
+	source_enemy: CombatEnemy = null
 ) -> bool:
 	if not is_shield_active():
 		return false
-	_resolve_shield_hit(amount, attack_source_position, apply_hit_stop, source_projectile)
+	_resolve_shield_hit(amount, attack_source_position, apply_hit_stop, source_projectile, source_enemy)
 	return true
 
 func resolve_projectile_shield_collision(
@@ -611,17 +628,19 @@ func resolve_projectile_shield_collision(
 ) -> bool:
 	if not is_shield_active():
 		return false
-	var block_result: Dictionary = _resolve_shield_hit(amount, attack_source_position, apply_hit_stop, projectile)
+	var block_result: Dictionary = _resolve_shield_hit(amount, attack_source_position, apply_hit_stop, projectile, null)
 	return bool(block_result.get("projectile_reflected", false))
 
 func _resolve_shield_hit(
 	amount: int,
 	attack_source_position: Vector2,
 	apply_hit_stop: bool,
-	source_projectile: CombatProjectile
+	source_projectile: CombatProjectile,
+	source_enemy: CombatEnemy
 ) -> Dictionary:
 	var is_perfect_block: bool = is_perfect_block_window_active()
 	var projectile_reflected: bool = false
+	var melee_counter_applied: bool = false
 	if (
 		is_perfect_block
 		and source_projectile != null
@@ -631,29 +650,55 @@ func _resolve_shield_hit(
 		var shield_origin: Vector2 = global_position + shield_facing * CombatConstants.SHIELD_COLLISION_OFFSET
 		source_projectile.reflect_from_shield(self, shield_facing, shield_origin)
 		projectile_reflected = true
+	elif is_perfect_block and source_enemy != null and source_enemy.has_method("apply_perfect_block_counter"):
+		var counter_direction: Vector2 = (source_enemy.global_position - global_position).normalized()
+		if counter_direction == Vector2.ZERO:
+			counter_direction = get_shield_facing_direction()
+		source_enemy.call(
+			"apply_perfect_block_counter",
+			counter_direction,
+			CombatConstants.SHIELD_PERFECT_BLOCK_MELEE_STAGGER_FORCE_MULTIPLIER,
+			CombatConstants.SHIELD_PERFECT_BLOCK_MELEE_STAGGER_DURATION_MULTIPLIER
+		)
+		melee_counter_applied = true
 	var shield_damage_multiplier: float = CombatConstants.SHIELD_PERFECT_BLOCK_DAMAGE_MULTIPLIER if is_perfect_block else 1.0
 	var shield_damage_applied: float = _apply_shield_damage(amount, shield_damage_multiplier)
 	_play_block_feedback(attack_source_position, is_perfect_block)
-	if apply_hit_stop and CombatConstants.SHIELD_BLOCK_PROJECTILE_HIT_STOP_SEC > 0.0:
-		_request_hit_stop(CombatConstants.SHIELD_BLOCK_PROJECTILE_HIT_STOP_SEC)
-	_record_block_event(is_perfect_block, source_projectile != null, projectile_reflected, shield_damage_applied)
+	if apply_hit_stop:
+		var hit_stop_tier: String = "medium" if is_perfect_block else "light"
+		var hit_stop_duration: float = CombatConstants.get_hit_stop_tier_duration(hit_stop_tier)
+		if hit_stop_duration > 0.0:
+			_request_hit_stop(hit_stop_duration)
+	_record_block_event(
+		is_perfect_block,
+		source_projectile != null,
+		projectile_reflected,
+		melee_counter_applied,
+		shield_damage_applied
+	)
 	return last_block_event
 
 func _record_block_event(
 	perfect_block: bool,
 	projectile_block: bool,
 	projectile_reflected: bool,
+	melee_counter_applied: bool,
 	shield_damage_applied: float
 ) -> void:
 	var now_ms: int = Time.get_ticks_msec()
 	var block_window_age_ms: int = now_ms - block_started_ms if block_started_ms >= 0 else -1
+	var block_quality_tier: String = "perfect" if perfect_block else "normal"
+	var source_type: String = "projectile" if projectile_block else "melee"
 	last_block_event = {
 		"timestamp_ms": now_ms,
+		"block_quality_tier": block_quality_tier,
 		"perfect_block": perfect_block,
 		"projectile_block": projectile_block,
 		"projectile_reflected": projectile_reflected,
+		"melee_counter_applied": melee_counter_applied,
 		"shield_damage_applied": shield_damage_applied,
-		"block_window_age_ms": block_window_age_ms
+		"block_window_age_ms": block_window_age_ms,
+		"source_type": source_type
 	}
 
 func get_last_block_event() -> Dictionary:
@@ -674,7 +719,9 @@ func _play_block_feedback(attack_source_position: Vector2 = Vector2.INF, perfect
 		if block_sfx:
 			audio_manager.play_sfx(block_sfx, CombatConstants.AUDIO_VOLUME_HIT)
 
-	apply_shake(3.2 if perfect_block else 2.5, 0.08)
+	var shake_tier: String = CombatConstants.SHIELD_PERFECT_BLOCK_SHAKE_TIER if perfect_block else CombatConstants.SHIELD_BLOCK_SHAKE_TIER
+	var shake_profile: Dictionary = CombatConstants.get_camera_shake_profile(shake_tier)
+	apply_shake(float(shake_profile.get("intensity", 2.5)), float(shake_profile.get("duration", 0.08)))
 	modulate = Color(1.0, 0.95, 0.68, 1.0) if perfect_block else Color(0.7, 0.9, 1.0, 1.0)
 	await get_tree().create_timer(0.06).timeout
 	if is_instance_valid(self) and not is_dead:

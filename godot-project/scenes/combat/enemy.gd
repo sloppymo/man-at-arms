@@ -26,6 +26,7 @@ var is_alive: bool = true
 var last_attack_ms: int = 0
 var attack_windup_remaining: float = 0.0
 var attack_windup_duration: float = CombatConstants.ENEMY_ATTACK_WINDUP
+var attack_min_read_duration: float = CombatConstants.ENEMY_ATTACK_WINDUP
 var attack_windup_elapsed: float = 0.0
 var attack_telegraph_color: Color = CombatConstants.ENEMY_ATTACK_TELEGRAPH_COLOR
 var attack_telegraph_pulse_hz: float = 0.0
@@ -35,6 +36,8 @@ var attack_telegraph_finish_mix: float = 0.0
 var attack_telegraph_sfx_name: String = ""
 var attack_telegraph_sfx_volume_db: float = CombatConstants.ENEMY_ATTACK_TELEGRAPH_SFX_VOLUME_DB
 var pending_attack: bool = false
+var has_attack_slot: bool = false
+var attack_gate_delay_remaining: float = 0.0
 var stagger_time_remaining: float = 0.0
 var stagger_velocity: Vector2 = Vector2.ZERO
 var external_push_velocity: Vector2 = Vector2.ZERO
@@ -76,11 +79,14 @@ func apply_type_modifiers() -> void:
 		"archer":
 			speed *= CombatConstants.ENEMY_ARCHER_SPEED_MULTIPLIER
 			attack_range = CombatConstants.ENEMY_ARCHER_ATTACK_RANGE
+			attack_cooldown = CombatConstants.ENEMY_ARCHER_ATTACK_COOLDOWN
 		_:
 			pass # grunt is default
 
 func _configure_attack_readability_profile() -> void:
 	attack_windup_duration = CombatConstants.get_enemy_attack_readability_windup(enemy_type)
+	attack_min_read_duration = CombatConstants.get_enemy_attack_readability_min_read(enemy_type)
+	attack_windup_duration = maxf(attack_windup_duration, attack_min_read_duration)
 	attack_telegraph_color = CombatConstants.get_enemy_attack_readability_color(enemy_type)
 	attack_telegraph_pulse_hz = CombatConstants.get_enemy_attack_readability_pulse_hz(enemy_type)
 	attack_telegraph_pulse_strength = CombatConstants.get_enemy_attack_readability_pulse_strength(enemy_type)
@@ -270,10 +276,13 @@ func _physics_process(delta: float) -> void:
 				var direction: Vector2 = (player.global_position - global_position).normalized()
 				base_velocity = direction * speed
 			else:
-				var now: int = Time.get_ticks_msec()
-				if not pending_attack and now - last_attack_ms >= int(attack_cooldown * 1000):
-					_start_attack_windup()
-					last_attack_ms = now
+				if attack_gate_delay_remaining > 0.0:
+					attack_gate_delay_remaining = maxf(0.0, attack_gate_delay_remaining - delta)
+				else:
+					var now: int = Time.get_ticks_msec()
+					if not pending_attack and now - last_attack_ms >= int(attack_cooldown * 1000):
+						_start_attack_windup()
+						last_attack_ms = now
 
 	base_velocity = _apply_shield_barrier_to_velocity(base_velocity, shield_barrier)
 	velocity = base_velocity + external_push_velocity
@@ -282,6 +291,8 @@ func _physics_process(delta: float) -> void:
 	_apply_external_push_resistance(delta)
 
 func _start_attack_windup() -> void:
+	if not _try_consume_attack_slot():
+		return
 	pending_attack = true
 	attack_windup_elapsed = 0.0
 	attack_windup_remaining = attack_windup_duration
@@ -304,6 +315,7 @@ func _clear_attack_windup() -> void:
 	pending_attack = false
 	attack_windup_remaining = 0.0
 	attack_windup_elapsed = 0.0
+	_release_attack_slot()
 	if is_alive:
 		modulate = Color.WHITE
 
@@ -334,6 +346,9 @@ func _update_attack_telegraph_visual() -> void:
 func attack_player() -> void:
 	if not pending_attack:
 		return
+	if attack_windup_elapsed + 0.0001 < attack_min_read_duration:
+		attack_windup_remaining = maxf(0.001, attack_min_read_duration - attack_windup_elapsed)
+		return
 	_clear_attack_windup()
 	if not is_alive:
 		return
@@ -345,7 +360,7 @@ func attack_player() -> void:
 		_fire_projectile()
 		return
 	if player.has_method("take_damage"):
-		player.take_damage(damage, global_position)
+		player.take_damage(damage, global_position, null, self)
 	if audio_manager:
 		var hit_sfx = audio_manager.get_sfx("hit")
 		if hit_sfx:
@@ -379,6 +394,27 @@ func _fire_projectile() -> void:
 	if projectile_instance is Node2D:
 		var projectile_node: Node2D = projectile_instance as Node2D
 		projectile_node.global_position = global_position + direction * CombatConstants.PROJECTILE_SPAWN_OFFSET
+
+func set_attack_gate_delay(delay_sec: float) -> void:
+	attack_gate_delay_remaining = maxf(0.0, delay_sec)
+
+func _try_consume_attack_slot() -> bool:
+	if has_attack_slot:
+		return true
+	var combat_scene: CombatScene = _get_combat_scene()
+	if combat_scene != null and combat_scene.has_method("request_enemy_attack_slot"):
+		has_attack_slot = bool(combat_scene.call("request_enemy_attack_slot", self))
+		return has_attack_slot
+	has_attack_slot = true
+	return true
+
+func _release_attack_slot() -> void:
+	if not has_attack_slot:
+		return
+	has_attack_slot = false
+	var combat_scene: CombatScene = _get_combat_scene()
+	if combat_scene != null and combat_scene.has_method("release_enemy_attack_slot"):
+		combat_scene.call("release_enemy_attack_slot", self)
 
 func apply_shield_push(push_velocity_delta: Vector2) -> void:
 	if not is_alive:
@@ -505,8 +541,15 @@ func take_damage(amount: int, attacker_direction: Vector2 = Vector2.ZERO, attack
 
 	if particle_manager:
 		if particle_manager.has_method("play_blood_spray"):
-			var blood_intensity: float = CombatConstants.BLOOD_HIT_INTENSITY + float(applied_damage) * CombatConstants.BLOOD_HIT_INTENSITY_PER_DAMAGE
-			particle_manager.play_blood_spray(global_position, hit_direction, blood_intensity)
+			var blood_tint: Color = CombatConstants.get_enemy_blood_tint(enemy_type)
+			var blood_tier: String = "light"
+			if applied_damage >= 3:
+				blood_tier = "heavy"
+			elif applied_damage >= 2:
+				blood_tier = "medium"
+			var blood_intensity: float = CombatConstants.get_blood_intensity_for_tier(blood_tier) + float(applied_damage) * CombatConstants.BLOOD_HIT_INTENSITY_PER_DAMAGE
+			var burst_count: int = CombatConstants.get_blood_burst_for_tier(blood_tier)
+			particle_manager.play_blood_spray(global_position, hit_direction, blood_intensity, blood_tint, burst_count)
 		elif particle_manager.has_method("play_blood_effect"):
 			particle_manager.play_blood_effect(global_position)
 
@@ -531,6 +574,15 @@ func _apply_stagger(hit_direction: Vector2, duration_multiplier: float = 1.0, fo
 	stagger_time_remaining = CombatConstants.ENEMY_STAGGER_DURATION * clampf(duration_multiplier, 1.0, 2.0)
 	stagger_velocity = hit_direction.normalized() * CombatConstants.ENEMY_STAGGER_FORCE * clampf(force_multiplier, 1.0, 2.5)
 
+func apply_perfect_block_counter(counter_direction: Vector2, force_multiplier: float = 1.0, duration_multiplier: float = 1.0) -> void:
+	if not is_alive:
+		return
+	var resolved_direction: Vector2 = counter_direction.normalized() if counter_direction != Vector2.ZERO else Vector2.LEFT
+	_apply_stagger(resolved_direction, duration_multiplier, force_multiplier)
+	if particle_manager and particle_manager.has_method("play_impact_effect"):
+		particle_manager.play_impact_effect(global_position, resolved_direction)
+	_play_hurt_flash()
+
 func _play_hurt_flash() -> void:
 	if hurt_tween and is_instance_valid(hurt_tween):
 		hurt_tween.kill()
@@ -554,7 +606,7 @@ func die() -> void:
 
 	# Blood effect using particle pool
 	if particle_manager and particle_manager.has_method("play_blood_explosion"):
-		particle_manager.play_blood_explosion(global_position, Vector2.UP)
+		particle_manager.play_blood_explosion(global_position, Vector2.UP, CombatConstants.get_enemy_blood_tint(enemy_type))
 	elif particle_manager and particle_manager.has_method("play_blood_effect"):
 		particle_manager.play_blood_effect(global_position)
 	else:
@@ -574,8 +626,10 @@ func _create_fallback_blood_effect() -> void:
 	blood_particles.spread = CombatConstants.BLOOD_PARTICLE_SPREAD
 	blood_particles.initial_velocity_min = CombatConstants.BLOOD_PARTICLE_VELOCITY_MIN
 	blood_particles.initial_velocity_max = CombatConstants.BLOOD_PARTICLE_VELOCITY_MAX
-	blood_particles.color = Color.RED
+	blood_particles.color = CombatConstants.get_enemy_blood_tint(enemy_type)
 	blood_particles.gravity = CombatConstants.BLOOD_PARTICLE_GRAVITY
+	blood_particles.z_as_relative = false
+	blood_particles.z_index = 8
 	blood_particles.add_to_group("combat_effects")
 	get_parent().add_child(blood_particles)
 	blood_particles.global_position = global_position

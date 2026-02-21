@@ -33,9 +33,14 @@ var enemy_scene: PackedScene = preload("res://scenes/combat/enemy.tscn")
 
 var event_bus: Node = null
 var audio_manager: Node = null
+var particle_manager: Node = null
 var hit_stop_timer: Timer = null
 var hit_stop_end_ms: int = 0
 var hit_stop_active: bool = false
+var encounter_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var attack_slot_holders: Dictionary = {}
+var max_concurrent_attackers: int = 2
+var initial_attack_delays_by_enemy_id: Dictionary = {}
 
 const ENEMY_TYPE_ORDER: Array[String] = ["grunt", "heavy", "archer"]
 
@@ -44,6 +49,7 @@ const ENEMY_TYPE_ORDER: Array[String] = ["grunt", "heavy", "archer"]
 func _ready() -> void:
 	event_bus = _get_event_bus()
 	audio_manager = _get_audio_manager()
+	particle_manager = _get_particle_manager()
 	_setup_hit_stop()
 	_sync_mode_with_scene()
 	
@@ -61,6 +67,7 @@ func _ready() -> void:
 	ui_node = $UI
 	particles_node = $Particles
 	background = $Background
+	_bind_combat_particle_layer()
 	
 	# Load background map
 	_load_background_map()
@@ -72,6 +79,7 @@ func _ready() -> void:
 	# Setup base difficulty first, then apply stat-based scaling.
 	setup_difficulty()
 	scale_difficulty_from_stats()
+	_configure_encounter_pacing()
 	
 	# Spawn enemies
 	spawn_enemies()
@@ -98,6 +106,23 @@ func _sync_mode_with_scene() -> void:
 	var game_modes = _get_game_modes()
 	if game_modes and game_modes.has_method("sync_mode_without_scene_change"):
 		game_modes.sync_mode_without_scene_change(game_modes.GameMode.COMBAT)
+
+func _bind_combat_particle_layer() -> void:
+	if particle_manager == null or particles_node == null:
+		return
+	if particle_manager.has_method("bind_effect_root"):
+		particle_manager.call("bind_effect_root", particles_node)
+	if particle_manager.has_method("clear_all_effects"):
+		particle_manager.call("clear_all_effects")
+
+func _unbind_combat_particle_layer() -> void:
+	if particle_manager == null:
+		return
+	if particle_manager.has_method("clear_all_effects"):
+		particle_manager.call("clear_all_effects")
+	if particle_manager.has_method("unbind_effect_root"):
+		var expected_root: Node = particles_node if is_instance_valid(particles_node) else null
+		particle_manager.call("unbind_effect_root", expected_root)
 
 func _consume_combat_start_payload() -> void:
 	if not event_bus or not event_bus.has_method("consume_combat_start"):
@@ -163,7 +188,9 @@ func spawn_enemies() -> void:
 		
 		enemies_node.add_child(enemy)
 		if enemy is CombatEnemy:
-			tracked_enemies.append(enemy as CombatEnemy)
+			var typed_tracked_enemy: CombatEnemy = enemy as CombatEnemy
+			tracked_enemies.append(typed_tracked_enemy)
+			_assign_enemy_pacing(typed_tracked_enemy, i)
 
 func _process(delta: float) -> void:
 	if is_game_over:
@@ -177,6 +204,73 @@ func _process(delta: float) -> void:
 	
 	# Check win/lose
 	check_game_end()
+
+func _configure_encounter_pacing() -> void:
+	max_concurrent_attackers = CombatConstants.get_encounter_max_concurrent_attackers(difficulty)
+	attack_slot_holders.clear()
+	initial_attack_delays_by_enemy_id.clear()
+	var seed_source: int = combat_id if combat_id >= 0 else 1
+	encounter_rng.seed = int(seed_source * 2654435761) & 0x7fffffff
+
+func _assign_enemy_pacing(enemy: CombatEnemy, spawn_index: int) -> void:
+	if enemy == null:
+		return
+	if not CombatConstants.ENCOUNTER_PACING_ENABLED:
+		return
+	var base_delay: float = CombatConstants.get_encounter_initial_attack_delay(difficulty)
+	var stagger_step: float = CombatConstants.ENCOUNTER_PACING_ATTACK_STAGGER_STEP_SEC
+	var jitter: float = encounter_rng.randf_range(0.0, CombatConstants.ENCOUNTER_PACING_ATTACK_STAGGER_RANDOM_SEC)
+	var start_delay: float = minf(
+		CombatConstants.ENCOUNTER_PACING_MAX_INITIAL_DELAY_SEC,
+		base_delay + float(spawn_index) * stagger_step + jitter
+	)
+	if enemy.has_method("set_attack_gate_delay"):
+		enemy.call("set_attack_gate_delay", start_delay)
+	initial_attack_delays_by_enemy_id[enemy.get_instance_id()] = start_delay
+
+func request_enemy_attack_slot(enemy: CombatEnemy) -> bool:
+	if enemy == null or not enemy.is_alive:
+		return false
+	var enemy_id: int = enemy.get_instance_id()
+	if attack_slot_holders.has(enemy_id):
+		return true
+	_trim_attack_slot_holders()
+	if attack_slot_holders.size() >= max_concurrent_attackers:
+		return false
+	attack_slot_holders[enemy_id] = weakref(enemy)
+	return true
+
+func release_enemy_attack_slot(enemy: Node) -> void:
+	if enemy == null or not is_instance_valid(enemy):
+		return
+	attack_slot_holders.erase(enemy.get_instance_id())
+
+func _trim_attack_slot_holders() -> void:
+	var stale_ids: Array[int] = []
+	for enemy_id_variant in attack_slot_holders.keys():
+		var enemy_id: int = int(enemy_id_variant)
+		var ref_variant: Variant = attack_slot_holders[enemy_id_variant]
+		if not (ref_variant is WeakRef):
+			stale_ids.append(enemy_id)
+			continue
+		var enemy_ref: WeakRef = ref_variant as WeakRef
+		var enemy_node: Variant = enemy_ref.get_ref()
+		if enemy_node == null:
+			stale_ids.append(enemy_id)
+			continue
+		if enemy_node is CombatEnemy:
+			var combat_enemy: CombatEnemy = enemy_node as CombatEnemy
+			if not combat_enemy.is_alive:
+				stale_ids.append(enemy_id)
+	for stale_id in stale_ids:
+		attack_slot_holders.erase(stale_id)
+
+func get_encounter_pacing_snapshot() -> Dictionary:
+	return {
+		"max_concurrent_attackers": max_concurrent_attackers,
+		"active_attackers": attack_slot_holders.size(),
+		"initial_attack_delays_by_enemy_id": initial_attack_delays_by_enemy_id.duplicate(true)
+	}
 
 func request_hit_stop(duration_sec: float) -> void:
 	if not CombatConstants.HIT_STOP_ENABLED:
@@ -446,14 +540,25 @@ func _on_enemy_killed() -> void:
 	
 	# Camera shake on kill
 	var camera = $Player/Camera2D if $Player else null
+	var kill_shake_profile: Dictionary = CombatConstants.get_camera_shake_profile("medium")
+	var kill_shake_intensity: float = float(kill_shake_profile.get("intensity", CombatConstants.CAMERA_SHAKE_INTENSITY))
+	var kill_shake_duration: float = float(kill_shake_profile.get("duration", CombatConstants.CAMERA_SHAKE_DURATION))
 	if camera and camera.has_method("apply_shake"):
-			camera.apply_shake(CombatConstants.CAMERA_SHAKE_INTENSITY, CombatConstants.CAMERA_SHAKE_DURATION)
+		camera.apply_shake(kill_shake_intensity, kill_shake_duration)
 	elif camera:
 		# Simple camera shake using tween
 		var tween = create_tween()
 		var original_offset = camera.offset
 		for i in range(5):
-			tween.tween_property(camera, "offset", original_offset + Vector2(randf_range(-CombatConstants.CAMERA_SHAKE_INTENSITY, CombatConstants.CAMERA_SHAKE_INTENSITY), randf_range(-CombatConstants.CAMERA_SHAKE_INTENSITY, CombatConstants.CAMERA_SHAKE_INTENSITY)), 0.03)
+			tween.tween_property(
+				camera,
+				"offset",
+				original_offset + Vector2(
+					encounter_rng.randf_range(-kill_shake_intensity, kill_shake_intensity),
+					encounter_rng.randf_range(-kill_shake_intensity, kill_shake_intensity)
+				),
+				0.03
+			)
 		tween.tween_property(camera, "offset", original_offset, 0.03)
 
 func _on_player_died() -> void:
@@ -467,11 +572,15 @@ func _cleanup_combat_connections() -> void:
 
 	var on_enemy_killed_callable := Callable(self, "_on_enemy_killed")
 	for enemy in tracked_enemies:
-		if is_instance_valid(enemy) and enemy.has_signal("died") and enemy.died.is_connected(on_enemy_killed_callable):
+		if not is_instance_valid(enemy):
+			continue
+		release_enemy_attack_slot(enemy)
+		if enemy.has_signal("died") and enemy.died.is_connected(on_enemy_killed_callable):
 			enemy.died.disconnect(on_enemy_killed_callable)
 	tracked_enemies.clear()
 
 func _exit_tree() -> void:
+	_unbind_combat_particle_layer()
 	_cleanup_combat_connections()
 	if hit_stop_timer and is_instance_valid(hit_stop_timer):
 		hit_stop_timer.stop()
@@ -505,6 +614,12 @@ func _get_audio_manager() -> Node:
 	var manager = RuntimeServices.audio_manager(self)
 	if not manager:
 		push_error("CombatScene: AudioManager singleton not found")
+	return manager
+
+func _get_particle_manager() -> Node:
+	var manager = RuntimeServices.particle_manager(self)
+	if not manager:
+		push_error("CombatScene: ParticleManager singleton not found")
 	return manager
 
 func _get_game_state() -> Node:

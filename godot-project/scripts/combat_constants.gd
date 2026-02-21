@@ -15,9 +15,15 @@ const SPAWN_POINTS = [
 
 # Player combat constants
 const HOTLINE_STYLE_MOVEMENT = true
+const INPUT_WINDOW_ACTION_BUFFER_MS = 90
+const INPUT_WINDOW_ATTACK_QUEUE_MS = 120
+const INPUT_WINDOW_BLOCK_QUEUE_MS = 110
+const INPUT_WINDOW_COMBO_CHAIN_GRACE_MS = 80
 const DODGE_SPEED = 760.0
 const DODGE_DISTANCE = 82.0
 const DODGE_INVINCIBILITY_TIME = 190  # milliseconds
+const DODGE_RESPONSE_STARTUP_MS = 36
+const DODGE_RECOVERY_MS = 110
 const PLAYER_MOVE_ACCELERATION = 4200.0
 const PLAYER_MOVE_DECELERATION = 5200.0
 const PLAYER_MOVE_TURN_ACCEL_MULTIPLIER = 1.35
@@ -64,6 +70,11 @@ const ATTACK_ARC_DURATION = 0.2
 const ATTACK_TRAIL_DURATION = 0.12
 const ATTACK_TRAIL_ALPHA = 0.85
 const ATTACK_TRAIL_SCALE = Vector2(0.6, 0.22)
+const ATTACK_CADENCE_TIERS = {
+	"baseline": 0.14,
+	"aggressive": 0.12,
+	"deliberate": 0.17
+}
 const COMBO_RESET_THRESHOLD = 3
 const COMBO_TIMEOUT_MS = 900
 const COMBO_DAMAGE_MULTIPLIER = 1.1
@@ -94,6 +105,24 @@ const COMBO_TIER_ARMOR_BREAK_LEVELS = {
 	2: 1,
 	3: 2
 }
+const COMBO_TIER_TIMEOUT_MS = {
+	0: COMBO_TIMEOUT_MS,
+	1: 940,
+	2: 1000,
+	3: 1080
+}
+const COMBO_TIER_HIT_STOP_TIERS = {
+	0: "light",
+	1: "light",
+	2: "medium",
+	3: "heavy"
+}
+const COMBO_TIER_CAMERA_SHAKE_TIERS = {
+	0: "light",
+	1: "light",
+	2: "medium",
+	3: "heavy"
+}
 const ENEMY_COMBO_ARMOR_BY_TYPE = {
 	"grunt": 0,
 	"heavy": 2,
@@ -110,6 +139,12 @@ const CAMERA_SHAKE_DAMAGE_INTENSITY = 5.0
 const CAMERA_SHAKE_DAMAGE_DURATION = 0.32
 const SWING_SOUND_VOLUME = -10.0
 const HIT_SOUND_VOLUME = -5.0
+const AUDIO_LAYER_PRIORITIES = {
+	"swing": 1,
+	"block": 2,
+	"hit": 3,
+	"death": 4
+}
 
 # Player default stats
 const PLAYER_DEFAULT_SPEED = 320.0
@@ -230,6 +265,7 @@ const ENEMY_HEAVY_SPEED_MULTIPLIER = 0.7
 const ENEMY_HEAVY_DAMAGE_MULTIPLIER = 1.2
 const ENEMY_ARCHER_SPEED_MULTIPLIER = 0.9
 const ENEMY_ARCHER_ATTACK_RANGE = 200.0
+const ENEMY_ARCHER_ATTACK_COOLDOWN = 5.0
 const ENEMY_STAGGER_DURATION = 0.12
 const ENEMY_STAGGER_FORCE = 220.0
 const ENEMY_STAGGER_DAMPING = 900.0
@@ -243,6 +279,7 @@ const ENEMY_ATTACK_READABILITY_FALLBACK_TYPE = "grunt"
 const ENEMY_ATTACK_READABILITY_BY_TYPE = {
 	"grunt": {
 		"windup_sec": 0.18,
+		"min_read_sec": 0.16,
 		"telegraph_color": Color(1.0, 0.56, 0.27, 1.0),
 		"pulse_hz": 5.5,
 		"pulse_strength": 0.12,
@@ -253,6 +290,7 @@ const ENEMY_ATTACK_READABILITY_BY_TYPE = {
 	},
 	"heavy": {
 		"windup_sec": 0.32,
+		"min_read_sec": 0.30,
 		"telegraph_color": Color(1.0, 0.26, 0.22, 1.0),
 		"pulse_hz": 3.8,
 		"pulse_strength": 0.20,
@@ -263,6 +301,7 @@ const ENEMY_ATTACK_READABILITY_BY_TYPE = {
 	},
 	"archer": {
 		"windup_sec": 0.26,
+		"min_read_sec": 0.24,
 		"telegraph_color": Color(1.0, 0.86, 0.28, 1.0),
 		"pulse_hz": 7.2,
 		"pulse_strength": 0.16,
@@ -279,6 +318,22 @@ const PROJECTILE_LIFETIME_SEC = 2.0
 const PROJECTILE_MAX_RANGE = 720.0
 const PROJECTILE_RADIUS = 6.0
 const PROJECTILE_SPAWN_OFFSET = 20.0
+const ENCOUNTER_PACING_ENABLED = true
+const ENCOUNTER_PACING_MAX_CONCURRENT_ATTACKERS_BY_DIFFICULTY = {
+	"easy": 1,
+	"normal": 2,
+	"hard": 3,
+	"extreme": 3
+}
+const ENCOUNTER_PACING_INITIAL_ATTACK_DELAY_BY_DIFFICULTY = {
+	"easy": 0.50,
+	"normal": 0.42,
+	"hard": 0.34,
+	"extreme": 0.28
+}
+const ENCOUNTER_PACING_ATTACK_STAGGER_STEP_SEC = 0.22
+const ENCOUNTER_PACING_ATTACK_STAGGER_RANDOM_SEC = 0.10
+const ENCOUNTER_PACING_MAX_INITIAL_DELAY_SEC = 1.75
 
 static func get_combo_tier(combo_count: int) -> int:
 	if combo_count >= COMBO_TIER_3_THRESHOLD:
@@ -301,8 +356,23 @@ static func get_combo_tier_stagger_duration_multiplier(combo_tier: int) -> float
 static func get_combo_tier_armor_break_level(combo_tier: int) -> int:
 	return maxi(0, int(COMBO_TIER_ARMOR_BREAK_LEVELS.get(combo_tier, 0)))
 
+static func get_combo_tier_timeout_ms(combo_tier: int) -> int:
+	return maxi(100, int(COMBO_TIER_TIMEOUT_MS.get(combo_tier, COMBO_TIMEOUT_MS)))
+
+static func get_combo_hit_stop_tier(combo_tier: int) -> String:
+	return str(COMBO_TIER_HIT_STOP_TIERS.get(combo_tier, "light"))
+
+static func get_combo_camera_shake_tier(combo_tier: int) -> String:
+	return str(COMBO_TIER_CAMERA_SHAKE_TIERS.get(combo_tier, "light"))
+
 static func get_enemy_combo_armor(type_name: String) -> int:
 	return maxi(0, int(ENEMY_COMBO_ARMOR_BY_TYPE.get(type_name, 0)))
+
+static func get_enemy_blood_tint(type_name: String) -> Color:
+	var tint_variant: Variant = BLOOD_COLOR_BY_ENEMY_TYPE.get(type_name, BLOOD_BASE_COLOR)
+	if tint_variant is Color:
+		return tint_variant as Color
+	return BLOOD_BASE_COLOR
 
 static func get_enemy_attack_readability_profile(type_name: String) -> Dictionary:
 	var fallback_profile: Dictionary = ENEMY_ATTACK_READABILITY_BY_TYPE[ENEMY_ATTACK_READABILITY_FALLBACK_TYPE]
@@ -314,6 +384,11 @@ static func get_enemy_attack_readability_profile(type_name: String) -> Dictionar
 static func get_enemy_attack_readability_windup(type_name: String) -> float:
 	var profile: Dictionary = get_enemy_attack_readability_profile(type_name)
 	return maxf(0.01, float(profile.get("windup_sec", ENEMY_ATTACK_WINDUP)))
+
+static func get_enemy_attack_readability_min_read(type_name: String) -> float:
+	var profile: Dictionary = get_enemy_attack_readability_profile(type_name)
+	var default_read: float = maxf(0.01, get_enemy_attack_readability_windup(type_name) * 0.9)
+	return maxf(0.01, float(profile.get("min_read_sec", default_read)))
 
 static func get_enemy_attack_readability_color(type_name: String) -> Color:
 	var profile: Dictionary = get_enemy_attack_readability_profile(type_name)
@@ -414,22 +489,75 @@ const HIT_STOP_ON_PLAYER_DAMAGED = false
 const HIT_STOP_PLAYER_HIT_DURATION_SEC = 0.04
 const HIT_STOP_PLAYER_DAMAGED_DURATION_SEC = 0.035
 const HIT_STOP_MAX_DURATION_SEC = 0.10
+const HIT_STOP_TIER_DURATIONS_SEC = {
+	"light": 0.024,
+	"medium": 0.040,
+	"heavy": 0.056
+}
+const CAMERA_SHAKE_TIER_PROFILES = {
+	"light": {"intensity": 2.4, "duration": 0.08},
+	"medium": {"intensity": 3.3, "duration": 0.12},
+	"heavy": {"intensity": 4.9, "duration": 0.22}
+}
+const SHIELD_BLOCK_SHAKE_TIER = "light"
+const SHIELD_PERFECT_BLOCK_SHAKE_TIER = "medium"
+const SHIELD_PERFECT_BLOCK_MELEE_STAGGER_FORCE_MULTIPLIER = 1.75
+const SHIELD_PERFECT_BLOCK_MELEE_STAGGER_DURATION_MULTIPLIER = 1.45
 
 # Particle system constants
 const BLOOD_POOL_SIZE = 28
-const BLOOD_PARTICLE_AMOUNT = 40
-const BLOOD_PARTICLE_LIFETIME = 0.78
-const BLOOD_PARTICLE_SPREAD = 72.0
-const BLOOD_PARTICLE_VELOCITY_MIN = 170.0
-const BLOOD_PARTICLE_VELOCITY_MAX = 430.0
+const BLOOD_DRIP_POOL_SIZE = 14
+const BLOOD_PARTICLE_AMOUNT = 24
+const BLOOD_PARTICLE_LIFETIME = 0.72
+const BLOOD_PARTICLE_SPREAD = 58.0
+const BLOOD_PARTICLE_VELOCITY_MIN = 140.0
+const BLOOD_PARTICLE_VELOCITY_MAX = 320.0
 const BLOOD_PARTICLE_GRAVITY = Vector2(0, 460.0)
-const BLOOD_HIT_BURST_COUNT = 3
-const BLOOD_HIT_INTENSITY = 1.75
-const BLOOD_HIT_INTENSITY_PER_DAMAGE = 0.08
-const BLOOD_DEATH_BURST_COUNT = 7
-const BLOOD_DEATH_INTENSITY = 3.8
-const BLOOD_BURST_OFFSET_RADIUS = 15.0
-const BLOOD_BURST_DIRECTION_JITTER_DEG = 24.0
+const BLOOD_PARTICLE_SCALE_MIN = 0.42
+const BLOOD_PARTICLE_SCALE_MAX = 1.2
+const BLOOD_BASE_COLOR = Color(0.82, 0.08, 0.08, 1.0)
+const BLOOD_COLOR_BY_ENEMY_TYPE = {
+	"grunt": Color(0.82, 0.08, 0.08, 1.0),
+	"heavy": Color(0.65, 0.05, 0.05, 1.0),
+	"archer": Color(0.76, 0.09, 0.09, 1.0)
+}
+const BLOOD_HIT_BURST_COUNT = 2
+const BLOOD_HIT_INTENSITY = 1.15
+const BLOOD_HIT_INTENSITY_PER_DAMAGE = 0.04
+const BLOOD_DEATH_BURST_COUNT = 5
+const BLOOD_DEATH_INTENSITY = 2.6
+const BLOOD_INTENSITY_TIERS = {
+	"light": 0.8,
+	"medium": 1.3,
+	"heavy": BLOOD_DEATH_INTENSITY
+}
+const BLOOD_BURST_TIERS = {
+	"light": 1,
+	"medium": BLOOD_HIT_BURST_COUNT,
+	"heavy": BLOOD_DEATH_BURST_COUNT
+}
+const BLOOD_BURST_OFFSET_RADIUS = 12.0
+const BLOOD_BURST_DIRECTION_JITTER_DEG = 16.0
+const BLOOD_DRIP_PARTICLE_AMOUNT = 12
+const BLOOD_DRIP_PARTICLE_LIFETIME = 1.15
+const BLOOD_DRIP_SPREAD = 20.0
+const BLOOD_DRIP_VELOCITY_MIN = 30.0
+const BLOOD_DRIP_VELOCITY_MAX = 95.0
+const BLOOD_DRIP_GRAVITY = Vector2(0, 620.0)
+const BLOOD_DRIP_SCALE_MIN = 0.30
+const BLOOD_DRIP_SCALE_MAX = 0.78
+const BLOOD_DRIP_INTENSITY_THRESHOLD = 1.9
+const BLOOD_MAX_ACTIVE_EFFECTS = 24
+const BLOOD_SOFT_ACTIVE_EFFECTS = 14
+const BLOOD_MIN_QUALITY_SCALE = 0.45
+const BLOOD_DECAL_POOL_SIZE = 48
+const BLOOD_DECAL_LIFETIME_SEC = 18.0
+const BLOOD_DECAL_FADE_DELAY_SEC = 8.0
+const BLOOD_DECAL_ALPHA = 0.82
+const BLOOD_DECAL_SCALE_MIN = 0.5
+const BLOOD_DECAL_SCALE_MAX = 1.85
+const BLOOD_DECAL_OFFSET_RADIUS = 26.0
+const BLOOD_DECAL_DRY_TINT = Color(0.20, 0.03, 0.02, 1.0)
 const IMPACT_PARTICLE_AMOUNT = 12
 const IMPACT_PARTICLE_LIFETIME = 0.22
 const IMPACT_PARTICLE_SPREAD = 55.0
@@ -447,3 +575,34 @@ const DIFFICULTY_MULTIPLIER = 1.2
 # Input thresholds
 const INPUT_DEADZONE = 0.5
 const MOUSE_DISTANCE_THRESHOLD = 1000.0
+
+static func get_hit_stop_tier_duration(tier: String) -> float:
+	return clampf(float(HIT_STOP_TIER_DURATIONS_SEC.get(tier, HIT_STOP_TIER_DURATIONS_SEC["light"])), 0.0, HIT_STOP_MAX_DURATION_SEC)
+
+static func get_camera_shake_profile(tier: String) -> Dictionary:
+	var profile_variant: Variant = CAMERA_SHAKE_TIER_PROFILES.get(tier, CAMERA_SHAKE_TIER_PROFILES["light"])
+	if profile_variant is Dictionary:
+		return (profile_variant as Dictionary).duplicate(true)
+	return CAMERA_SHAKE_TIER_PROFILES["light"].duplicate(true)
+
+static func get_blood_intensity_for_tier(tier: String) -> float:
+	return maxf(0.1, float(BLOOD_INTENSITY_TIERS.get(tier, BLOOD_INTENSITY_TIERS["light"])))
+
+static func get_blood_burst_for_tier(tier: String) -> int:
+	return maxi(1, int(BLOOD_BURST_TIERS.get(tier, BLOOD_BURST_TIERS["light"])))
+
+static func get_encounter_max_concurrent_attackers(difficulty_name: String) -> int:
+	return maxi(1, int(
+		ENCOUNTER_PACING_MAX_CONCURRENT_ATTACKERS_BY_DIFFICULTY.get(
+			difficulty_name,
+			ENCOUNTER_PACING_MAX_CONCURRENT_ATTACKERS_BY_DIFFICULTY["normal"]
+		)
+	))
+
+static func get_encounter_initial_attack_delay(difficulty_name: String) -> float:
+	return maxf(0.0, float(
+		ENCOUNTER_PACING_INITIAL_ATTACK_DELAY_BY_DIFFICULTY.get(
+			difficulty_name,
+			ENCOUNTER_PACING_INITIAL_ATTACK_DELAY_BY_DIFFICULTY["normal"]
+		)
+	))

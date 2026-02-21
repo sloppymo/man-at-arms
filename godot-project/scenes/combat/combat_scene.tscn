@@ -8,6 +8,7 @@ script = ExtResource("2_8qk6x")
 
 [node name="Background" type="Sprite2D" parent="."]
 modulate = Color(0.8, 0.8, 0.8, 1)
+z_index = -20
 
 [node name="Player" parent="." instance=ExtResource("1_8qk6x")]
 
