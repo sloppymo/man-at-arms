@@ -4,6 +4,8 @@ class_name CombatScene
 # Import combat constants
 const CombatConstants = preload("res://scripts/combat_constants.gd")
 const RuntimeServices = preload("res://scripts/runtime_services.gd")
+const RuntimeLog = preload("res://scripts/runtime_log.gd")
+const COMBAT_MAP_PATH: String = "res://assets/map.png"
 
 @export var difficulty: String = "normal"
 @export var time_limit: float = 90.0
@@ -414,23 +416,109 @@ func end_combat(victory: bool) -> void:
 			game_modes.set_mode(GameModes.GameMode.DEATH)
 
 func _load_background_map() -> void:
-	# Try to load a map background from common locations
-	var map_paths = [
-		"res://assets/map.png"
+	if background == null:
+		RuntimeLog.error("CombatScene: Background sprite is missing")
+		return
+
+	if not ResourceLoader.exists(COMBAT_MAP_PATH):
+		RuntimeLog.error("CombatScene: Map texture not found at %s" % COMBAT_MAP_PATH)
+		return
+
+	var texture: Texture2D = _load_combat_map_texture(COMBAT_MAP_PATH)
+	if texture == null:
+		RuntimeLog.error("CombatScene: Failed to load map texture from %s" % COMBAT_MAP_PATH)
+		return
+
+	background.texture = texture
+	background.centered = true
+	background.z_as_relative = false
+	background.z_index = -20
+	background.position = CombatConstants.COMBAT_AREA_CENTER
+
+	var texture_size: Vector2 = texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		RuntimeLog.error("CombatScene: Invalid map size %s at %s" % [str(texture_size), COMBAT_MAP_PATH])
+		return
+
+	var scale_x: float = CombatConstants.COMBAT_AREA_SIZE.x / texture_size.x
+	var scale_y: float = CombatConstants.COMBAT_AREA_SIZE.y / texture_size.y
+	var scale: float = minf(scale_x, scale_y)
+	background.scale = Vector2(scale, scale)
+	RuntimeLog.debug(
+		"CombatScene: Loaded map %s (%s) size=%s scale=%.4f"
+		% [COMBAT_MAP_PATH, texture.get_class(), str(texture_size), scale]
+	)
+
+func _load_combat_map_texture(map_path: String) -> Texture2D:
+	var imported_texture: Texture2D = load(map_path) as Texture2D
+	if _is_texture_usable(imported_texture):
+		return imported_texture
+
+	var image: Image = Image.new()
+	var load_result: Error = image.load(map_path)
+	if load_result != OK:
+		RuntimeLog.error(
+			"CombatScene: Image fallback load failed for %s (err=%d)"
+			% [map_path, int(load_result)]
+		)
+		return null
+
+	var fallback_texture: ImageTexture = ImageTexture.create_from_image(image)
+	if _is_texture_usable(fallback_texture):
+		RuntimeLog.warn(
+			"CombatScene: Using ImageTexture fallback for %s after imported texture validation failed"
+			% map_path
+		)
+		return fallback_texture
+
+	return null
+
+func _is_texture_usable(texture: Texture2D) -> bool:
+	if texture == null:
+		return false
+
+	var size: Vector2 = texture.get_size()
+	if size.x <= 0.0 or size.y <= 0.0:
+		return false
+
+	var image: Image = texture.get_image()
+	if image == null or image.is_empty():
+		return false
+
+	var width: int = image.get_width()
+	var height: int = image.get_height()
+	var sample_points: Array[Vector2i] = [
+		Vector2i(0, 0),
+		Vector2i(width / 2, 0),
+		Vector2i(width - 1, 0),
+		Vector2i(0, height / 2),
+		Vector2i(width / 2, height / 2),
+		Vector2i(width - 1, height / 2),
+		Vector2i(0, height - 1),
+		Vector2i(width / 2, height - 1),
+		Vector2i(width - 1, height - 1)
 	]
-	
-	for map_path in map_paths:
-		if FileAccess.file_exists(map_path):
-			var texture = load(map_path)
-			if texture:
-				background.texture = texture
-				# Center and scale the background
-				background.position = CombatConstants.COMBAT_AREA_CENTER
-				var scale_x = CombatConstants.COMBAT_AREA_SIZE.x / texture.get_width()
-				var scale_y = CombatConstants.COMBAT_AREA_SIZE.y / texture.get_height()
-				var scale = min(scale_x, scale_y)
-				background.scale = Vector2(scale, scale)
-				return
+	var min_r: float = 1.0
+	var min_g: float = 1.0
+	var min_b: float = 1.0
+	var max_r: float = 0.0
+	var max_g: float = 0.0
+	var max_b: float = 0.0
+	for point in sample_points:
+		var color: Color = image.get_pixelv(point)
+		min_r = minf(min_r, color.r)
+		min_g = minf(min_g, color.g)
+		min_b = minf(min_b, color.b)
+		max_r = maxf(max_r, color.r)
+		max_g = maxf(max_g, color.g)
+		max_b = maxf(max_b, color.b)
+
+	var low_variance: bool = (max_r - min_r) < 0.005 and (max_g - min_g) < 0.005 and (max_b - min_b) < 0.005
+	var looks_like_white_quad: bool = max_r > 0.985 and max_g > 0.985 and max_b > 0.985
+	if low_variance and looks_like_white_quad:
+		return false
+
+	return true
 
 func _on_enemy_killed() -> void:
 	if is_game_over:

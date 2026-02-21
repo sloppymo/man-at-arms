@@ -13,6 +13,11 @@ const AUDIO_PATHS = {
 	"hit": "res://assets/audio/hit.wav",
 	"death": "res://assets/audio/death.wav"
 }
+const AUDIO_STREAMS := {
+	"swing": preload("res://assets/audio/swing.wav"),
+	"hit": preload("res://assets/audio/hit.wav"),
+	"death": preload("res://assets/audio/death.wav")
+}
 
 # Audio players
 var sfx_players: Array[AudioStreamPlayer] = []
@@ -110,14 +115,16 @@ func get_sfx(name: String) -> AudioStream:
 	if _audio_cache.has(name):
 		return _audio_cache[name]
 	
-	if AUDIO_PATHS.has(name):
-		var path = AUDIO_PATHS[name]
-		if FileAccess.file_exists(path):
-			var stream = load(path)
+	if AUDIO_STREAMS.has(name):
+		var stream: AudioStream = AUDIO_STREAMS[name]
+		if stream:
 			_audio_cache[name] = stream
 			return stream
-		else:
-			RuntimeLog.warn("AudioManager: Audio file not found: %s" % path)
+		var path: String = AUDIO_PATHS.get(name, "<unknown>")
+		RuntimeLog.warn("AudioManager: Audio stream preload failed: %s" % path)
+	elif AUDIO_PATHS.has(name):
+		var path: String = AUDIO_PATHS[name]
+		RuntimeLog.warn("AudioManager: Audio stream '%s' was not preloaded: %s" % [name, path])
 	else:
 		RuntimeLog.warn("AudioManager: Unknown audio name: %s" % name)
 	
