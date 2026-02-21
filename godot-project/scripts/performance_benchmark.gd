@@ -11,6 +11,10 @@ signal comparison_report_generated(report: Dictionary)
 const BENCHMARK_DURATION = 30.0
 const SAMPLE_INTERVAL = 0.1  # 100ms
 const WARMUP_DURATION = 5.0
+const BENCHMARK_RNG_SEED: int = 424242
+const BENCHMARK_SETTLE_TIME_SEC: float = 1.5
+const MEMORY_BASELINE_SAMPLE_COUNT: int = 10
+const MEMORY_COOLDOWN_SEC: float = 2.0
 
 # Performance thresholds
 const TARGET_FPS = 60
@@ -35,6 +39,7 @@ var audio_manager: AudioManager
 var particle_manager: Node
 var test_player: CombatPlayer
 var monitor_timer: Timer
+var benchmark_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	print("=== Performance Benchmark Framework ===")
@@ -84,6 +89,7 @@ func _collect_performance_sample() -> void:
 
 func run_all_benchmarks() -> void:
 	print("\n🚀 Starting Comprehensive Performance Benchmarks...")
+	_reset_benchmark_rng()
 	
 	# Warmup phase
 	print("🔥 Warming up systems...")
@@ -91,10 +97,15 @@ func run_all_benchmarks() -> void:
 	
 	# Run individual benchmarks
 	await benchmark_audio_system_performance()
+	await _settle_system_state()
 	await benchmark_camera_shake_performance()
+	await _settle_system_state()
 	await benchmark_particle_system_performance()
+	await _settle_system_state()
 	await benchmark_combined_performance()
+	await _settle_system_state(BENCHMARK_SETTLE_TIME_SEC * 2.0)
 	await benchmark_memory_efficiency()
+	await _settle_system_state()
 	await benchmark_scalability()
 	
 	# Generate comparison report
@@ -106,7 +117,10 @@ func _warmup_systems() -> void:
 	
 	while Time.get_ticks_msec() - warmup_start < WARMUP_DURATION * 1000:
 		audio_manager.play_sfx(mock_stream, -10.0)
-		particle_manager.play_blood_effect(Vector2(randf() * 100, randf() * 100))
+		particle_manager.play_blood_effect(Vector2(
+			benchmark_rng.randf_range(0.0, 100.0),
+			benchmark_rng.randf_range(0.0, 100.0)
+		))
 		test_player.apply_shake(2.0, 0.1)
 		await get_tree().process_frame
 	
@@ -196,7 +210,10 @@ func benchmark_particle_system_performance() -> void:
 		var effects_this_frame = int(1 + load_factor * 3)  # 1-4 effects per frame
 		
 		for i in range(effects_this_frame):
-			particle_manager.play_blood_effect(Vector2(randf() * 200, randf() * 150))
+			particle_manager.play_blood_effect(Vector2(
+				benchmark_rng.randf_range(0.0, 200.0),
+				benchmark_rng.randf_range(0.0, 150.0)
+			))
 			effects_played += 1
 		
 		await get_tree().process_frame
@@ -229,17 +246,20 @@ func benchmark_combined_performance() -> void:
 		var combat_intensity = sin(Time.get_ticks_msec() * 0.0008) * 0.5 + 0.5
 		
 		# Audio (combat sounds)
-		if randf() < 0.3 + combat_intensity * 0.4:
+		if benchmark_rng.randf() < 0.3 + combat_intensity * 0.4:
 			audio_manager.play_sfx(mock_stream, -10.0)
 			total_operations += 1
 		
 		# Particles (hit effects)
-		if randf() < 0.2 + combat_intensity * 0.3:
-			particle_manager.play_blood_effect(Vector2(randf() * 300, randf() * 200))
+		if benchmark_rng.randf() < 0.2 + combat_intensity * 0.3:
+			particle_manager.play_blood_effect(Vector2(
+				benchmark_rng.randf_range(0.0, 300.0),
+				benchmark_rng.randf_range(0.0, 200.0)
+			))
 			total_operations += 1
 		
 		# Camera shake (impact effects)
-		if randf() < 0.1 + combat_intensity * 0.2:
+		if benchmark_rng.randf() < 0.1 + combat_intensity * 0.2:
 			test_player.apply_shake(3.0 + combat_intensity * 5.0, 0.2)
 			total_operations += 1
 		
@@ -258,14 +278,20 @@ func benchmark_combined_performance() -> void:
 func benchmark_memory_efficiency() -> void:
 	current_benchmark = "Memory Efficiency"
 	print("\n💾 Benchmarking Memory Efficiency...")
+	await _settle_system_state(BENCHMARK_SETTLE_TIME_SEC * 2.0)
 	
 	_reset_metrics()
 	is_benchmarking = true
 	benchmark_start_time = Time.get_ticks_msec()
 	
 	var mock_stream = AudioStreamGenerator.new()
-	var initial_memory = memory_samples[0] if not memory_samples.is_empty() else _get_memory_usage()
-	var memory_growth_samples = []
+	var baseline_samples: Array[float] = await _sample_memory_usage(
+		MEMORY_BASELINE_SAMPLE_COUNT,
+		SAMPLE_INTERVAL
+	)
+	var initial_memory: float = _calculate_average(baseline_samples) if not baseline_samples.is_empty() else _get_memory_usage()
+	var peak_memory_mb: float = initial_memory
+	var memory_growth_samples: Array[float] = []
 	
 	# Extended memory test
 	while Time.get_ticks_msec() - benchmark_start_time < BENCHMARK_DURATION * 1000:
@@ -274,19 +300,27 @@ func benchmark_memory_efficiency() -> void:
 			audio_manager.play_sfx(mock_stream, -10.0)
 			particle_manager.play_blood_effect(Vector2(i * 20, i * 15))
 		
-		# Track memory growth
-		if memory_samples.size() > 0:
-			memory_growth_samples.append(memory_samples[-1] - initial_memory)
+		# Track memory growth from a direct read so we don't depend on timer cadence.
+		var current_memory_mb: float = _get_memory_usage()
+		peak_memory_mb = maxf(peak_memory_mb, current_memory_mb)
+		memory_growth_samples.append(current_memory_mb - initial_memory)
 		
 		await get_tree().create_timer(1.0).timeout
 	
 	is_benchmarking = false
+	await _settle_system_state(MEMORY_COOLDOWN_SEC)
+	var final_samples: Array[float] = await _sample_memory_usage(6, SAMPLE_INTERVAL)
+	var final_memory_mb: float = _calculate_average(final_samples) if not final_samples.is_empty() else _get_memory_usage()
+	var retained_growth_mb: float = final_memory_mb - initial_memory
+	var peak_growth_mb: float = peak_memory_mb - initial_memory
 	
 	var results = _calculate_performance_metrics("memory")
 	results["initial_memory_mb"] = initial_memory
-	results["final_memory_mb"] = memory_samples[-1] if not memory_samples.is_empty() else initial_memory
-	results["total_memory_growth_mb"] = results.final_memory_mb - results.initial_memory_mb
-	results["memory_growth_rate_mb_per_min"] = (results.total_memory_growth_mb / BENCHMARK_DURATION) * 60.0
+	results["final_memory_mb"] = final_memory_mb
+	results["peak_memory_mb"] = peak_memory_mb
+	results["peak_memory_growth_mb"] = peak_growth_mb
+	results["total_memory_growth_mb"] = retained_growth_mb
+	results["memory_growth_rate_mb_per_min"] = (maxf(0.0, retained_growth_mb) / BENCHMARK_DURATION) * 60.0
 	results["memory_stability"] = _calculate_memory_stability(memory_growth_samples)
 	
 	benchmark_completed.emit(current_benchmark, results)
@@ -337,7 +371,8 @@ func benchmark_scalability() -> void:
 	var results = {
 		"scalability_data": scalability_results,
 		"performance_degradation": _calculate_performance_degradation(scalability_results),
-		"optimal_load_level": _find_optimal_load_level(scalability_results)
+		"optimal_load_level": _find_optimal_load_level(scalability_results),
+		"performance_grade": "N/A"
 	}
 	
 	benchmark_completed.emit(current_benchmark, results)
@@ -351,6 +386,25 @@ func _reset_metrics() -> void:
 	memory_samples.clear()
 	audio_latency_samples.clear()
 	cpu_usage_samples.clear()
+
+func _reset_benchmark_rng() -> void:
+	benchmark_rng.seed = BENCHMARK_RNG_SEED
+
+func _sample_memory_usage(sample_count: int, interval_sec: float) -> Array[float]:
+	var samples: Array[float] = []
+	for i in range(maxi(1, sample_count)):
+		samples.append(_get_memory_usage())
+		if i < sample_count - 1 and interval_sec > 0.0:
+			await get_tree().create_timer(interval_sec).timeout
+	return samples
+
+func _settle_system_state(duration_sec: float = BENCHMARK_SETTLE_TIME_SEC) -> void:
+	if duration_sec <= 0.0:
+		return
+	is_benchmarking = false
+	var settle_until_ms: int = Time.get_ticks_msec() + int(duration_sec * 1000.0)
+	while Time.get_ticks_msec() < settle_until_ms:
+		await get_tree().process_frame
 
 func _calculate_performance_metrics(benchmark_type: String) -> Dictionary:
 	var results = {}
@@ -596,7 +650,7 @@ func _get_memory_usage() -> float:
 
 func _print_benchmark_results(benchmark_name: String, results: Dictionary) -> void:
 	print("\n📊 ", benchmark_name, " Results:")
-	print("   Grade: ", results.performance_grade)
+	print("   Grade: ", str(results.get("performance_grade", "N/A")))
 	print("   Average FPS: ", "%.1f" % results.get("avg_fps", 0))
 	print("   FPS Stability: ", "%.1f" % results.get("fps_stability", 0), "%")
 	print("   Memory Usage: ", "%.1f" % results.get("avg_memory_mb", 0), " MB")

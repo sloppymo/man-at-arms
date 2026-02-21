@@ -65,3 +65,22 @@ Diff scopes:
 - Updated `StartupValidator` to use `ResourceLoader.exists/load` for packed Web exports.
 - Updated `.github/workflows/deploy.yml` to deploy `godot-project/build/web` directly to GitHub Pages.
 - Local browser smoke check for web export: PASS (no page/console errors after startup validator fix).
+
+## 2026-02-20 - Post-deploy full verification
+- Goal: verify GitHub Pages build and Godot runtime are fully healthy after publish.
+- Deploy status:
+  - `gh run list --workflow deploy.yml --limit 3`: latest deploy run `22202466473` = success.
+  - `gh api repos/sloppymo/man-at-arms/pages`: status `built`, url `https://sloppymo.github.io/man-at-arms/`.
+- Live web checks:
+  - `curl -I https://sloppymo.github.io/man-at-arms/`: `HTTP/2 200`.
+  - Asset checks: `index.js`, `index.wasm`, `index.side.wasm`, `index.pck` all return `HTTP/2 200`.
+  - Browser smoke (Playwright, live URL) with keyboard/mouse interaction + ESC return: PASS, no console/page/request errors.
+  - Screenshots saved:
+    - `output/pages-check-01-landing.png`
+    - `output/pages-check-02-after-input.png`
+    - `output/pages-check-03-after-esc.png`
+- Runtime validation:
+  - `bash godot-project/scripts/run_headless_smoke.sh`: PASS.
+  - `bash godot-project/scripts/run_runtime_release_gate.sh`: PASS.
+  - Runtime gate artifacts regenerated under `godot-project/artifacts/runtime-gate/` with overall `pass`.
+- Note: `develop-web-game` skill client script currently cannot resolve `playwright` from its own path in this environment, so equivalent local Playwright checks were used (`node` script from repo root) after installing Chromium via `npx playwright install chromium`.

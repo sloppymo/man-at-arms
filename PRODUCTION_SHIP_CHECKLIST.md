@@ -5,17 +5,15 @@
 **Run on every commit before deployment:**
 
 ```bash
-# 1. Smoke Tests - Validate active runtime stories
-npm run test:smoke
+# 1. Canonical web reliability gate (legacy boundary + Jest + smoke + build)
+npm run ci:web
 
-# 2. Unit Tests - Core component functionality
-npm run unit-tests
-
-# 3. Build + Preview - Production bundle validation
-npm run build && npm run preview
+# 2. Optional manual production preview
+npm run preview
 ```
 
 **Expected Results:**
+- ✅ Legacy import boundary: no `src/` imports from `js/`
 - ✅ Smoke tests: Active runtime stories pass parser-shape validation (allowlist/skiplist aware)
 - ✅ Unit tests: Canonical Jest suite passes
 - ✅ Build: Completes without errors

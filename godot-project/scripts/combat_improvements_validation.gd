@@ -1,17 +1,18 @@
 extends SceneTree
 
 const CombatConstants = preload("res://scripts/combat_constants.gd")
+const GameModesScript = preload("res://scripts/game_modes.gd")
 const SPAWN_SANITY_SEED_COUNT: int = 240
 const SPAWN_RATIO_EPSILON: float = 0.01
 
 var failures: Array[String] = []
 
 func _init() -> void:
+	_cleanup_save_file()
 	call_deferred("_run")
 
 func _run() -> void:
-	_cleanup_save_file()
-	await _wait_frames(2)
+	await _stabilize_runtime_state()
 
 	await _test_dodge_displacement()
 	await _test_hit_stop_flow()
@@ -22,11 +23,35 @@ func _run() -> void:
 	await _test_projectile_enemy_friendly_fire()
 	await _test_projectile_max_range_limit()
 	await _test_projectile_shield_intercept()
+	await _test_enemy_zero_read_prevention()
+	await _test_combo_payoff_tiers()
+	await _test_perfect_block_outcomes()
+	await _test_encounter_pacing_attack_slots()
 	_test_spawn_variety_distribution()
 	await _wait_frames(5)
 
 	_cleanup_save_file()
 	_finish()
+
+func _stabilize_runtime_state() -> void:
+	_cleanup_save_file()
+	await _wait_frames(3)
+
+	var game_modes: Node = root.get_node_or_null("GameModes")
+	if game_modes != null:
+		game_modes.set("queued_mode", -1)
+		game_modes.set("queued_force", false)
+		game_modes.set("queued_dialogue_scene", "")
+		game_modes.set("is_transitioning", false)
+		if game_modes.has_method("sync_mode_without_scene_change"):
+			game_modes.call("sync_mode_without_scene_change", GameModesScript.GameMode.LOADING)
+
+	var active_scene: Node = current_scene
+	if active_scene != null and is_instance_valid(active_scene):
+		active_scene.free()
+
+	await _wait_frames(2)
+	_cleanup_save_file()
 
 func _test_dodge_displacement() -> void:
 	var combat_scene_resource: PackedScene = load("res://scenes/combat/combat_scene.tscn")
@@ -637,6 +662,214 @@ func _test_projectile_shield_intercept() -> void:
 	_assert(player.health == health_start, "Projectile interception should prevent direct player damage")
 	_assert(player.shield_health < shield_start, "Projectile interception should damage shield health")
 	_assert(not is_instance_valid(projectile_instance) or projectile_spent, "Projectile should be consumed on shield impact")
+
+	await _dispose_node(combat_scene)
+
+func _test_enemy_zero_read_prevention() -> void:
+	var enemy_scene: PackedScene = load("res://scenes/combat/enemy.tscn")
+	var harness_root := Node2D.new()
+	root.add_child(harness_root)
+
+	var player_stub := Node2D.new()
+	player_stub.add_to_group("player")
+	harness_root.add_child(player_stub)
+	await _wait_frames(2)
+
+	var enemy := enemy_scene.instantiate() as CombatEnemy
+	_assert(enemy != null, "Zero-read prevention test should instantiate enemy")
+	if enemy == null:
+		await _dispose_node(harness_root)
+		return
+	enemy.enemy_type = "heavy"
+	harness_root.add_child(enemy)
+	await _wait_frames(2)
+
+	enemy.call("_start_attack_windup")
+	var min_read: float = CombatConstants.get_enemy_attack_readability_min_read(enemy.enemy_type)
+	enemy.attack_windup_elapsed = maxf(0.0, min_read - 0.02)
+	enemy.attack_windup_remaining = 0.0
+	enemy.attack_player()
+	_assert(enemy.pending_attack, "Enemy should not execute attack before minimum read window elapses")
+
+	enemy.attack_windup_elapsed = min_read + 0.01
+	enemy.attack_windup_remaining = 0.0
+	enemy.attack_player()
+	_assert(not enemy.pending_attack, "Enemy should execute attack once minimum read window elapsed")
+
+	await _dispose_node(harness_root)
+
+func _test_combo_payoff_tiers() -> void:
+	var enemy_scene: PackedScene = load("res://scenes/combat/enemy.tscn")
+	var harness_root := Node2D.new()
+	root.add_child(harness_root)
+
+	var player_stub := Node2D.new()
+	player_stub.add_to_group("player")
+	harness_root.add_child(player_stub)
+	await _wait_frames(2)
+
+	var enemy := enemy_scene.instantiate() as CombatEnemy
+	_assert(enemy != null, "Combo payoff test should instantiate enemy")
+	if enemy == null:
+		await _dispose_node(harness_root)
+		return
+	enemy.enemy_type = "heavy"
+	harness_root.add_child(enemy)
+	await _wait_frames(2)
+
+	var base_damage: int = 10
+	var tier0_damage: int = int(enemy.call("_calculate_combo_adjusted_damage", base_damage, 1.0, 0))
+	var tier2_damage: int = int(enemy.call(
+		"_calculate_combo_adjusted_damage",
+		base_damage,
+		CombatConstants.get_combo_tier_damage_multiplier(2),
+		CombatConstants.get_combo_tier_armor_break_level(2)
+	))
+	var tier3_damage: int = int(enemy.call(
+		"_calculate_combo_adjusted_damage",
+		base_damage,
+		CombatConstants.get_combo_tier_damage_multiplier(3),
+		CombatConstants.get_combo_tier_armor_break_level(3)
+	))
+	_assert(tier2_damage > tier0_damage, "Combo tier 2 should increase applied damage versus tier 0")
+	_assert(tier3_damage > tier2_damage, "Combo tier 3 should increase applied damage versus tier 2")
+
+	enemy.health = 999
+	enemy.take_damage(1, Vector2.RIGHT, {"stagger_force_multiplier": 1.0, "stagger_duration_multiplier": 1.0})
+	var baseline_stagger_duration: float = enemy.stagger_time_remaining
+	var baseline_stagger_velocity: float = enemy.stagger_velocity.length()
+
+	enemy.take_damage(
+		1,
+		Vector2.RIGHT,
+		{
+			"stagger_force_multiplier": CombatConstants.get_combo_tier_stagger_force_multiplier(3),
+			"stagger_duration_multiplier": CombatConstants.get_combo_tier_stagger_duration_multiplier(3)
+		}
+	)
+	var boosted_stagger_duration: float = enemy.stagger_time_remaining
+	var boosted_stagger_velocity: float = enemy.stagger_velocity.length()
+	_assert(boosted_stagger_duration > baseline_stagger_duration, "Combo tier stagger duration should scale up")
+	_assert(boosted_stagger_velocity > baseline_stagger_velocity, "Combo tier stagger force should scale up")
+
+	await _dispose_node(harness_root)
+
+func _test_perfect_block_outcomes() -> void:
+	var combat_scene_resource: PackedScene = load("res://scenes/combat/combat_scene.tscn")
+	var combat_scene := combat_scene_resource.instantiate() as CombatScene
+	root.add_child(combat_scene)
+	await _wait_frames(5)
+
+	_assert(combat_scene != null and combat_scene.player != null, "Combat scene should initialize for perfect block test")
+	if combat_scene == null or combat_scene.player == null:
+		return
+
+	var target_enemy: CombatEnemy = _get_first_alive_enemy(combat_scene)
+	_assert(target_enemy != null, "Perfect block test requires an alive enemy")
+	if target_enemy == null:
+		await _dispose_node(combat_scene)
+		return
+
+	for child in combat_scene.enemies_node.get_children():
+		if child is CombatEnemy and child != target_enemy:
+			var spare_enemy: CombatEnemy = child as CombatEnemy
+			spare_enemy.global_position = Vector2(-10000, -10000)
+
+	var player: CombatPlayer = combat_scene.player
+	player.set_physics_process(false)
+	player.global_position = Vector2(800, 600)
+	player.is_blocking = true
+	player.shield_broken = false
+	player.shield_health = CombatConstants.SHIELD_MAX_HEALTH
+	player.shield_direction = Vector2.RIGHT
+	player.call("_update_shield_transform")
+	player.call("_sync_shield_collision_state")
+	await _wait_physics_frames(2)
+
+	target_enemy.global_position = player.global_position + Vector2(60.0, 0.0)
+	target_enemy.external_push_velocity = Vector2.ZERO
+	target_enemy.call("_clear_attack_windup")
+
+	player.block_started_ms = Time.get_ticks_msec() - CombatConstants.SHIELD_PERFECT_BLOCK_WINDOW_MS - 20
+	player.take_shield_hit(20, target_enemy.global_position, true, null, target_enemy)
+	var normal_event: Dictionary = player.get_last_block_event()
+	var normal_shield_loss: float = float(normal_event.get("shield_damage_applied", 0.0))
+	var normal_counter: bool = bool(normal_event.get("melee_counter_applied", false))
+	var normal_stagger_duration: float = target_enemy.stagger_time_remaining
+
+	target_enemy.stagger_time_remaining = 0.0
+	target_enemy.stagger_velocity = Vector2.ZERO
+	player.shield_health = CombatConstants.SHIELD_MAX_HEALTH
+	player.block_started_ms = Time.get_ticks_msec()
+	player.take_shield_hit(20, target_enemy.global_position, true, null, target_enemy)
+	var perfect_event: Dictionary = player.get_last_block_event()
+	var perfect_shield_loss: float = float(perfect_event.get("shield_damage_applied", 0.0))
+	var perfect_counter: bool = bool(perfect_event.get("melee_counter_applied", false))
+	var perfect_stagger_duration: float = target_enemy.stagger_time_remaining
+
+	_assert(not normal_counter, "Normal block should not apply melee counter stagger")
+	_assert(perfect_counter, "Perfect block should apply melee counter stagger")
+	_assert(perfect_shield_loss < normal_shield_loss, "Perfect block should reduce shield damage taken")
+	_assert(perfect_stagger_duration > normal_stagger_duration + 0.01, "Perfect block should apply stronger stagger than normal block")
+	_assert(str(perfect_event.get("block_quality_tier", "")) == "perfect", "Perfect block event should expose quality tier metadata")
+	_assert(str(normal_event.get("block_quality_tier", "")) == "normal", "Normal block event should expose quality tier metadata")
+
+	await _dispose_node(combat_scene)
+
+func _test_encounter_pacing_attack_slots() -> void:
+	var combat_scene_resource: PackedScene = load("res://scenes/combat/combat_scene.tscn")
+	var combat_scene := combat_scene_resource.instantiate() as CombatScene
+	root.add_child(combat_scene)
+	await _wait_frames(5)
+
+	_assert(combat_scene != null and combat_scene.player != null, "Combat scene should initialize for pacing-slot test")
+	if combat_scene == null or combat_scene.player == null:
+		return
+
+	var snapshot: Dictionary = combat_scene.get_encounter_pacing_snapshot()
+	var configured_max_attackers: int = int(snapshot.get("max_concurrent_attackers", 0))
+	var expected_max_attackers: int = CombatConstants.get_encounter_max_concurrent_attackers(combat_scene.difficulty)
+	_assert(
+		configured_max_attackers == expected_max_attackers,
+		"Encounter pacing max concurrent attackers should match constants for difficulty"
+	)
+
+	var attack_delays: Dictionary = snapshot.get("initial_attack_delays_by_enemy_id", {})
+	_assert(attack_delays.size() == combat_scene.enemy_count, "Encounter pacing should assign a start delay for each enemy")
+	for enemy in combat_scene.enemies_node.get_children():
+		if enemy is CombatEnemy:
+			var enemy_id: int = enemy.get_instance_id()
+			var delay: float = float(attack_delays.get(enemy_id, -1.0))
+			_assert(delay >= 0.0, "Encounter pacing delay should be non-negative for all enemies")
+			_assert(
+				delay <= CombatConstants.ENCOUNTER_PACING_MAX_INITIAL_DELAY_SEC + 0.001,
+				"Encounter pacing delay should stay under anti-spike cap"
+			)
+			enemy.set_physics_process(false)
+
+	var alive_enemies: Array[CombatEnemy] = []
+	for child in combat_scene.enemies_node.get_children():
+		if child is CombatEnemy and child.is_alive:
+			alive_enemies.append(child as CombatEnemy)
+
+	var granted_count: int = 0
+	for enemy in alive_enemies:
+		if combat_scene.request_enemy_attack_slot(enemy):
+			granted_count += 1
+
+	_assert(
+		granted_count == mini(expected_max_attackers, alive_enemies.size()),
+		"Encounter pacing should enforce max concurrent attack slots"
+	)
+
+	if not alive_enemies.is_empty():
+		combat_scene.release_enemy_attack_slot(alive_enemies[0])
+		var replacement_granted: bool = false
+		for enemy in alive_enemies:
+			if combat_scene.request_enemy_attack_slot(enemy):
+				replacement_granted = true
+				break
+		_assert(replacement_granted, "Encounter pacing should release and re-grant attack slots")
 
 	await _dispose_node(combat_scene)
 

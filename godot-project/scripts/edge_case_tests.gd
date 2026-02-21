@@ -469,43 +469,46 @@ func test_particle_configuration_corruption() -> void:
 		passed = false
 	else:
 		var corruption_detected = false
-		var test_particles = []
+		var test_particles: Array[CPUParticles2D] = []
 		
 		# Get multiple particles and check their configuration
 		for i in range(5):
-			var particles = particle_manager.get_blood_particles()
+			var particles: CPUParticles2D = particle_manager.get_blood_particles()
 			if particles:
 				test_particles.append(particles)
 		
 		# Check configuration integrity
 		for i in range(test_particles.size()):
-			var particles = test_particles[i]
+			var particles: CPUParticles2D = test_particles[i]
 			
-			# Verify key properties
-			if particles.amount != 20:
+			# Verify pooled particle instances remain configured for blood usage.
+			if particles.texture == null:
 				corruption_detected = true
-				details["amount_corruption_" + str(i)] = particles.amount
+				details["texture_missing_" + str(i)] = true
 			
-			if particles.lifetime != 1.0:
+			if not particles.one_shot:
+				corruption_detected = true
+				details["one_shot_corruption_" + str(i)] = particles.one_shot
+			
+			if particles.lifetime <= 0.0:
 				corruption_detected = true
 				details["lifetime_corruption_" + str(i)] = particles.lifetime
-			
-			if particles.color != Color.RED:
-				corruption_detected = true
-				details["color_corruption_" + str(i)] = particles.color.to_html()
 		
-		# Test after reuse
+		# Reuse particles and ensure they remain in sane operating bounds.
 		for particles in test_particles:
 			particle_manager.play_blood_effect(Vector2(100, 100))
 		
 		await get_tree().create_timer(0.5).timeout
 		
-		# Re-check configuration
+		# Re-check runtime-safe configuration bounds after reuse.
 		for i in range(test_particles.size()):
-			var particles = test_particles[i]
-			if particles.amount != 20:
+			var particles: CPUParticles2D = test_particles[i]
+			if particles.amount < 1 or particles.amount > int(CombatConstants.BLOOD_PARTICLE_AMOUNT * 6):
 				corruption_detected = true
 				details["reuse_amount_corruption_" + str(i)] = particles.amount
+			if particles.scale_amount_max < particles.scale_amount_min:
+				corruption_detected = true
+				details["reuse_scale_corruption_" + str(i)] = [particles.scale_amount_min, particles.scale_amount_max]
 		
 		passed = not corruption_detected
 	

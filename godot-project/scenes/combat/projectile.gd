@@ -140,7 +140,8 @@ func _handle_collision_body(body: Node) -> bool:
 	if body.is_in_group("player"):
 		var reflect_count_before: int = reflect_count
 		if body.has_method("take_damage"):
-			body.call("take_damage", damage, global_position, self)
+			var source_actor: CombatEnemy = source_enemy as CombatEnemy if source_enemy is CombatEnemy else null
+			body.call("take_damage", damage, global_position, self, source_actor)
 		if reflect_count > reflect_count_before:
 			return true
 		_consume()

@@ -24,6 +24,7 @@ var _audio_cache: Dictionary = {}
 
 # Pool configuration
 const SFX_POOL_SIZE: int = 8
+const ENABLE_POOL_DEBUG_LOGS: bool = false
 
 func _ready() -> void:
 	# Initialize SFX player pool
@@ -61,7 +62,7 @@ func _setup_audio_buses() -> void:
 
 func play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
 	if not stream:
-		push_error("AudioManager: Attempted to play null audio stream")
+		RuntimeLog.warn("AudioManager: Ignoring null audio stream request")
 		return
 	
 	if sfx_players.is_empty():
@@ -69,7 +70,8 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
 		return
 	
 	# Get next available player from pool (round-robin)
-	var player = sfx_players[sfx_pool_index]
+	var player_index: int = sfx_pool_index
+	var player = sfx_players[player_index]
 	sfx_pool_index = (sfx_pool_index + 1) % SFX_POOL_SIZE
 	
 	# Configure and play sound
@@ -77,11 +79,11 @@ func play_sfx(stream: AudioStream, volume_db: float = 0.0) -> void:
 	player.volume_db = volume_db
 	player.play()
 	
-	# Debug logging for pool usage (can be conditionally compiled)
-	if OS.is_debug_build():
+	# Optional verbose pool logging.
+	if ENABLE_POOL_DEBUG_LOGS and OS.is_debug_build():
 		RuntimeLog.debug(
 			"AudioManager: Playing SFX on pool player %d with volume %.2fdB"
-			% [sfx_pool_index - 1, volume_db]
+			% [player_index, volume_db]
 		)
 
 func play_music(stream: AudioStream, volume_db: float = -10.0, loop: bool = true) -> void:

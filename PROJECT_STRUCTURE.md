@@ -182,6 +182,7 @@ main.js (entry point)
 - `unit-tests`: Compatibility alias for `test --runInBand`
 - `test:smoke`: Active-story Yarn smoke harness
 - `guard:legacy-imports`: Prevent `src/` imports from `js/`
+- `ci:web`: Canonical web CI gate (`guard:legacy-imports` + Jest + smoke + build)
 
 ## Game Modes
 

@@ -383,3 +383,223 @@ When architecture decisions change, update this file in the same PR with:
 - Validation commands run and outcomes
 
 This keeps the guide accurate and prevents drift from live runtime behavior.
+
+---
+
+## Project Write-Up (Authoritative Snapshot: February 21, 2026)
+
+This section is a practical handoff snapshot intended for future models and engineers.
+It describes what exists now, what is stable, where risk remains, and how to work safely.
+
+### 1) Product and Technical Direction
+- Product: `Man-at-Arms` mercenary campaign RPG, currently in Godot migration.
+- Immediate priority: combat-first quality. Combat feel, readability, reliability, and deterministic validation take priority over campaign breadth.
+- Combat intent:
+  - fast and lethal
+  - readable enemy pressure
+  - strong impact feedback (hit-stop, shake, blood, audio)
+  - fair but dangerous encounters
+  - deterministic enough for headless automation
+
+### 2) Runtime Scope and Source of Truth
+- Repository root contains web-era and migration-era code.
+- Godot runtime source of truth is `godot-project/`.
+- Engine target is Godot `4.6.x` (Flatpak runtime in active workflows).
+- Main scene entry in project config:
+  - `godot-project/project.godot`
+  - `run/main_scene="res://scenes/landing_scene.tscn"`
+
+### 3) Core Runtime Architecture
+
+#### Autoloads (global systems)
+Configured in `godot-project/project.godot`:
+- `GameModes` -> `res://scripts/game_modes.gd`
+- `GameState` -> `res://scripts/game_state.gd`
+- `EventBus` -> `res://scripts/event_bus.gd`
+- `AudioManager` -> `res://scripts/audio_manager.gd`
+- `ParticleManager` -> `res://scripts/particle_manager.gd`
+
+#### Responsibilities
+- `game_modes.gd`
+  - authoritative mode transitions and scene switching
+  - transition queueing while scene switch is in progress
+  - auto-save on mode changes (except loading)
+  - supports modes not yet scene-implemented (logs status)
+- `game_state.gd`
+  - default state bootstrap
+  - JSON save/load (`user://savegame.json`)
+  - schema versioning (`schema_version = 2`)
+  - corrupt save quarantine strategy
+- `event_bus.gd`
+  - combat start/result handshake
+  - deterministic `combat_id` allocation
+  - dedupe for combat result resolution
+  - writeback of combat outcomes into `GameState`
+- `audio_manager.gd`
+  - pooled SFX playback
+  - stream lookup cache (`get_sfx`)
+  - null stream handling is warning + no-op (not runtime error)
+- `particle_manager.gd`
+  - pooled blood/impact/drip/decal systems
+  - quality scaling and hard/soft caps for blood load
+  - enemy-type tint support for blood visuals
+
+### 4) Scene and Gameplay Flow
+
+#### Main flow
+1. `landing_scene.tscn` boots and exposes mode/system test launch points.
+2. `overworld_scene.tscn`
+  - hex movement
+  - hotspot-triggered dialogue
+  - combat encounter trigger via `EventBus.queue_combat_start(...)`
+3. `combat_scene.tscn`
+  - encounter setup from queued payload
+  - difficulty and stat scaling
+  - combat resolution -> combat result submission
+4. `death_scene.tscn` for defeat path.
+
+#### Not fully implemented scene branches
+`Character Creation`, `Camp`, `Equipment`, `Encounter`, and `Ending` are present as mode concepts in `GameModes` but several are placeholders without complete scene implementations.
+
+### 5) Combat System Snapshot
+
+#### Key scripts
+- `godot-project/scenes/combat/player.gd`
+- `godot-project/scenes/combat/enemy.gd`
+- `godot-project/scenes/combat/combat_scene.gd`
+- `godot-project/scenes/combat/projectile.gd`
+- `godot-project/scripts/combat_constants.gd`
+
+#### What is implemented now
+- Centralized typed combat tuning surface in `combat_constants.gd`.
+- Enemy readability pass:
+  - per-type telegraph profiles (`grunt`, `heavy`, `archer`)
+  - type-specific windup and min-read windows
+  - explicit zero-read prevention before damage release
+- Combo payoff mechanics:
+  - tiered damage multipliers
+  - tiered stagger force/duration multipliers
+  - tiered armor-break levels
+  - tier-driven hit-stop/shake mapping
+- Shield skill ceiling:
+  - hold-to-block preserved
+  - perfect block window active
+  - normal vs perfect outcome split:
+    - reduced shield loss on perfect
+    - projectile reflection support
+    - melee counter-stagger support
+    - block event payload includes quality metadata
+- Encounter pacing:
+  - deterministic initial attack delay assignment per enemy
+  - deterministic max concurrent attacker slot gating
+  - seeded by `combat_id`
+- Feedback hierarchy:
+  - hit-stop tiers (`light`, `medium`, `heavy`)
+  - camera shake tiers (`light`, `medium`, `heavy`)
+  - blood intensity and burst tiers with caps
+
+#### Combat constants categories now available
+- input windows
+- dodge startup and recovery
+- attack cadence tiers
+- combo tier timing/payoff
+- hit-stop tier durations
+- camera shake tier profiles
+- blood intensity and burst tiers
+- blood soft/hard cap controls
+- encounter pacing concurrency and delay controls
+
+### 6) Determinism and CI Wrapper Status
+
+#### CI wrapper
+- Entry script: `godot-project/scripts/run_automated_ci_pipeline.gd`
+- Worker: `godot-project/scripts/automated_ci_tests.gd`
+
+#### Current behavior
+- Performance stage consumes real benchmark signal outputs (no simulated benchmark injection).
+- Integration randomness is seeded deterministically.
+- Final validation counts recorded runtime errors from test result payloads.
+- CI output includes machine-readable JSON payload in log line:
+  - `RunAutomatedCIPipeline: results=...`
+
+#### Known important guardrail
+- Any stage that emits real failure now fails pipeline.
+- Past random/simulated pass-fail behavior was removed from the CI pipeline path.
+
+### 7) Performance Harness Notes
+
+File: `godot-project/scripts/performance_benchmark.gd`
+
+Important implementation notes:
+- Benchmark RNG is now seeded for deterministic workload variation.
+- Stage-to-stage settle windows are used to reduce cross-benchmark memory contamination.
+- Memory Efficiency benchmark tracks retained growth from sampled baseline to post-cooldown sampled final memory.
+- This avoids false failures caused by transient allocator spikes during high-load benchmark phases.
+
+### 8) Validation and Release Gates
+
+#### Primary integrated release gate
+- Script: `godot-project/scripts/run_runtime_release_gate.sh`
+- Artifacts:
+  - `godot-project/artifacts/runtime-gate/runtime_gate_summary.json`
+  - `godot-project/artifacts/runtime-gate/runtime_gate_report.md`
+  - `godot-project/artifacts/runtime-gate/logs/`
+  - copied metrics under `godot-project/artifacts/runtime-gate/`
+
+#### Common harnesses
+- `run_headless_smoke.sh`
+- `combat_improvements_validation.gd`
+- `combat_performance_harness.gd`
+- `blood_feature_validation.gd`
+- `run_automated_ci_pipeline.gd`
+
+#### Blood validation artifact
+- Current report path:
+  - `godot-project/artifacts/blood-validation/blood_feature_validation_latest.json`
+- Validator writes to `user://blood_validation/...`; if artifact is stale, sync from user data to repository artifact path after run.
+
+### 9) Current Known Caveats (Non-Blocking)
+- Some tests intentionally trigger null audio stream handling; this emits a warning line and is expected.
+- Some headless exits still report `ObjectDB instances leaked at exit`. Current gates pass despite this, but teardown hardening remains desirable.
+- Some placeholder game modes still log "not implemented yet" scene notes.
+
+### 10) Operational Command Set (Reference)
+
+#### Launch game (desktop)
+```bash
+flatpak run org.godotengine.Godot --path godot-project
+```
+
+#### CI wrapper
+```bash
+flatpak run org.godotengine.Godot --headless --path godot-project --script res://scripts/run_automated_ci_pipeline.gd
+```
+
+#### Runtime release gate
+```bash
+bash godot-project/scripts/run_runtime_release_gate.sh
+```
+
+#### Combat and blood validation
+```bash
+flatpak run org.godotengine.Godot --headless --path godot-project --script res://scripts/combat_improvements_validation.gd
+flatpak run org.godotengine.Godot --headless --path godot-project --script res://scripts/combat_performance_harness.gd
+flatpak run org.godotengine.Godot --headless --path godot-project --script res://scripts/blood_feature_validation.gd
+```
+
+### 11) Working Rules for Future Models
+- Treat `godot-project/` runtime behavior as truth over legacy docs.
+- Do not revert unrelated dirty worktree files.
+- Use typed GDScript for gameplay/runtime changes.
+- Keep signal/event-driven coupling over brittle scene-path coupling.
+- For combat changes, update both:
+  - runtime scripts
+  - validation harness assertions and/or artifact expectations
+- Treat runtime script errors as failures unless explicitly asserted behavior.
+- Re-run release gates after modifying test harness or benchmark behavior.
+
+### 12) Recommended Next Engineering Wave
+- Teardown hygiene for headless harnesses to eliminate leak warnings.
+- Further encounter sequencing logic (beyond initial delay + slot cap) for nuanced pressure ramps.
+- Explicit audio layer arbitration implementation using priority constants.
+- Continue moving mode placeholders (`Camp`, `Equipment`, etc.) to full scene-backed implementations when combat-first objectives are stable.

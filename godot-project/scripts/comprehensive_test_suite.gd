@@ -3,6 +3,7 @@ class_name ComprehensiveTestSuite
 
 # Comprehensive Testing Suite for Priority 1 Implementation Validation
 # Tests audio system pooling, camera shake optimization, and particle system memory management
+const CombatConstants = preload("res://scripts/combat_constants.gd")
 
 signal test_completed(test_name: String, result: bool, details: Dictionary)
 signal all_tests_completed(results: Dictionary)
@@ -438,19 +439,36 @@ func test_combat_shake_integration() -> void:
 	var test_details = {}
 	var passed = true
 	
-	if not test_player:
+	if not test_player or not is_instance_valid(test_player):
 		passed = false
 	else:
+		test_player.max_health = max(test_player.max_health, 200)
+		test_player.health = test_player.max_health
+		test_player.is_dead = false
+		test_player.set_physics_process(true)
+
 		# Trigger multiple consecutive shakes
 		var start_fps = _calculate_average_fps()
+		var successful_hits: int = 0
 		
 		for i in range(10):
+			if not is_instance_valid(test_player):
+				passed = false
+				test_details["error"] = "test_player_freed_during_shake_integration"
+				break
+			if test_player.health <= 12:
+				test_player.health = test_player.max_health
 			test_player.take_damage(10)  # This applies shake
+			if test_player.is_dead:
+				passed = false
+				test_details["error"] = "test_player_died_during_shake_integration"
+				break
+			successful_hits += 1
 			await get_tree().create_timer(0.1).timeout
 		
 		var end_fps = _calculate_average_fps()
 		
-		test_details["consecutive_shakes"] = 10
+		test_details["consecutive_shakes"] = successful_hits
 		test_details["fps_before"] = start_fps
 		test_details["fps_after"] = end_fps
 		test_details["fps_impact"] = start_fps - end_fps
@@ -504,9 +522,10 @@ func test_particle_pool_creation() -> void:
 	else:
 		# Test pool size
 		var pool_size = particle_manager.blood_particle_pool.size()
+		var expected_pool_size = CombatConstants.BLOOD_POOL_SIZE
 		test_details["pool_size"] = pool_size
-		if pool_size != 10:
-			test_details["size_error"] = "Expected 10, got " + str(pool_size)
+		if pool_size != expected_pool_size:
+			test_details["size_error"] = "Expected %d, got %d" % [expected_pool_size, pool_size]
 			passed = false
 		
 		# Test initial pool index

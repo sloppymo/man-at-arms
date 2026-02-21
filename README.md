@@ -161,8 +161,9 @@ npm run test:smoke       # Run active-story smoke validation harness
 
 # Legacy/compatibility
 npm run unit-tests       # Alias for canonical Jest run (--runInBand)
-npm run test:cjs         # Alias lane for narrative-service unit subset
+npm run test:cjs         # Compatibility alias for the stable Jest subset
 npm run guard:legacy-imports  # Block src/ -> js/ legacy imports
+npm run ci:web           # CI-grade web gate (guard + tests + smoke + build)
 ```
 
 ### Development Workflow

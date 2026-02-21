@@ -3,6 +3,7 @@ class_name AutomatedCITests
 
 # Automated CI Testing for Priority 1 Implementation
 # Provides continuous integration testing capabilities with automated validation
+const CombatConstants = preload("res://scripts/combat_constants.gd")
 
 signal ci_test_completed(test_suite: String, results: Dictionary)
 signal ci_pipeline_completed(results: Dictionary)
@@ -16,6 +17,15 @@ const CI_PERFORMANCE_THRESHOLDS = {
 	"max_audio_cutoffs": 0,
 	"min_test_coverage": 95.0
 }
+const INTEGRATION_RNG_SEED: int = 90210
+const EXPECTED_BENCHMARK_NAMES: Array[String] = [
+	"Audio System Performance",
+	"Camera Shake Performance",
+	"Particle System Performance",
+	"Combined Performance",
+	"Memory Efficiency",
+	"Scalability Test"
+]
 
 # CI Test state
 var ci_running = false
@@ -23,6 +33,9 @@ var ci_start_time = 0
 var current_test_suite = ""
 var test_results = {}
 var failure_log = []
+var edge_case_result_buffer: Dictionary = {}
+var benchmark_result_buffer: Dictionary = {}
+var integration_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 # System references
 var comprehensive_tests: ComprehensiveTestSuite
@@ -93,6 +106,9 @@ func run_ci_pipeline() -> void:
 	ci_start_time = Time.get_ticks_msec()
 	test_results.clear()
 	failure_log.clear()
+	edge_case_result_buffer.clear()
+	benchmark_result_buffer.clear()
+	_reset_integration_rng()
 	
 	# CI Pipeline stages
 	var pipeline_success = true
@@ -166,10 +182,10 @@ func _run_system_health_check() -> bool:
 	if particle_manager:
 		health_results["particle_manager"] = {
 			"exists": true,
-			"pool_initialized": particle_manager.blood_particle_pool.size() == 10,
+			"pool_initialized": particle_manager.blood_particle_pool.size() == CombatConstants.BLOOD_POOL_SIZE,
 			"pool_size": particle_manager.blood_particle_pool.size()
 		}
-		if particle_manager.blood_particle_pool.size() != 10:
+		if particle_manager.blood_particle_pool.size() != CombatConstants.BLOOD_POOL_SIZE:
 			all_healthy = false
 			failure_log.append("ParticleManager pool size incorrect")
 	else:
@@ -184,22 +200,22 @@ func _run_system_health_check() -> bool:
 		"platform": OS.get_name()
 	}
 	
-	# Check for critical errors
-	var error_count = 0
-	for i in range(10):  # Check last 10 frames
-		if Engine.get_frames_per_second() < 30:
-			error_count += 1
-	
-	if error_count > 3:
+	# Lightweight startup perf sanity only; detailed perf checks run in benchmark stage.
+	await get_tree().create_timer(0.1).timeout
+	var sampled_fps: float = Engine.get_frames_per_second()
+	var performance_healthy: bool = sampled_fps > 0.0
+	if not performance_healthy:
 		all_healthy = false
-		failure_log.append("System performance issues detected")
+		failure_log.append("System performance monitor unavailable")
 	
-	health_results["performance_healthy"] = error_count <= 3
+	health_results["performance_healthy"] = performance_healthy
+	health_results["sampled_fps"] = sampled_fps
 	
 	test_results["system_health"] = health_results
 	ci_test_completed.emit(current_test_suite, health_results)
 	
-	print(all_healthy and "✅" or "❌", " System Health Check: ", "PASSED" if all_healthy else "FAILED")
+	var status_icon := "✅" if all_healthy else "❌"
+	print(status_icon, " System Health Check: ", "PASSED" if all_healthy else "FAILED")
 	return all_healthy
 
 func _run_comprehensive_test_suite() -> bool:
@@ -260,27 +276,29 @@ func _run_edge_case_tests() -> bool:
 	var edge_case_results = {}
 	var passed_count = 0
 	var total_count = 0
+	edge_case_result_buffer.clear()
 	
-	# Wait for edge case tests to complete
+	# Wait for edge case tests to complete and collect emitted per-test results.
 	await edge_case_tests.run_edge_case_tests()
 	
-	# Collect results (simulated - in real implementation would track actual results)
-	var edge_test_names = [
-		"Audio Pool Exhaustion", "Invalid Audio Streams", "Rapid Audio Start/Stop",
-		"Overlapping Camera Shakes", "Zero Parameters", "Extreme Shake Values",
-		"Particle Pool Exhaustion", "Rapid Particle Lifecycle"
-	]
+	if edge_case_result_buffer.is_empty():
+		failure_log.append("Edge case tests produced no results")
+		return false
+
+	var edge_test_names: Array = edge_case_result_buffer.keys()
+	edge_test_names.sort()
 	
-	for test_name in edge_test_names:
+	for test_name_variant in edge_test_names:
+		var test_name: String = str(test_name_variant)
+		var result_entry: Dictionary = edge_case_result_buffer.get(test_name, {})
+		var passed: bool = bool(result_entry.get("passed", false))
 		total_count += 1
-		# Simulate edge case test results (95% pass rate for CI)
-		var passed = randf() > 0.05  # 5% failure rate for simulation
 		if passed:
 			passed_count += 1
 		else:
 			failure_log.append("Edge case test failed: " + test_name)
 		
-		edge_case_results[test_name] = {"passed": passed}
+		edge_case_results[test_name] = result_entry
 	
 	var success_rate = float(passed_count) / float(total_count) * 100.0
 	var passed = success_rate >= 90.0  # Edge cases can have slightly lower threshold
@@ -302,44 +320,60 @@ func _run_edge_case_tests() -> bool:
 func _run_performance_benchmarks() -> bool:
 	current_test_suite = "Performance Benchmarks"
 	print("\n📊 Running Performance Benchmarks...")
-	
-	# Wait for performance benchmarks to complete
+
+	if not performance_benchmark:
+		failure_log.append("Performance benchmark runner not available")
+		return false
+
+	benchmark_result_buffer.clear()
 	await performance_benchmark.run_all_benchmarks()
-	
-	# Check performance against thresholds
+	await get_tree().process_frame
+
+	if benchmark_result_buffer.is_empty():
+		failure_log.append("Performance benchmark stage produced no benchmark data")
+		return false
+
+	# Check performance against thresholds from actual benchmark output.
 	var performance_results = {}
 	var all_benchmarks_passed = true
-	
-	# Simulate benchmark results (in real implementation would collect actual data)
-	var benchmarks = {
-		"Audio System Performance": {"avg_fps": 58, "grade": "A"},
-		"Camera Shake Performance": {"avg_fps": 59, "grade": "A"},
-		"Particle System Performance": {"avg_fps": 57, "grade": "A"},
-		"Combined Performance": {"avg_fps": 55, "grade": "B"},
-		"Memory Efficiency": {"memory_growth_mb": 8, "grade": "A"},
-		"Scalability Test": {"optimal_load_level": 4, "grade": "B"}
-	}
-	
-	for benchmark_name in benchmarks:
-		var benchmark_data = benchmarks[benchmark_name]
-		
-		# Check FPS threshold
-		var fps_passed = benchmark_data.avg_fps >= CI_PERFORMANCE_THRESHOLDS.min_fps
-		if not fps_passed:
+
+	for benchmark_name in EXPECTED_BENCHMARK_NAMES:
+		if not benchmark_result_buffer.has(benchmark_name):
 			all_benchmarks_passed = false
-			failure_log.append("Performance benchmark failed FPS threshold: " + benchmark_name)
-		
-		# Check memory threshold for memory efficiency test
-		var memory_passed = true
+			failure_log.append("Missing benchmark result: " + benchmark_name)
+			performance_results[benchmark_name] = {
+				"overall_passed": false,
+				"missing_result": true
+			}
+			continue
+
+		var benchmark_data: Dictionary = benchmark_result_buffer[benchmark_name]
+		var fps_passed: bool = true
+		if benchmark_data.has("avg_fps"):
+			fps_passed = float(benchmark_data.get("avg_fps", 0.0)) >= CI_PERFORMANCE_THRESHOLDS.min_fps
+			if not fps_passed:
+				all_benchmarks_passed = false
+				failure_log.append("Performance benchmark failed FPS threshold: " + benchmark_name)
+
+		var memory_passed: bool = true
+		var memory_growth_mb: float = float(benchmark_data.get(
+			"total_memory_growth_mb",
+			benchmark_data.get("memory_growth_mb", 0.0)
+		))
 		if benchmark_name == "Memory Efficiency":
-			memory_passed = benchmark_data.memory_growth_mb <= CI_PERFORMANCE_THRESHOLDS.max_memory_growth_mb
+			memory_passed = memory_growth_mb <= CI_PERFORMANCE_THRESHOLDS.max_memory_growth_mb
 			if not memory_passed:
 				all_benchmarks_passed = false
 				failure_log.append("Memory growth exceeded threshold: " + benchmark_name)
-		
+
+		var benchmark_grade: String = str(benchmark_data.get(
+			"performance_grade",
+			benchmark_data.get("grade", "N/A")
+		))
 		performance_results[benchmark_name] = {
-			"avg_fps": benchmark_data.avg_fps,
-			"grade": benchmark_data.grade,
+			"avg_fps": benchmark_data.get("avg_fps", null),
+			"memory_growth_mb": memory_growth_mb,
+			"grade": benchmark_grade,
 			"fps_passed": fps_passed,
 			"memory_passed": memory_passed,
 			"overall_passed": fps_passed and memory_passed
@@ -360,6 +394,7 @@ func _run_performance_benchmarks() -> bool:
 func _run_integration_tests() -> bool:
 	current_test_suite = "Integration Tests"
 	print("\n🔗 Running Integration Tests...")
+	_reset_integration_rng()
 	
 	var integration_results = {}
 	var passed_count = 0
@@ -406,6 +441,7 @@ func _run_integration_scenario(scenario_name: String) -> Dictionary:
 	
 	var passed = true
 	var details = {}
+	var started_ms: int = Time.get_ticks_msec()
 	
 	match scenario_name:
 		"Combat Audio + Particles + Shake":
@@ -425,7 +461,7 @@ func _run_integration_scenario(scenario_name: String) -> Dictionary:
 	return {
 		"passed": passed,
 		"details": details,
-		"execution_time_ms": Time.get_ticks_msec()
+		"execution_time_ms": Time.get_ticks_msec() - started_ms
 	}
 
 func _test_combat_integration() -> bool:
@@ -532,10 +568,13 @@ func _test_extended_gameplay() -> bool:
 	# Extended gameplay simulation (shortened for CI)
 	for minute in range(2):  # 2 minutes instead of 10
 		for second in range(60):
-			if randf() < 0.3:
+			if integration_rng.randf() < 0.3:
 				audio_manager.play_sfx(mock_stream, -10.0)
-			if randf() < 0.2:
-				particle_manager.play_blood_effect(Vector2(randf() * 200, randf() * 150))
+			if integration_rng.randf() < 0.2:
+				particle_manager.play_blood_effect(Vector2(
+					integration_rng.randf_range(0.0, 200.0),
+					integration_rng.randf_range(0.0, 150.0)
+				))
 			
 			await get_tree().create_timer(0.016).timeout  # Simulate 60 FPS
 	
@@ -588,7 +627,7 @@ func _validate_audio_system() -> Dictionary:
 
 func _validate_particle_system() -> Dictionary:
 	var particle_manager = get_node("/root/ParticleManager")
-	var passed = particle_manager != null and particle_manager.blood_particle_pool.size() == 10
+	var passed = particle_manager != null and particle_manager.blood_particle_pool.size() == CombatConstants.BLOOD_POOL_SIZE
 	return {"passed": passed, "details": {"pool_size": particle_manager.blood_particle_pool.size() if particle_manager else 0}}
 
 func _validate_performance() -> Dictionary:
@@ -603,13 +642,21 @@ func _validate_memory() -> Dictionary:
 
 func _validate_no_errors() -> Dictionary:
 	# Check for recent critical errors
-	var error_count = 0
+	var critical_error_frames: int = 0
 	for i in range(60):  # Check last second (60 frames at 60 FPS)
+		await get_tree().process_frame
 		if Engine.get_frames_per_second() < 20:
-			error_count += 1
+			critical_error_frames += 1
 	
-	var passed = error_count < 5
-	return {"passed": passed, "details": {"critical_error_frames": error_count}}
+	var recorded_runtime_errors: int = _count_recorded_runtime_errors()
+	var passed = critical_error_frames < 5 and recorded_runtime_errors == 0
+	return {
+		"passed": passed,
+		"details": {
+			"critical_error_frames": critical_error_frames,
+			"recorded_runtime_errors": recorded_runtime_errors
+		}
+	}
 
 # ==================== CI COMPLETION ====================
 
@@ -674,18 +721,46 @@ func _on_comprehensive_tests_completed(results: Dictionary) -> void:
 	pass
 
 func _on_edge_case_test_completed(test_name: String, result: bool, details: Dictionary) -> void:
-	# Results collected in edge case tests
-	pass
+	edge_case_result_buffer[test_name] = {
+		"passed": result,
+		"details": details
+	}
 
 func _on_benchmark_completed(benchmark_name: String, results: Dictionary) -> void:
-	# Results collected in performance benchmarks
-	pass
+	benchmark_result_buffer[benchmark_name] = results.duplicate(true)
 
 # ==================== UTILITY FUNCTIONS ====================
 
 func _get_memory_usage_bytes() -> float:
 	var memory_monitor = Performance.get_monitor(Performance.MEMORY_STATIC)
 	return float(memory_monitor) if memory_monitor != null else 0.0
+
+func _reset_integration_rng() -> void:
+	integration_rng.seed = INTEGRATION_RNG_SEED
+
+func _count_recorded_runtime_errors() -> int:
+	var count: int = 0
+	for suite_name in test_results:
+		count += _count_runtime_errors_in_variant(test_results[suite_name])
+	return count
+
+func _count_runtime_errors_in_variant(value: Variant) -> int:
+	var count: int = 0
+	if value is Dictionary:
+		var dict_value: Dictionary = value as Dictionary
+		if dict_value.has("error"):
+			var error_text: String = str(dict_value.get("error", ""))
+			if not error_text.is_empty():
+				count += 1
+		for key in dict_value.keys():
+			if str(key) == "error":
+				continue
+			count += _count_runtime_errors_in_variant(dict_value[key])
+	elif value is Array:
+		var array_value: Array = value as Array
+		for entry in array_value:
+			count += _count_runtime_errors_in_variant(entry)
+	return count
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_page_up"):  # Page Up key
