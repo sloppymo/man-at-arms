@@ -103,6 +103,16 @@ func _ready() -> void:
 		var on_player_died_callable := Callable(self, "_on_player_died")
 		if not player.died.is_connected(on_player_died_callable):
 			player.died.connect(on_player_died_callable)
+	
+	# Mark combat as fully initialized
+	_mark_combat_active()
+
+func _mark_combat_active() -> void:
+	var game_modes = _get_game_modes()
+	if game_modes:
+		var integration = game_modes.get_node_or_null("CombatStateIntegration")
+		if integration and integration.has_method("mark_combat_active"):
+			integration.mark_combat_active()
 
 func _sync_mode_with_scene() -> void:
 	var game_modes = _get_game_modes()
@@ -621,10 +631,8 @@ func _on_enemy_killed() -> void:
 	enemies_killed += 1
 	
 	# Play death sound
-	if audio_manager:
-		var death_sfx = audio_manager.get_sfx("death")
-		if death_sfx:
-			audio_manager.play_sfx(death_sfx, CombatConstants.AUDIO_VOLUME_DEATH)
+	if audio_manager and audio_manager.has_method("play_sfx_by_name"):
+		audio_manager.play_sfx_by_name("death")  # Uses normalized volume + anti-spam
 	
 	# Camera shake on kill
 	var camera = $Player/Camera2D if $Player else null

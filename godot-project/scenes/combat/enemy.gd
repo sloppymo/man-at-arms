@@ -47,6 +47,8 @@ var bark_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var bark_display_time_remaining: float = 0.0
 var bark_interval_remaining: float = 0.0
 var last_bark_line: String = ""
+var strafe_timer_remaining: float = 0.0
+var strafe_sign: float = 1.0
 
 @onready var audio_manager = get_node("/root/AudioManager")
 @onready var particle_manager = get_node("/root/ParticleManager")
@@ -66,6 +68,7 @@ func _ready() -> void:
 	_setup_dialog_bark_label()
 	_reset_ambient_bark_interval(true)
 	_try_emit_dialog_bark("spawn", CombatConstants.ENEMY_BARK_SPAWN_CHANCE)
+	_reset_strafe_state(true)
 
 	add_to_group("enemies")
 
@@ -272,9 +275,10 @@ func _physics_process(delta: float) -> void:
 				attack_player()
 		else:
 			var distance_to_player: float = global_position.distance_to(player.global_position)
-			if distance_to_player > attack_range:
-				var direction: Vector2 = (player.global_position - global_position).normalized()
-				base_velocity = direction * speed
+			base_velocity = _compute_desired_velocity(distance_to_player, delta)
+			if distance_to_player > _get_attack_trigger_range():
+				# Keep advancing/repositioning until we are in attack range.
+				pass
 			else:
 				if attack_gate_delay_remaining > 0.0:
 					attack_gate_delay_remaining = maxf(0.0, attack_gate_delay_remaining - delta)
@@ -289,6 +293,55 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_resolve_shield_barrier_penetration(shield_barrier)
 	_apply_external_push_resistance(delta)
+
+func _compute_desired_velocity(distance_to_player: float, delta: float) -> Vector2:
+	if player == null:
+		return Vector2.ZERO
+	var to_player: Vector2 = player.global_position - global_position
+	if to_player == Vector2.ZERO:
+		return Vector2.ZERO
+
+	var direction: Vector2 = to_player.normalized()
+	if enemy_type != "archer":
+		var chase_threshold: float = maxf(0.0, attack_range - CombatConstants.ENEMY_MELEE_APPROACH_BUFFER)
+		if distance_to_player > chase_threshold:
+			return direction * speed
+		return Vector2.ZERO
+
+	var min_range: float = CombatConstants.ENEMY_ARCHER_MIN_COMBAT_RANGE
+	var max_range: float = minf(attack_range, CombatConstants.ENEMY_ARCHER_MAX_COMBAT_RANGE)
+	var deadzone: float = CombatConstants.ENEMY_ARCHER_REPOSITION_DEADZONE
+
+	# Retreat if player collapses into archer minimum range.
+	if distance_to_player < (min_range - deadzone):
+		return -direction * speed
+
+	# Close distance if player is beyond preferred firing envelope.
+	if distance_to_player > (max_range + deadzone):
+		return direction * speed
+
+	# Archer is in preferred band; strafe to maintain pressure and avoid static turret behavior.
+	strafe_timer_remaining -= delta
+	if strafe_timer_remaining <= 0.0:
+		_reset_strafe_state()
+
+	var perpendicular: Vector2 = direction.orthogonal()
+	if perpendicular == Vector2.ZERO:
+		return Vector2.ZERO
+	return perpendicular.normalized() * speed * CombatConstants.ENEMY_ARCHER_STRAFE_SPEED_MULTIPLIER * strafe_sign
+
+func _get_attack_trigger_range() -> float:
+	if enemy_type == "archer":
+		return maxf(1.0, minf(attack_range, CombatConstants.ENEMY_ARCHER_MAX_COMBAT_RANGE + CombatConstants.ENEMY_ARCHER_REPOSITION_DEADZONE))
+	return maxf(1.0, attack_range)
+
+func _reset_strafe_state(quick_start: bool = false) -> void:
+	strafe_sign = -1.0 if bark_rng.randf() < 0.5 else 1.0
+	var jitter: float = CombatConstants.ENEMY_ARCHER_STRAFE_JITTER_SEC
+	if quick_start:
+		strafe_timer_remaining = bark_rng.randf_range(0.15, maxf(0.2, jitter))
+	else:
+		strafe_timer_remaining = bark_rng.randf_range(maxf(0.2, jitter * 0.55), jitter * 1.35)
 
 func _start_attack_windup() -> void:
 	if not _try_consume_attack_slot():
@@ -305,11 +358,10 @@ func _play_attack_telegraph_sfx() -> void:
 		return
 	if audio_manager == null:
 		return
-	if not audio_manager.has_method("get_sfx") or not audio_manager.has_method("play_sfx"):
+	if not audio_manager.has_method("play_sfx_by_name"):
 		return
-	var cue: AudioStream = audio_manager.get_sfx(attack_telegraph_sfx_name)
-	if cue:
-		audio_manager.play_sfx(cue, attack_telegraph_sfx_volume_db)
+	# Use play_sfx_by_name for anti-spam protection and normalized volume
+	audio_manager.play_sfx_by_name(attack_telegraph_sfx_name)
 
 func _clear_attack_windup() -> void:
 	pending_attack = false
@@ -354,17 +406,26 @@ func attack_player() -> void:
 		return
 	if not player:
 		return
-	if global_position.distance_to(player.global_position) > attack_range:
+	var distance_to_player: float = global_position.distance_to(player.global_position)
+	if distance_to_player > attack_range:
 		return
 	if enemy_type == "archer":
+		if distance_to_player < CombatConstants.ENEMY_ARCHER_MIN_FIRE_RANGE:
+			attack_gate_delay_remaining = maxf(
+				attack_gate_delay_remaining,
+				CombatConstants.ENEMY_ARCHER_POST_SHOT_GATE_DELAY_SEC
+			)
+			return
 		_fire_projectile()
+		attack_gate_delay_remaining = maxf(
+			attack_gate_delay_remaining,
+			CombatConstants.ENEMY_ARCHER_POST_SHOT_GATE_DELAY_SEC
+		)
 		return
 	if player.has_method("take_damage"):
 		player.take_damage(damage, global_position, null, self)
-	if audio_manager:
-		var hit_sfx = audio_manager.get_sfx("hit")
-		if hit_sfx:
-			audio_manager.play_sfx(hit_sfx, CombatConstants.AUDIO_VOLUME_ENEMY_HIT)
+	if audio_manager and audio_manager.has_method("play_sfx_by_name"):
+		audio_manager.play_sfx_by_name("hit")  # Uses normalized volume + anti-spam
 
 func _fire_projectile() -> void:
 	if PROJECTILE_SCENE == null:
@@ -394,6 +455,10 @@ func _fire_projectile() -> void:
 	if projectile_instance is Node2D:
 		var projectile_node: Node2D = projectile_instance as Node2D
 		projectile_node.global_position = global_position + direction * CombatConstants.PROJECTILE_SPAWN_OFFSET
+	
+	# Play projectile fire sound
+	if audio_manager and audio_manager.has_method("play_sfx_by_name"):
+		audio_manager.play_sfx_by_name("projectile")
 
 func set_attack_gate_delay(delay_sec: float) -> void:
 	attack_gate_delay_remaining = maxf(0.0, delay_sec)

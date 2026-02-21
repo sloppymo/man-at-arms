@@ -57,6 +57,12 @@ signal mode_changed(from: GameMode, to: GameMode, forced: bool)
 
 func _ready() -> void:
 	load_game_on_startup()
+	
+	# Initialize combat state integration
+	var integration = preload("res://scripts/combat_state_integration.gd").new()
+	integration.name = "CombatStateIntegration"
+	add_child(integration)
+	
 	RuntimeLog.info("GameModes: Initialized - current_mode: %d" % current_mode)
 	RuntimeLog.info(
 		"GameModes: Autoload ready - current scene: %s"

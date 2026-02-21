@@ -4,6 +4,7 @@ const CombatConstants = preload("res://scripts/combat_constants.gd")
 const GameModesScript = preload("res://scripts/game_modes.gd")
 const SPAWN_SANITY_SEED_COUNT: int = 240
 const SPAWN_RATIO_EPSILON: float = 0.01
+const EXPECTED_CORE_RULE_LOCK_VERSION: String = "2026-02-21-day1"
 
 var failures: Array[String] = []
 
@@ -14,8 +15,11 @@ func _init() -> void:
 func _run() -> void:
 	await _stabilize_runtime_state()
 
+	_test_core_combat_rules_lock()
 	await _test_dodge_displacement()
 	await _test_hit_stop_flow()
+	await _test_attack_buffer_queue()
+	await _test_melee_hit_detection_consistency()
 	await _test_enemy_attack_readability_profiles()
 	await _test_shield_push_directionality()
 	await _test_shield_push_integration_path()
@@ -32,6 +36,96 @@ func _run() -> void:
 
 	_cleanup_save_file()
 	_finish()
+
+func _test_core_combat_rules_lock() -> void:
+	_assert(
+		CombatConstants.CORE_COMBAT_RULES_LOCK_VERSION == EXPECTED_CORE_RULE_LOCK_VERSION,
+		"Core combat lock version drift (expected %s, got %s)" % [
+			EXPECTED_CORE_RULE_LOCK_VERSION,
+			CombatConstants.CORE_COMBAT_RULES_LOCK_VERSION
+		]
+	)
+
+	var rules: Dictionary = CombatConstants.get_core_combat_rules_snapshot()
+	_assert(
+		str(rules.get("damage_model", "")) == "lethal_one_hit",
+		"Damage model lock should remain lethal_one_hit"
+	)
+
+	var player_rules: Dictionary = rules.get("player", {})
+	_assert(int(player_rules.get("health", -1)) == CombatConstants.PLAYER_DEFAULT_HEALTH, "Player health lock mismatch")
+	_assert(int(player_rules.get("damage", -1)) == CombatConstants.PLAYER_DEFAULT_DAMAGE, "Player damage lock mismatch")
+	_assert(
+		absf(float(player_rules.get("attack_cooldown_sec", -1.0)) - CombatConstants.PLAYER_DEFAULT_ATTACK_COOLDOWN) <= 0.0001,
+		"Player attack cooldown lock mismatch"
+	)
+
+	var enemy_rules: Dictionary = rules.get("enemy", {})
+	var base_enemy_rules: Dictionary = enemy_rules.get("base", {})
+	_assert(int(base_enemy_rules.get("health", -1)) == CombatConstants.ENEMY_DEFAULT_HEALTH, "Enemy base health lock mismatch")
+	_assert(int(base_enemy_rules.get("damage", -1)) == CombatConstants.ENEMY_DEFAULT_DAMAGE, "Enemy base damage lock mismatch")
+
+	var archer_rules: Dictionary = enemy_rules.get("archer", {})
+	_assert(
+		absf(float(archer_rules.get("attack_cooldown_sec", -1.0)) - 5.0) <= 0.0001,
+		"Archer cooldown lock should remain 5.0 seconds"
+	)
+	_assert(
+		absf(CombatConstants.ENEMY_ARCHER_ATTACK_COOLDOWN - 5.0) <= 0.0001,
+		"Archer cooldown constant should remain 5.0 seconds"
+	)
+
+	var win_rules: Dictionary = rules.get("win_conditions", {})
+	_assert(
+		bool(win_rules.get("enemies_killed_gte_enemy_count", false)),
+		"Win condition lock should remain enemies_killed >= enemy_count"
+	)
+
+	var lose_rules: Dictionary = rules.get("lose_conditions", {})
+	_assert(int(lose_rules.get("player_health_lte", 999)) == 0, "Lose condition player_health_lte should remain 0")
+	_assert(
+		absf(float(lose_rules.get("time_remaining_lte_sec", -1.0))) <= 0.0001,
+		"Lose condition time_remaining_lte_sec should remain 0.0"
+	)
+
+	var cadence_targets: Dictionary = rules.get("cadence_targets", {})
+	_assert(
+		absf(float(cadence_targets.get("player_attack_cooldown_sec", -1.0)) - CombatConstants.PLAYER_DEFAULT_ATTACK_COOLDOWN) <= 0.0001,
+		"Cadence lock mismatch for player attack cooldown"
+	)
+	_assert(
+		absf(float(cadence_targets.get("archer_attack_cooldown_sec", -1.0)) - 5.0) <= 0.0001,
+		"Cadence lock mismatch for archer attack cooldown"
+	)
+	_assert(
+		float(cadence_targets.get("grunt_min_read_sec", 0.0)) >= 0.16,
+		"Cadence lock mismatch for grunt minimum read window"
+	)
+	_assert(
+		float(cadence_targets.get("heavy_min_read_sec", 0.0)) >= 0.30,
+		"Cadence lock mismatch for heavy minimum read window"
+	)
+	_assert(
+		float(cadence_targets.get("archer_min_read_sec", 0.0)) >= 0.30,
+		"Cadence lock mismatch for archer minimum read window"
+	)
+
+	var done_metrics: Dictionary = CombatConstants.get_combat_done_feel_metrics_snapshot()
+	var readability: Dictionary = done_metrics.get("readability", {})
+	_assert(
+		absf(float(readability.get("archer_cooldown_sec", -1.0)) - 5.0) <= 0.0001,
+		"Done-feel metric archer_cooldown_sec should remain 5.0"
+	)
+
+	var responsiveness: Dictionary = done_metrics.get("responsiveness", {})
+	_assert(
+		int(responsiveness.get("input_attack_buffer_ms", -1)) == CombatConstants.INPUT_WINDOW_ATTACK_QUEUE_MS,
+		"Done-feel metric input_attack_buffer_ms should match combat constant"
+	)
+	_assert(
+		absf(float(responsiveness.get("player_attack_cooldown_sec", -1.0)) - CombatConstants.PLAYER_DEFAULT_ATTACK_COOLDOWN) <= 0.0001,
+		"Done-feel metric player_attack_cooldown_sec should match combat constant"
+	)
 
 func _stabilize_runtime_state() -> void:
 	_cleanup_save_file()
@@ -133,6 +227,157 @@ func _test_hit_stop_flow() -> void:
 	await create_timer(0.3).timeout
 	_assert(combat_scene.time_remaining < pre_hit_time_remaining, "Combat timer should continue after hit stop")
 	await create_timer(maxf(CombatConstants.ATTACK_ARC_DURATION, CombatConstants.ATTACK_TRAIL_DURATION) + 0.2).timeout
+
+	await _dispose_node(combat_scene)
+
+func _test_attack_buffer_queue() -> void:
+	var combat_scene_resource: PackedScene = load("res://scenes/combat/combat_scene.tscn")
+	var combat_scene := combat_scene_resource.instantiate() as CombatScene
+	root.add_child(combat_scene)
+	await _wait_frames(5)
+
+	_assert(combat_scene != null and combat_scene.player != null, "Combat scene and player should initialize for attack buffer queue test")
+	if combat_scene == null or combat_scene.player == null:
+		return
+
+	var player: CombatPlayer = combat_scene.player
+	player.is_blocking = false
+	player.is_dodging = false
+	player.is_attacking = false
+	player.call("_stop_block")
+	player.call("_clear_buffered_attack")
+	player.last_attack_direction = Vector2.RIGHT
+	player.last_movement_direction = Vector2.RIGHT
+	player.shield_direction = Vector2.RIGHT
+
+	var cooldown_ms: int = int(player.attack_cooldown * 1000.0)
+	var remaining_cooldown_ms: int = mini(cooldown_ms - 1, maxi(1, CombatConstants.INPUT_WINDOW_ATTACK_QUEUE_MS - 10))
+	var cooldown_anchor_ms: int = Time.get_ticks_msec() - (cooldown_ms - remaining_cooldown_ms)
+	player.last_attack_ms = cooldown_anchor_ms
+	player.handle_attack()
+	await _wait_physics_frames(1)
+
+	_assert(player.has_method("has_buffered_attack") and player.has_buffered_attack(), "Attack queue should store cooldown-time attack input")
+	_assert(player.last_attack_ms == cooldown_anchor_ms, "Queued attack should not execute on the same frame as cooldown-time input")
+
+	var fired_early: bool = false
+	for _i in range(4):
+		await _wait_physics_frames(1)
+		if player.last_attack_ms > cooldown_anchor_ms:
+			fired_early = true
+			break
+	_assert(not fired_early, "Queued attack should not execute before cooldown has elapsed")
+
+	var executed: bool = false
+	var execute_interval_ms: int = -1
+	for _i in range(24):
+		await _wait_physics_frames(1)
+		if player.last_attack_ms > cooldown_anchor_ms:
+			executed = true
+			execute_interval_ms = player.last_attack_ms - cooldown_anchor_ms
+			break
+
+	var cooldown_floor_ms: int = int(player.attack_cooldown * 1000.0) - 2
+	_assert(executed, "Queued attack should execute once on the first legal frame")
+	_assert(execute_interval_ms >= cooldown_floor_ms, "Queued attack should respect minimum cooldown interval")
+
+	var first_execute_ms: int = player.last_attack_ms
+	for _i in range(10):
+		await _wait_physics_frames(1)
+	_assert(player.last_attack_ms == first_execute_ms, "Single-slot attack queue should execute exactly once per buffered input")
+
+	await _dispose_node(combat_scene)
+
+func _test_melee_hit_detection_consistency() -> void:
+	var combat_scene_resource: PackedScene = load("res://scenes/combat/combat_scene.tscn")
+	var combat_scene := combat_scene_resource.instantiate() as CombatScene
+	root.add_child(combat_scene)
+	await _wait_frames(5)
+
+	_assert(combat_scene != null and combat_scene.player != null, "Combat scene and player should initialize for melee consistency test")
+	if combat_scene == null or combat_scene.player == null:
+		return
+
+	var target_enemy: CombatEnemy = _get_first_alive_enemy(combat_scene)
+	_assert(target_enemy != null, "Melee consistency test requires an alive enemy")
+	if target_enemy == null:
+		await _dispose_node(combat_scene)
+		return
+
+	for child in combat_scene.enemies_node.get_children():
+		if child is CombatEnemy and child != target_enemy:
+			var spare_enemy: CombatEnemy = child as CombatEnemy
+			spare_enemy.global_position = Vector2(-10000, -10000)
+			spare_enemy.set_physics_process(false)
+
+	var player: CombatPlayer = combat_scene.player
+	player.set_physics_process(false)
+	player.is_blocking = false
+	player.is_dodging = false
+	player.is_attacking = false
+	player.call("_clear_buffered_attack")
+	player.combo_counter = 0
+	player.global_position = Vector2(800, 600)
+	player.last_attack_direction = Vector2.RIGHT
+	player.last_movement_direction = Vector2.RIGHT
+	player.shield_direction = Vector2.RIGHT
+
+	target_enemy.set_physics_process(false)
+	target_enemy.speed = 0.0
+	target_enemy.attack_range = 0.0
+	target_enemy.max_health = 1000
+	target_enemy.health = 1000
+	target_enemy.is_alive = true
+	target_enemy.global_position = player.global_position + Vector2(player.attack_range - 2.0, 0.0)
+
+	var dedupe_registry: Dictionary = {}
+	var first_dedupe_hit: int = player.perform_attack_detection(Vector2.RIGHT, dedupe_registry)
+	var second_dedupe_hit: int = player.perform_attack_detection(Vector2.RIGHT, dedupe_registry)
+	_assert(first_dedupe_hit == 1 and second_dedupe_hit == 0, "Melee swing should not double-hit the same enemy in one swing pass")
+
+	var inside_hits_consistent: bool = true
+	for _i in range(6):
+		target_enemy.global_position = player.global_position + Vector2(player.attack_range - 2.0, 0.0)
+		var inside_registry: Dictionary = {}
+		if player.perform_attack_detection(Vector2.RIGHT, inside_registry) != 1:
+			inside_hits_consistent = false
+			break
+	_assert(inside_hits_consistent, "Enemies clearly inside melee arc/range should be hit consistently")
+
+	var outside_range_consistent: bool = true
+	for _i in range(6):
+		target_enemy.global_position = player.global_position + Vector2(player.attack_range + 18.0, 0.0)
+		var outside_range_registry: Dictionary = {}
+		if player.perform_attack_detection(Vector2.RIGHT, outside_range_registry) != 0:
+			outside_range_consistent = false
+			break
+	_assert(outside_range_consistent, "Enemies clearly outside melee range should consistently miss")
+
+	var inside_boundary_consistent: bool = true
+	var outside_boundary_consistent: bool = true
+	var boundary_distance: float = player.attack_range - 1.0
+	var inside_boundary_angle: float = player.attack_arc * 0.5 - 0.02
+	var outside_boundary_angle: float = player.attack_arc * 0.5 + 0.08
+	for _i in range(6):
+		target_enemy.global_position = player.global_position + Vector2(cos(inside_boundary_angle), sin(inside_boundary_angle)) * boundary_distance
+		var inside_boundary_registry: Dictionary = {}
+		if player.perform_attack_detection(Vector2.RIGHT, inside_boundary_registry) != 1:
+			inside_boundary_consistent = false
+			break
+	for _i in range(6):
+		target_enemy.global_position = player.global_position + Vector2(cos(outside_boundary_angle), sin(outside_boundary_angle)) * boundary_distance
+		var outside_boundary_registry: Dictionary = {}
+		if player.perform_attack_detection(Vector2.RIGHT, outside_boundary_registry) != 0:
+			outside_boundary_consistent = false
+			break
+
+	_assert(inside_boundary_consistent, "Melee arc boundary just-inside samples should hit consistently")
+	_assert(outside_boundary_consistent, "Melee arc boundary just-outside samples should miss consistently")
+
+	target_enemy.global_position = player.global_position + Vector2(-10.0, 0.0)
+	var overlap_registry: Dictionary = {}
+	var overlap_hit: int = player.perform_attack_detection(Vector2.RIGHT, overlap_registry)
+	_assert(overlap_hit == 1, "Near-overlap melee target should resolve as a hit to avoid phantom misses")
 
 	await _dispose_node(combat_scene)
 

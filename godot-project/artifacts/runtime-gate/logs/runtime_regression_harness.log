@@ -1,0 +1,67 @@
+=== Runtime Regression Harness ===
+Command: flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/runtime_regression_harness.gd
+Started: 2026-02-21T02:19:48Z
+Godot Engine v4.6.1.stable.flathub.14d19694e - https://godotengine.org
+
+[Runtime] [INFO] GameState: Game loaded successfully
+[Runtime] [DEBUG] GameModes: Loaded saved game on startup
+[Runtime] [INFO] GameModes: Initialized - current_mode: 0
+[Runtime] [INFO] GameModes: Autoload ready - current scene: NULL
+[Runtime] [DEBUG] AudioManager: Created SFX player 0 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 1 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 2 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 3 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 4 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 5 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 6 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 7 in pool
+[Runtime] [INFO] ParticleManager: Initialized with 28 blood particles and 12 impact particles
+[Runtime] [DEBUG] GameModes: Attempting transition from 0 (Title) to 7 (Combat)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scripts/game_modes.gd", "function": "_resume_saved_mode", "line": 277 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Combat
+[Runtime] [INFO] StartupValidator: Startup validation passed
+[Runtime] [DEBUG] GameModes: Attempting transition from 7 (Combat) to 6 (Overworld)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_enter_mode_and_wait_for_scene", "line": 792 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_test_overworld_flow", "line": 99 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_run", "line": 50 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_wait_frames", "line": 832 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Overworld
+[Runtime] [DEBUG] OverworldScene: Ready at hex { "q": 0, "r": 0 }
+[Runtime] [DEBUG] GameModes: Attempting transition from 6 (Overworld) to 7 (Combat)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scenes/overworld/overworld_scene.gd", "function": "trigger_combat_encounter", "line": 146 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_test_overworld_flow", "line": 138 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_simulate_overworld_single_step", "line": 787 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Combat
+[Runtime] [DEBUG] GameModes: Attempting transition from 7 (Combat) to 6 (Overworld)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scenes/combat/combat_scene.gd", "function": "end_combat", "line": 486 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_test_combat_feel_invariants", "line": 600 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_wait_physics_frames", "line": 836 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Overworld
+[Runtime] [DEBUG] OverworldScene: Ready at hex { "q": 1, "r": 0 }
+[Runtime] [DEBUG] GameModes: Attempting transition from 6 (Overworld) to 7 (Combat)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_enter_mode_and_wait_for_scene", "line": 792 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_test_combat_feel_invariants", "line": 605 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_wait_for_scene", "line": 803 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Combat
+[Runtime] [DEBUG] GameModes: Attempting transition from 7 (Combat) to 8 (Death)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scenes/combat/combat_scene.gd", "function": "end_combat", "line": 488 }, { "source": "res://scenes/combat/combat_scene.gd", "function": "_on_player_died", "line": 545 }, { "source": "res://scenes/combat/player.gd", "function": "die", "line": 987 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_test_combat_feel_invariants", "line": 619 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_enter_mode_and_wait_for_scene", "line": 794 }, { "source": "res://scripts/runtime_regression_harness.gd", "function": "_wait_for_scene", "line": 803 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Death
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [INFO] GameState: Game loaded successfully
+ERROR: [Runtime] [ERROR] GameState: Failed to parse save JSON: Expected key (line 0)
+   at: push_error (core/variant/variant_utility.cpp:1024)
+   GDScript backtrace (most recent call first):
+       [0] error (res://scripts/runtime_log.gd:17)
+       [1] load_game (res://scripts/game_state.gd:189)
+       [2] _test_save_load_resilience (res://scripts/runtime_regression_harness.gd:678)
+       [3] _wait_frames (res://scripts/runtime_regression_harness.gd:832)
+WARNING: [Runtime] [WARN] GameState: Corrupt save quarantined as user://savegame.json.corrupt-20260220-181954
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] warn (res://scripts/runtime_log.gd:14)
+         [1] _quarantine_corrupt_save_file (res://scripts/game_state.gd:236)
+         [2] load_game (res://scripts/game_state.gd:193)
+         [3] _test_save_load_resilience (res://scripts/runtime_regression_harness.gd:678)
+         [4] _wait_frames (res://scripts/runtime_regression_harness.gd:832)
+RuntimeRegressionHarness: METRICS_PATH=user://runtime_regression/runtime_regression_metrics_latest.json
+RuntimeRegressionHarness: FLAT_METRICS_JSON={"combat.attack.accepted_attack_count":3,"combat.attack.avg_interval_ms":165.5,"combat.attack.cadence_monotonic":true,"combat.attack.combo_base_avg_damage":29.0,"combat.attack.combo_hits_recorded":9,"combat.attack.combo_max_armor_break_level":2,"combat.attack.combo_max_counter":9,"combat.attack.combo_tier3_avg_damage":48.0,"combat.attack.combo_tier3_stronger_than_base":true,"combat.attack.combo_tier_reached_1":true,"combat.attack.combo_tier_reached_2":true,"combat.attack.combo_tier_reached_3":true,"combat.attack.cooldown_reject_count":1,"combat.attack.damage_dealt_total":109,"combat.attack.first_attack_response_ms":1,"combat.attack.min_interval_ms":165.0,"combat.attack.rapid_spam_accept_count":3,"combat.attack.rapid_spam_interval_respected":true,"combat.attack.rapid_spam_min_interval_ms":165.0,"combat.attack.rapid_spam_reject_count":27,"combat.movement.enter_combat_frames":0,"combat.movement.frames_to_decelerate_to_stop":4,"combat.movement.frames_to_reach_80pct_speed":4,"combat.movement.hotline_dodge_blocked":true,"combat.movement.hotline_style_enabled":true,"combat.projectile.blocked_health_delta":0,"combat.projectile.blocked_projectile_consumed":true,"combat.projectile.blocked_shield_delta":14.0,"combat.projectile.normal_block_projectile_reflected":false,"combat.projectile.perfect_block_health_delta":0,"combat.projectile.perfect_block_projectile_consumed":true,"combat.projectile.perfect_block_projectile_reflected":true,"combat.projectile.perfect_block_projectile_survived_initial_frames":true,"combat.projectile.perfect_block_shield_delta":4.90000000000001,"combat.projectile.perfect_block_shield_delta_reduced":true,"combat.projectile.perfect_block_vs_normal_shield_delta_gap":9.09999999999999,"combat.projectile.perfect_block_wait_frames_for_normal_test":8,"combat.projectile.perfect_block_window_ms":90,"combat.projectile.shield_active_for_block_test":true,"combat.projectile.unblocked_health_delta":14,"combat.projectile.unblocked_projectile_consumed":true,"combat.shield.activate_frames":1,"combat.shield.base_block_release_flow_ok":true,"combat.shield.collision_active_while_blocking":true,"combat.shield.collision_inactive_after_release":true,"combat.shield.normal_block_outside_perfect_window":true,"combat.shield.normal_block_window_age_ms":435,"combat.shield.perfect_block_window_age_ms":83,"combat.shield.perfect_block_within_window":true,"combat.shield.rapid_toggle_cycles":6,"combat.shield.rapid_toggle_final_inactive":true,"combat.shield.rapid_toggle_mismatch_count":0,"combat.shield.release_frames":1,"combat.transitions.combat_end_events_observed":2,"combat.transitions.defeat_mode_death":true,"combat.transitions.defeat_result_flag":true,"combat.transitions.defeat_transition_frames":1,"combat.transitions.victory_mode_overworld":true,"combat.transitions.victory_result_flag":true,"combat.transitions.victory_transition_frames":2,"overworld.combat_payload_encounter_hex_matches":true,"overworld.combat_payload_has_combat_id":true,"overworld.combat_payload_has_encounter_hex":true,"overworld.combat_payload_has_source":true,"overworld.combat_payload_time_limit_default":true,"overworld.encounter_mode_combat":true,"overworld.encounter_transition_frames":1,"overworld.encounter_transition_within_budget":true,"overworld.enter_overworld_frames":1,"overworld.move_apply_frames":1,"overworld.move_hex_delta_q":1,"overworld.move_hex_delta_r":0,"overworld.player_position_synced":true,"save_load.corrupt_load_returns_false":true,"save_load.corrupt_quarantine_delta":1,"save_load.corrupt_resets_defaults":true,"save_load.roundtrip_load_success":true,"save_load.roundtrip_wealth_restored":true,"startup.autoload_present_count":5,"startup.missing_autoload_count":0,"startup.startup_validator_ok":true}
+RuntimeRegressionHarness: PASS
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2641)

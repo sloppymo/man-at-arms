@@ -1,0 +1,68 @@
+WorkerThreadPool: 16 threads, 4 max low-priority.
+Godot Engine v4.6.1.stable.flathub.14d19694e - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Unrecognized output string "misc2" in mapping:
+030000000d0f0000ab01000011010000,Horipad Steam,a:b0,b:b1,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b6,leftstick:b13,lefttrigger:a5,leftx:a0,lefty:a1,misc2:b2,paddle1:b19,paddle2:b18,paddle3:b15,paddle4:b5,rightshoulder:b7,rightstick:b14,righttrigger:a4,rightx:a2,righty:a3,start:b11,x:b3,y:b4,platform:Linux,
+Unrecognized output string "misc2" in mapping:
+050000000d0f00009601000091000000,Horipad Steam,a:b0,b:b1,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b6,leftstick:b13,lefttrigger:a5,leftx:a0,lefty:a1,misc2:b2,paddle1:b19,paddle2:b18,paddle3:b15,paddle4:b5,rightshoulder:b7,rightstick:b14,righttrigger:a4,rightx:a2,righty:a3,start:b11,x:b3,y:b4,platform:Linux,
+Unrecognized output string "misc2" in mapping:
+030000007e0500006920000011010000,Nintendo Switch 2 Pro Controller,a:b0,b:b1,back:b14,dpdown:b8,dpleft:b10,dpright:b9,dpup:b11,guide:b16,leftshoulder:b12,leftstick:b15,lefttrigger:b13,leftx:a0,lefty:a1~,misc1:b17,misc2:b20,paddle1:b18,paddle2:b19,rightshoulder:b4,rightstick:b7,righttrigger:b5,rightx:a2,righty:a3~,start:b6,x:b2,y:b3,platform:Linux,
+SDL: Init OK!
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+CORE API HASH: 75400357
+EDITOR API HASH: 3012763406
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: res://addons/resource_databases/database_format_loader.gd
+Loading resource: res://scripts/game_modes.gd
+Loading resource: res://scripts/game_state.gd
+Loading resource: res://scripts/event_bus.gd
+Loading resource: res://scripts/audio_manager.gd
+Loading resource: res://scripts/particle_manager.gd
+Loaded system CA certificates
+Loading resource: res://scenes/landing_scene.tscn
+Loading resource: res://scenes/landing_scene.gd
+Loading resource: res://assets/effects/weapon_trail.png
+Loading resource: res://.godot/imported/weapon_trail.png-2bfa9842e72a025c9daa4e9af82c29a1.ctex
+Loading resource: res://assets/sprites/enemy_grunt.png
+Loading resource: res://.godot/imported/enemy_grunt.png-cd0d178e4af76927c058cd1e82c253e2.ctex
+Loading resource: res://assets/sprites/enemy_heavy.png
+Loading resource: res://.godot/imported/enemy_heavy.png-9c2fc873428d535bf0f16232f7bb9be9.ctex
+Loading resource: res://assets/sprites/enemy_archer.png
+Loading resource: res://.godot/imported/enemy_archer.png-9e9aec8b34b413f683653a36b8d1e5af.ctex
+Loading resource: res://scenes/combat/projectile.tscn
+Loading resource: res://scenes/combat/projectile.gd
+Loading resource: res://scenes/combat/enemy.tscn
+Loading resource: res://scenes/combat/enemy.gd
+[Runtime] [INFO] GameState: No save file found
+[Runtime] [DEBUG] GameModes: No save file loaded on startup
+[Runtime] [INFO] GameModes: Initialized - current_mode: 0
+[Runtime] [INFO] GameModes: Autoload ready - current scene: res://scenes/landing_scene.tscn
+[Runtime] [DEBUG] AudioManager: Created SFX player 0 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 1 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 2 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 3 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 4 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 5 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 6 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 7 in pool
+[Runtime] [INFO] ParticleManager: Initialized with 28 blood particles and 12 impact particles
+[Runtime] [INFO] LandingScene: Initializing landing page
+Loading resource: res://assets/audio/swing.wav
+Loading resource: res://.godot/imported/swing.wav-794de6e16fd48d414e484bd2479a4c9c.sample
+Loading resource: res://assets/audio/hit.wav
+Loading resource: res://.godot/imported/hit.wav-96dc477cdf4a42f381370dba6e3f75ce.sample
+Loading resource: res://assets/audio/death.wav
+Loading resource: res://.godot/imported/death.wav-021a45cab225299ddf24ec88f548f45a.sample
+Loading resource: res://assets/sprites/player_idle.png
+Loading resource: res://.godot/imported/player_idle.png-2ffdcb49b694c96dd7c8d4f81809e4c8.ctex
+Loading resource: res://assets/effects/blood_particle.png
+Loading resource: res://.godot/imported/blood_particle.png-e1d78db4f39c22e1e552a72908971b20.ctex
+Loading resource: res://assets/map.png
+Loading resource: res://.godot/imported/map.png-dfba05084e3346587240e6093ee94fb2.ctex
+[Runtime] [INFO] StartupValidator: Startup validation passed
+XR: Clearing primary interface
+XR: Removed interface "Native mobile"
+XR: Removed interface "OpenXR"

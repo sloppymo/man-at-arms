@@ -58,7 +58,7 @@ const SHIELD_BLOCK_VFX_ENABLED = true
 const SHIELD_BLOCK_SFX_ENABLED = true
 const SHIELD_BLOCK_PROJECTILE_HIT_STOP_SEC = 0.015
 const SHIELD_BLOCK_MIN_DAMAGE = 1.0
-const SHIELD_PERFECT_BLOCK_WINDOW_MS = 90
+const SHIELD_PERFECT_BLOCK_WINDOW_MS = 120
 const SHIELD_PERFECT_BLOCK_DAMAGE_MULTIPLIER = 0.35
 const SHIELD_PERFECT_BLOCK_PROJECTILE_REFLECT_ENABLED = true
 const SHIELD_PERFECT_BLOCK_REFLECT_SHIELD_IGNORE_FRAMES = 2
@@ -78,14 +78,17 @@ const ATTACK_CADENCE_TIERS = {
 const COMBO_RESET_THRESHOLD = 3
 const COMBO_TIMEOUT_MS = 900
 const COMBO_DAMAGE_MULTIPLIER = 1.1
+const COMBO_DAMAGE_MULTIPLIER_TIER_1 = 1.2
+const COMBO_DAMAGE_MULTIPLIER_TIER_2 = 1.4
+const COMBO_DAMAGE_MULTIPLIER_TIER_3 = 1.6
 const COMBO_TIER_1_THRESHOLD = 3
 const COMBO_TIER_2_THRESHOLD = 6
 const COMBO_TIER_3_THRESHOLD = 9
 const COMBO_TIER_DAMAGE_MULTIPLIERS = {
 	0: 1.0,
-	1: COMBO_DAMAGE_MULTIPLIER,
-	2: 1.24,
-	3: 1.38
+	1: COMBO_DAMAGE_MULTIPLIER_TIER_1,
+	2: COMBO_DAMAGE_MULTIPLIER_TIER_2,
+	3: COMBO_DAMAGE_MULTIPLIER_TIER_3
 }
 const COMBO_TIER_STAGGER_FORCE_MULTIPLIERS = {
 	0: 1.0,
@@ -266,6 +269,14 @@ const ENEMY_HEAVY_DAMAGE_MULTIPLIER = 1.2
 const ENEMY_ARCHER_SPEED_MULTIPLIER = 0.9
 const ENEMY_ARCHER_ATTACK_RANGE = 200.0
 const ENEMY_ARCHER_ATTACK_COOLDOWN = 5.0
+const ENEMY_ARCHER_MIN_COMBAT_RANGE = 118.0
+const ENEMY_ARCHER_MAX_COMBAT_RANGE = 182.0
+const ENEMY_ARCHER_MIN_FIRE_RANGE = 124.0
+const ENEMY_ARCHER_REPOSITION_DEADZONE = 10.0
+const ENEMY_ARCHER_STRAFE_SPEED_MULTIPLIER = 0.72
+const ENEMY_ARCHER_STRAFE_JITTER_SEC = 0.65
+const ENEMY_ARCHER_POST_SHOT_GATE_DELAY_SEC = 0.30
+const ENEMY_MELEE_APPROACH_BUFFER = 8.0
 const ENEMY_STAGGER_DURATION = 0.12
 const ENEMY_STAGGER_FORCE = 220.0
 const ENEMY_STAGGER_DAMPING = 900.0
@@ -300,20 +311,20 @@ const ENEMY_ATTACK_READABILITY_BY_TYPE = {
 		"telegraph_sfx_volume_db": -9.0
 	},
 	"archer": {
-		"windup_sec": 0.26,
-		"min_read_sec": 0.24,
+		"windup_sec": 0.34,
+		"min_read_sec": 0.30,
 		"telegraph_color": Color(1.0, 0.86, 0.28, 1.0),
-		"pulse_hz": 7.2,
-		"pulse_strength": 0.16,
-		"finish_window_sec": 0.08,
-		"finish_mix": 0.38,
+		"pulse_hz": 6.1,
+		"pulse_strength": 0.15,
+		"finish_window_sec": 0.10,
+		"finish_mix": 0.34,
 		"telegraph_sfx": "swing",
 		"telegraph_sfx_volume_db": -11.0
 	}
 }
 const PROJECTILE_COLLISION_LAYER_BIT = 3
-const PROJECTILE_SPEED = 520.0
-const PROJECTILE_DAMAGE = 14
+const PROJECTILE_SPEED = 460.0
+const PROJECTILE_DAMAGE = 12
 const PROJECTILE_LIFETIME_SEC = 2.0
 const PROJECTILE_MAX_RANGE = 720.0
 const PROJECTILE_RADIUS = 6.0
@@ -466,14 +477,78 @@ const ENEMY_TYPE_WEIGHTS_BY_DIFFICULTY = {
 	"extreme": {"grunt": 0.30, "heavy": 0.30, "archer": 0.40}
 }
 
+# Core combat rule lock (Day 1)
+# Keep this in sync with GODOT_DEVELOPMENT_GUIDE.md when intentionally retuning combat.
+const CORE_COMBAT_RULES_LOCK_VERSION = "2026-02-21-day1"
+const CORE_COMBAT_RULES = {
+	"damage_model": "lethal_one_hit",
+	"player": {
+		"speed": PLAYER_DEFAULT_SPEED,
+		"health": PLAYER_DEFAULT_HEALTH,
+		"damage": PLAYER_DEFAULT_DAMAGE,
+		"attack_range": PLAYER_DEFAULT_ATTACK_RANGE,
+		"attack_arc_rad": PLAYER_DEFAULT_ATTACK_ARC,
+		"attack_cooldown_sec": PLAYER_DEFAULT_ATTACK_COOLDOWN,
+		"dodge_cooldown_sec": PLAYER_DEFAULT_DODGE_COOLDOWN,
+		"special_cooldown_sec": PLAYER_DEFAULT_SPECIAL_COOLDOWN
+	},
+	"enemy": {
+		"base": {
+			"speed": ENEMY_DEFAULT_SPEED,
+			"health": ENEMY_DEFAULT_HEALTH,
+			"damage": ENEMY_DEFAULT_DAMAGE,
+			"attack_range": ENEMY_DEFAULT_ATTACK_RANGE,
+			"attack_cooldown_sec": ENEMY_DEFAULT_ATTACK_COOLDOWN
+		},
+		"heavy": {
+			"health_multiplier": ENEMY_HEAVY_HEALTH_MULTIPLIER,
+			"speed_multiplier": ENEMY_HEAVY_SPEED_MULTIPLIER,
+			"damage_multiplier": ENEMY_HEAVY_DAMAGE_MULTIPLIER
+		},
+		"archer": {
+			"speed_multiplier": ENEMY_ARCHER_SPEED_MULTIPLIER,
+			"attack_range": ENEMY_ARCHER_ATTACK_RANGE,
+			"attack_cooldown_sec": ENEMY_ARCHER_ATTACK_COOLDOWN,
+			"min_fire_range": ENEMY_ARCHER_MIN_FIRE_RANGE
+		}
+	},
+	"projectile": {
+		"speed": PROJECTILE_SPEED,
+		"damage": PROJECTILE_DAMAGE,
+		"lifetime_sec": PROJECTILE_LIFETIME_SEC,
+		"max_range": PROJECTILE_MAX_RANGE
+	},
+	"difficulty": DIFFICULTY_SETTINGS,
+	"cadence_targets": {
+		"player_attack_cooldown_sec": PLAYER_DEFAULT_ATTACK_COOLDOWN,
+		"grunt_min_read_sec": 0.16,
+		"heavy_min_read_sec": 0.30,
+		"archer_min_read_sec": 0.30,
+		"archer_attack_cooldown_sec": ENEMY_ARCHER_ATTACK_COOLDOWN
+	},
+	"win_conditions": {
+		"enemies_killed_gte_enemy_count": true
+	},
+	"lose_conditions": {
+		"player_health_lte": 0,
+		"time_remaining_lte_sec": 0.0
+	}
+}
+
 # Camera shake optimization
 const SHAKE_UPDATE_RATE = 0.016  # ~60 FPS update rate
 
-# Audio volumes
+# Audio volumes (normalized for consistent mix)
 const AUDIO_VOLUME_SWING = -10.0
 const AUDIO_VOLUME_HIT = -5.0
 const AUDIO_VOLUME_DEATH = -5.0
 const AUDIO_VOLUME_ENEMY_HIT = -8.0
+const AUDIO_VOLUME_BLOCK = -8.0
+const AUDIO_VOLUME_PROJECTILE = -10.0
+const AUDIO_VOLUME_PERFECT_BLOCK = -4.0
+const AUDIO_VOLUME_SHIELD_BREAK = -6.0
+const AUDIO_VOLUME_SFX_BUS = -2.0
+const AUDIO_VOLUME_MUSIC_BUS = -12.0
 
 # Visual effect durations
 const EFFECT_DURATION_ATTACK_ARC = 0.2
@@ -503,6 +578,30 @@ const SHIELD_BLOCK_SHAKE_TIER = "light"
 const SHIELD_PERFECT_BLOCK_SHAKE_TIER = "medium"
 const SHIELD_PERFECT_BLOCK_MELEE_STAGGER_FORCE_MULTIPLIER = 1.75
 const SHIELD_PERFECT_BLOCK_MELEE_STAGGER_DURATION_MULTIPLIER = 1.45
+
+# "Done feel" targets used by validation and balance passes.
+# These are target windows, not direct gameplay logic.
+const COMBAT_DONE_FEEL_METRICS = {
+	"ttk_seconds_by_difficulty": {
+		"easy": {"target_min": 4.0, "target_max": 20.0},
+		"normal": {"target_min": 6.0, "target_max": 24.0},
+		"hard": {"target_min": 8.0, "target_max": 30.0},
+		"extreme": {"target_min": 10.0, "target_max": 36.0}
+	},
+	"readability": {
+		"grunt_min_read_sec": 0.16,
+		"heavy_min_read_sec": 0.30,
+		"archer_min_read_sec": 0.30,
+		"archer_cooldown_sec": 5.0
+	},
+	"responsiveness": {
+		"input_action_buffer_ms": INPUT_WINDOW_ACTION_BUFFER_MS,
+		"input_attack_buffer_ms": INPUT_WINDOW_ATTACK_QUEUE_MS,
+		"dodge_startup_ms": DODGE_RESPONSE_STARTUP_MS,
+		"player_attack_cooldown_sec": PLAYER_DEFAULT_ATTACK_COOLDOWN,
+		"max_hit_stop_sec": HIT_STOP_MAX_DURATION_SEC
+	}
+}
 
 # Particle system constants
 const BLOOD_POOL_SIZE = 28
@@ -606,3 +705,9 @@ static func get_encounter_initial_attack_delay(difficulty_name: String) -> float
 			ENCOUNTER_PACING_INITIAL_ATTACK_DELAY_BY_DIFFICULTY["normal"]
 		)
 	))
+
+static func get_core_combat_rules_snapshot() -> Dictionary:
+	return CORE_COMBAT_RULES.duplicate(true)
+
+static func get_combat_done_feel_metrics_snapshot() -> Dictionary:
+	return COMBAT_DONE_FEEL_METRICS.duplicate(true)

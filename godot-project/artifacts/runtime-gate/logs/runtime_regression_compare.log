@@ -1,0 +1,21 @@
+=== Runtime Regression Baseline Compare ===
+Command: flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/runtime_regression_compare.gd
+Started: 2026-02-21T02:19:54Z
+Godot Engine v4.6.1.stable.flathub.14d19694e - https://godotengine.org
+
+[Runtime] [INFO] GameState: No save file found
+[Runtime] [DEBUG] GameModes: No save file loaded on startup
+[Runtime] [INFO] GameModes: Initialized - current_mode: 0
+[Runtime] [INFO] GameModes: Autoload ready - current scene: NULL
+[Runtime] [DEBUG] AudioManager: Created SFX player 0 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 1 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 2 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 3 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 4 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 5 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 6 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 7 in pool
+[Runtime] [INFO] ParticleManager: Initialized with 28 blood particles and 12 impact particles
+RuntimeRegressionCompare: OUTPUT_PATH=user://runtime_regression/runtime_regression_comparison_latest.json
+RuntimeRegressionCompare: STATUS=pass
+RuntimeRegressionCompare: PASS

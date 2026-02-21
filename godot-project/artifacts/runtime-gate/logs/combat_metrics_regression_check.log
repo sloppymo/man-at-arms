@@ -1,0 +1,24 @@
+=== Combat Metrics Regression Check ===
+Command: flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/combat_metrics_regression_check.gd
+Started: 2026-02-21T02:19:47Z
+Godot Engine v4.6.1.stable.flathub.14d19694e - https://godotengine.org
+
+[Runtime] [INFO] GameState: Game loaded successfully
+[Runtime] [DEBUG] GameModes: Loaded saved game on startup
+[Runtime] [INFO] GameModes: Initialized - current_mode: 0
+[Runtime] [INFO] GameModes: Autoload ready - current scene: NULL
+[Runtime] [DEBUG] AudioManager: Created SFX player 0 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 1 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 2 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 3 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 4 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 5 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 6 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 7 in pool
+[Runtime] [INFO] ParticleManager: Initialized with 28 blood particles and 12 impact particles
+CombatMetricsRegressionCheck: SUMMARY_JSON={"avg_active_effects":5.79487179487179,"avg_active_enemies":3.12820512820513,"avg_fps":143.948717948718,"avg_frame_time_ms":6.96626538801604,"avg_memory_mb":30.1809599705232,"max_fps":145.0,"memory_delta_mb":0.258937835693359,"memory_end_mb":30.2050657272339,"memory_peak_mb":30.2669286727905,"memory_start_mb":29.9461278915405,"min_fps":104.0,"p95_frame_time_ms":6.89655172413793,"sample_count":78.0}
+CombatMetricsRegressionCheck: PASS
+[Runtime] [DEBUG] GameModes: Attempting transition from 0 (Title) to 7 (Combat)
+[Runtime] [DEBUG] GameModes: Call stack: [{ "source": "res://scripts/game_modes.gd", "function": "set_mode", "line": 76 }, { "source": "res://scripts/game_modes.gd", "function": "_resume_saved_mode", "line": 277 }]
+[Runtime] [INFO] GameState: Game saved successfully
+[Runtime] [DEBUG] GameModes: Auto-saved on mode transition to Combat

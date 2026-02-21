@@ -337,6 +337,45 @@ func _test_combat_feel_invariants() -> void:
 	_assert(rapid_spam_rejects >= 1, "Combat invariants: rapid LMB spam should include cooldown rejections")
 	_assert(bool(attack_metrics["rapid_spam_interval_respected"]), "Combat invariants: rapid LMB spam must not bypass attack cooldown")
 
+	# Attack queue: one buffered input during cooldown should fire once on the first legal frame.
+	await _wait_until_attack_ready(combat_scene.player, 120)
+	combat_scene.player.is_attacking = false
+	combat_scene.player.call("_clear_buffered_attack")
+	var cooldown_ms: int = int(combat_scene.player.attack_cooldown * 1000.0)
+	var remaining_cooldown_ms: int = mini(cooldown_ms - 1, maxi(1, CombatConstants.INPUT_WINDOW_ATTACK_QUEUE_MS - 10))
+	var attack_queue_anchor_ms: int = Time.get_ticks_msec() - (cooldown_ms - remaining_cooldown_ms)
+	combat_scene.player.last_attack_ms = attack_queue_anchor_ms
+	combat_scene.player.handle_attack()
+	await _wait_physics_frames(1)
+
+	var attack_queue_registered: bool = combat_scene.player.has_buffered_attack() if combat_scene.player.has_method("has_buffered_attack") else false
+	var attack_queue_fired_early: bool = combat_scene.player.last_attack_ms > attack_queue_anchor_ms
+	var attack_queue_execute_frames: int = -1
+	for frame_idx in range(24):
+		await physics_frame
+		if combat_scene.player.last_attack_ms > attack_queue_anchor_ms:
+			attack_queue_execute_frames = frame_idx + 1
+			break
+
+	var attack_queue_executed: bool = attack_queue_execute_frames >= 0
+	var attack_queue_interval_ms: int = combat_scene.player.last_attack_ms - attack_queue_anchor_ms if attack_queue_executed else -1
+	var cooldown_floor_ms: int = int(combat_scene.player.attack_cooldown * 1000.0) - 2
+	var attack_queue_no_early_fire: bool = (
+		not attack_queue_fired_early
+		and (not attack_queue_executed or attack_queue_interval_ms >= cooldown_floor_ms)
+	)
+
+	attack_metrics["attack_queue_registered"] = attack_queue_registered
+	attack_metrics["attack_queue_executed"] = attack_queue_executed
+	attack_metrics["attack_queue_execute_frames"] = attack_queue_execute_frames
+	attack_metrics["attack_queue_interval_ms"] = attack_queue_interval_ms
+	attack_metrics["attack_queue_no_early_fire"] = attack_queue_no_early_fire
+
+	_assert(attack_queue_registered, "Combat invariants: cooldown-time attack input should register in attack queue")
+	_assert(not attack_queue_fired_early, "Combat invariants: queued attack should not fire before cooldown is ready")
+	_assert(attack_queue_executed, "Combat invariants: queued attack should execute on first legal frame")
+	_assert(attack_queue_no_early_fire, "Combat invariants: queued attack should preserve minimum attack cooldown interval")
+
 	# Combo payoff: higher tiers should increase damage and unlock armor-break bonuses.
 	await _wait_until_attack_ready(combat_scene.player, 120)
 	combat_scene.player.combo_counter = 0
@@ -531,6 +570,7 @@ func _test_combat_feel_invariants() -> void:
 
 	var perfect_health_before: int = combat_scene.player.health
 	var perfect_shield_before: float = combat_scene.player.shield_health
+	var previous_block_event_timestamp: int = int(blocked_event.get("timestamp_ms", 0))
 	var perfect_projectile: CombatProjectile = _spawn_projectile_toward_player_front(combat_scene, 18.0)
 	await _wait_physics_frames(4)
 	var perfect_projectile_survived_initial_frames: bool = (
@@ -539,6 +579,12 @@ func _test_combat_feel_invariants() -> void:
 		and perfect_projectile.get_tree() != null
 	)
 	var perfect_event: Dictionary = combat_scene.player.get_last_block_event() if combat_scene.player.has_method("get_last_block_event") else {}
+	for _i in range(16):
+		var event_timestamp: int = int(perfect_event.get("timestamp_ms", 0))
+		if event_timestamp > previous_block_event_timestamp:
+			break
+		await physics_frame
+		perfect_event = combat_scene.player.get_last_block_event() if combat_scene.player.has_method("get_last_block_event") else {}
 	var perfect_event_perfect: bool = bool(perfect_event.get("perfect_block", false))
 	var perfect_event_reflected: bool = bool(perfect_event.get("projectile_reflected", false))
 	var perfect_window_age_ms: int = int(perfect_event.get("block_window_age_ms", -1))

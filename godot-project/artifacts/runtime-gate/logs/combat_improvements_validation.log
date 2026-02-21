@@ -1,0 +1,23 @@
+=== Combat Improvements Validation ===
+Command: flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/combat_improvements_validation.gd
+Started: 2026-02-21T02:19:31Z
+Godot Engine v4.6.1.stable.flathub.14d19694e - https://godotengine.org
+
+[Runtime] [INFO] GameState: No save file found
+[Runtime] [DEBUG] GameModes: No save file loaded on startup
+[Runtime] [INFO] GameModes: Initialized - current_mode: 0
+[Runtime] [INFO] GameModes: Autoload ready - current scene: NULL
+[Runtime] [DEBUG] AudioManager: Created SFX player 0 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 1 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 2 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 3 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 4 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 5 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 6 in pool
+[Runtime] [DEBUG] AudioManager: Created SFX player 7 in pool
+[Runtime] [INFO] ParticleManager: Initialized with 28 blood particles and 12 impact particles
+CombatImprovementsValidation: PASS
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2641)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

@@ -27,6 +27,8 @@ var last_combo_armor_break_level: int = 0
 var last_attack_ms: int = 0
 var last_dodge_ms: int = 0
 var last_special_ms: int = 0
+var buffered_attack_expires_ms: int = -1
+var buffered_attack_direction: Vector2 = Vector2.ZERO
 var is_attacking: bool = false
 var is_dodging: bool = false
 var is_invincible: bool = false
@@ -69,6 +71,14 @@ var dodge_speed: float = 0.0
 var nearby_enemies: Array[CombatEnemy] = []
 var enemy_update_timer: float = 0.0
 const ENEMY_UPDATE_INTERVAL = 0.1  # Update every 100ms
+const ATTACK_RANGE_TOLERANCE: float = 6.0
+const ATTACK_ARC_DOT_TOLERANCE: float = 0.035
+const ATTACK_NEAR_OVERLAP_DISTANCE: float = 18.0
+const ATTACK_GATE_READY: String = "ready"
+const ATTACK_GATE_COOLDOWN: String = "cooldown"
+const ATTACK_GATE_DEAD: String = "dead"
+const ATTACK_GATE_HIT_STOP: String = "hit_stop"
+const ATTACK_GATE_BLOCKED: String = "blocked"
 
 # Camera shake optimization variables
 var shake_timer: Timer
@@ -101,6 +111,9 @@ func _physics_process(delta: float) -> void:
 
 	if is_attacking and now - last_attack_ms > int(attack_cooldown * 1000.0):
 		is_attacking = false
+
+	if _has_buffered_attack(now):
+		_consume_buffered_attack(now)
 
 	if is_invincible and now - last_dodge_ms > CombatConstants.DODGE_INVINCIBILITY_TIME:
 		is_invincible = false
@@ -246,11 +259,11 @@ func _sync_shield_collision_state() -> void:
 		return
 	shield_collision_enabled = active
 	if shield_collision_shape:
-		shield_collision_shape.set_deferred("disabled", not active)
+		shield_collision_shape.disabled = not active
 	if shield_push_shape:
-		shield_push_shape.set_deferred("disabled", not active)
+		shield_push_shape.disabled = not active
 	if shield_push_area:
-		shield_push_area.set_deferred("monitoring", active)
+		shield_push_area.monitoring = active
 
 func _input(event: InputEvent) -> void:
 	if is_dead:
@@ -298,58 +311,103 @@ func _get_mouse_aim_direction() -> Vector2:
 	return to_mouse.normalized()
 
 func handle_attack() -> void:
-	if is_dead or _is_hit_stop_active():
-		return
-
 	var now: int = Time.get_ticks_msec()
-
-	if is_attacking or is_dodging or is_blocking:
+	var attack_direction: Vector2 = get_attack_direction()
+	var gate_reason: String = _get_attack_gate_reason(now)
+	if gate_reason == ATTACK_GATE_READY:
+		_begin_attack(now, attack_direction)
 		return
+	if gate_reason == ATTACK_GATE_COOLDOWN:
+		_queue_buffered_attack(now, attack_direction)
 
-	# Check cooldown
-	if last_attack_ms > 0 and now - last_attack_ms < int(attack_cooldown * 1000):
-		return
+func has_buffered_attack() -> bool:
+	return _has_buffered_attack(Time.get_ticks_msec())
 
+func _is_attack_cooldown_active(now_ms: int) -> bool:
+	return last_attack_ms > 0 and now_ms - last_attack_ms < int(attack_cooldown * 1000.0)
+
+func _get_attack_gate_reason(now_ms: int) -> String:
+	if is_dead:
+		return ATTACK_GATE_DEAD
+	if _is_hit_stop_active():
+		return ATTACK_GATE_HIT_STOP
+	if is_dodging or is_blocking:
+		return ATTACK_GATE_BLOCKED
+	if is_attacking or _is_attack_cooldown_active(now_ms):
+		return ATTACK_GATE_COOLDOWN
+	return ATTACK_GATE_READY
+
+func _queue_buffered_attack(now_ms: int, attack_direction: Vector2) -> void:
+	buffered_attack_expires_ms = now_ms + CombatConstants.INPUT_WINDOW_ATTACK_QUEUE_MS
+	if attack_direction != Vector2.ZERO:
+		buffered_attack_direction = attack_direction.normalized()
+	else:
+		buffered_attack_direction = get_attack_direction()
+
+func _clear_buffered_attack() -> void:
+	buffered_attack_expires_ms = -1
+	buffered_attack_direction = Vector2.ZERO
+
+func _has_buffered_attack(now_ms: int) -> bool:
+	if buffered_attack_expires_ms < 0:
+		return false
+	if now_ms > buffered_attack_expires_ms:
+		_clear_buffered_attack()
+		return false
+	return true
+
+func _consume_buffered_attack(now_ms: int) -> bool:
+	if not _has_buffered_attack(now_ms):
+		return false
+	if _get_attack_gate_reason(now_ms) != ATTACK_GATE_READY:
+		return false
+	var queued_direction: Vector2 = buffered_attack_direction
+	_clear_buffered_attack()
+	if queued_direction == Vector2.ZERO:
+		queued_direction = get_attack_direction()
+	return _begin_attack(now_ms, queued_direction)
+
+func _begin_attack(now_ms: int, attack_direction: Vector2) -> bool:
+	var resolved_direction: Vector2 = attack_direction.normalized() if attack_direction != Vector2.ZERO else get_attack_direction()
 	is_attacking = true
-	last_attack_ms = now
+	last_attack_ms = now_ms
+	last_attack_direction = resolved_direction
+	_clear_buffered_attack()
 
 	# Play attack sound
-	if audio_manager:
-		var swing_sfx = audio_manager.get_sfx("swing")
-		if swing_sfx:
-			audio_manager.play_sfx(swing_sfx, CombatConstants.AUDIO_VOLUME_SWING)
+	if audio_manager and audio_manager.has_method("play_sfx_by_name"):
+		audio_manager.play_sfx_by_name("swing")  # Uses normalized volume + anti-spam
 
-	# Movement-based attack direction
-	var attack_direction: Vector2 = get_attack_direction()
-	var attack_angle: float = attack_direction.angle()
+	var attack_angle: float = resolved_direction.angle()
 
 	# Create visual effect
 	create_attack_arc(attack_angle)
 
 	# Perform hit detection
-	var hit_count: int = perform_attack_detection(attack_direction)
+	var hit_registry: Dictionary = {}
+	var hit_count: int = perform_attack_detection(resolved_direction, hit_registry)
 	if hit_count == 0 and CombatConstants.HOTLINE_STYLE_MOVEMENT:
 		var assisted_direction: Vector2 = _get_melee_assist_direction()
 		if assisted_direction != Vector2.ZERO:
-			hit_count = perform_attack_detection(assisted_direction)
+			hit_count = perform_attack_detection(assisted_direction, hit_registry)
 
 	# Update combo
 	if hit_count > 0:
 		combo_counter += hit_count
-		last_combo_hit_ms = now
+		last_combo_hit_ms = now_ms
 
 		if CombatConstants.HIT_STOP_ON_PLAYER_HIT:
 			var combo_hit_stop_tier: String = CombatConstants.get_combo_hit_stop_tier(get_combo_tier())
 			_request_hit_stop(CombatConstants.get_hit_stop_tier_duration(combo_hit_stop_tier))
 
 		# Play hit sound
-		if audio_manager:
-			var hit_sfx = audio_manager.get_sfx("hit")
-			if hit_sfx:
-				audio_manager.play_sfx(hit_sfx, CombatConstants.AUDIO_VOLUME_HIT)
+		if audio_manager and audio_manager.has_method("play_sfx_by_name"):
+			audio_manager.play_sfx_by_name("hit")  # Uses normalized volume + anti-spam
 	else:
 		combo_counter = 0
 		_clear_combo_attack_context()
+
+	return true
 
 func create_attack_arc(attack_angle: float) -> void:
 	var arc_points: Array[Vector2] = []
@@ -402,28 +460,40 @@ func update_nearby_enemies() -> void:
 		if global_position.distance_to(enemy.global_position) <= attack_range * 2.0:
 			nearby_enemies.append(enemy)
 
-func perform_attack_detection(attack_direction: Vector2) -> int:
+func perform_attack_detection(attack_direction: Vector2, hit_registry: Dictionary) -> int:
 	var hit_count: int = 0
 	var projected_combo_count: int = combo_counter
+	var resolved_attack_direction: Vector2 = attack_direction.normalized() if attack_direction != Vector2.ZERO else get_attack_direction()
+	var range_limit: float = attack_range + ATTACK_RANGE_TOLERANCE
+	var arc_dot_threshold: float = clampf(cos(attack_arc / 2.0) - ATTACK_ARC_DOT_TOLERANCE, -1.0, 1.0)
 
 	# Use a live query per swing to avoid stale cached target lists.
-	for enemy in _get_attack_candidates():
+	for enemy in _get_sorted_attack_candidates():
 		if not enemy.is_alive:
 			continue
+		var enemy_id: int = enemy.get_instance_id()
+		if hit_registry.has(enemy_id):
+			continue
 
-		var distance: float = global_position.distance_to(enemy.global_position)
+		var to_enemy_vector: Vector2 = enemy.global_position - global_position
+		var distance: float = to_enemy_vector.length()
+		if distance > range_limit:
+			continue
 
-		if distance <= attack_range:
-			var to_enemy: Vector2 = (enemy.global_position - global_position).normalized()
-			var dot_product: float = to_enemy.dot(attack_direction)
+		var inside_arc: bool = false
+		if distance <= ATTACK_NEAR_OVERLAP_DISTANCE:
+			inside_arc = true
+		elif to_enemy_vector != Vector2.ZERO:
+			var dot_product: float = to_enemy_vector.normalized().dot(resolved_attack_direction)
+			inside_arc = dot_product >= arc_dot_threshold
 
-			# Enemy is within attack arc
-			if dot_product > cos(attack_arc / 2.0):
-				projected_combo_count += 1
-				var combo_context: Dictionary = _build_combo_attack_context(projected_combo_count)
-				enemy.take_damage(damage, attack_direction, combo_context)
-				_record_last_combo_attack_context(combo_context)
-				hit_count += 1
+		if inside_arc:
+			projected_combo_count += 1
+			var combo_context: Dictionary = _build_combo_attack_context(projected_combo_count)
+			enemy.take_damage(damage, resolved_attack_direction, combo_context)
+			hit_registry[enemy_id] = true
+			_record_last_combo_attack_context(combo_context)
+			hit_count += 1
 
 	return hit_count
 
@@ -457,7 +527,7 @@ func _clear_combo_attack_context() -> void:
 func _get_melee_assist_direction() -> Vector2:
 	var closest_enemy: CombatEnemy = null
 	var closest_distance: float = attack_range * 1.15
-	for enemy in _get_attack_candidates():
+	for enemy in _get_sorted_attack_candidates():
 		if not enemy.is_alive:
 			continue
 		var distance: float = global_position.distance_to(enemy.global_position)
@@ -475,6 +545,22 @@ func _get_attack_candidates() -> Array[CombatEnemy]:
 		if enemy is CombatEnemy and enemy.is_alive:
 			candidates.append(enemy as CombatEnemy)
 	return candidates
+
+func _get_sorted_attack_candidates() -> Array[CombatEnemy]:
+	var candidates: Array[CombatEnemy] = _get_attack_candidates()
+	candidates.sort_custom(_sort_attack_candidates)
+	return candidates
+
+func _sort_attack_candidates(a: CombatEnemy, b: CombatEnemy) -> bool:
+	if a == null:
+		return false
+	if b == null:
+		return true
+	var distance_a: float = global_position.distance_squared_to(a.global_position)
+	var distance_b: float = global_position.distance_squared_to(b.global_position)
+	if not is_equal_approx(distance_a, distance_b):
+		return distance_a < distance_b
+	return a.get_instance_id() < b.get_instance_id()
 
 func handle_dodge() -> void:
 	if CombatConstants.HOTLINE_STYLE_MOVEMENT:
@@ -503,6 +589,7 @@ func handle_dodge() -> void:
 	last_movement_direction = dodge_direction
 	dodge_speed = maxf(1.0, CombatConstants.DODGE_SPEED)
 	dodge_remaining_distance = maxf(0.0, CombatConstants.DODGE_DISTANCE)
+	_clear_buffered_attack()
 	is_dodging = dodge_remaining_distance > 0.0
 	is_invincible = true
 	last_dodge_ms = now
@@ -516,6 +603,7 @@ func _start_block() -> void:
 		return
 	var was_blocking: bool = is_blocking
 	is_blocking = true
+	_clear_buffered_attack()
 	if not was_blocking:
 		block_started_ms = Time.get_ticks_msec()
 	_sync_shield_collision_state()
@@ -583,14 +671,18 @@ func take_damage(
 	if health <= 0:
 		die()
 	else:
-		# Knockback
-		var knockback_direction: Vector2 = -last_movement_direction if last_movement_direction != Vector2.ZERO else Vector2.LEFT
+		# Prefer attacker-relative knockback direction when available for consistent hit feedback.
+		var knockback_direction: Vector2 = Vector2.ZERO
+		if attack_source_position.is_finite():
+			knockback_direction = (global_position - attack_source_position).normalized()
+		if knockback_direction == Vector2.ZERO:
+			knockback_direction = -last_movement_direction if last_movement_direction != Vector2.ZERO else Vector2.LEFT
 		velocity = knockback_direction * CombatConstants.KNOCKBACK_SPEED
 
 		modulate = Color.RED
 		await get_tree().create_timer(CombatConstants.HURT_EFFECT_DURATION).timeout
 		if is_instance_valid(self) and not is_dead:
-				modulate = Color.WHITE
+			modulate = Color.WHITE
 
 func _is_attack_blocked(attack_source_position: Vector2) -> bool:
 	if not is_blocking:
@@ -714,10 +806,10 @@ func _play_block_feedback(attack_source_position: Vector2 = Vector2.INF, perfect
 		var impact_position: Vector2 = global_position + impact_direction * CombatConstants.SHIELD_COLLISION_OFFSET
 		particle_manager.play_impact_effect(impact_position, impact_direction)
 
-	if CombatConstants.SHIELD_BLOCK_SFX_ENABLED and audio_manager:
-		var block_sfx = audio_manager.get_sfx("hit")
-		if block_sfx:
-			audio_manager.play_sfx(block_sfx, CombatConstants.AUDIO_VOLUME_HIT)
+	if CombatConstants.SHIELD_BLOCK_SFX_ENABLED and audio_manager and audio_manager.has_method("play_sfx_by_name"):
+		# Use perfect_block sound for perfect blocks, regular block otherwise
+		var block_sfx_name := "perfect_block" if perfect_block else "block"
+		audio_manager.play_sfx_by_name(block_sfx_name)
 
 	var shake_tier: String = CombatConstants.SHIELD_PERFECT_BLOCK_SHAKE_TIER if perfect_block else CombatConstants.SHIELD_BLOCK_SHAKE_TIER
 	var shake_profile: Dictionary = CombatConstants.get_camera_shake_profile(shake_tier)
@@ -981,6 +1073,7 @@ func die() -> void:
 		return
 
 	is_dead = true
+	_clear_buffered_attack()
 	velocity = Vector2.ZERO
 	set_physics_process(false)
 	set_process_input(false)

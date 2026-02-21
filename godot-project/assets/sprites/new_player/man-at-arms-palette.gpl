@@ -1,0 +1,47 @@
+GIMP Palette
+Name: Man-at-Arms Medieval
+Columns: 8
+#
+# Player Blue
+ 60  80 120	Player Blue Light
+ 44  60  92	Player Blue Mid
+ 28  43  65	Player Blue Dark
+ 16  24  38	Player Blue Shadow
+# Chainmail
+120 120 130	Chainmail Light
+ 88  88  98	Chainmail Mid
+ 64  64  72	Chainmail Dark
+ 48  48  56	Chainmail Shadow
+# Steel
+180 190 200	Steel Light
+148 158 168	Steel Mid
+108 118 128	Steel Dark
+ 80  90 100	Steel Shadow
+# Leather
+140 100  70	Leather Light
+100  70  50	Leather Mid
+ 70  50  36	Leather Dark
+ 48  34  24	Leather Shadow
+# Skin
+210 170 140	Skin Light
+178 138 110	Skin Mid
+140 110  88	Skin Dark
+100  78  62	Skin Shadow
+# Helmet
+140 140 150	Helmet Light
+ 90  90 100	Helmet Mid
+ 64  64  74	Helmet Dark
+ 40  40  48	Helmet Shadow
+# Accents
+200 164  60	Gold Light
+168 132  40	Gold Mid
+140 112  40	Gold Dark
+140  42  42	Blood Red
+100  26  26	Blood Dark
+# Utility
+240 240 240	White (trails/flashes)
+200 200 200	Grey Light
+128 128 128	Grey Mid
+ 64  64  64	Grey Dark
+ 16  16  16	Near Black
+  0   0   0	Black (outline)

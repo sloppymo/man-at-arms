@@ -160,6 +160,35 @@ References:
 - Prefer explicit collision-layer/mask design over ad hoc positional hacks.
 - Validate changes both with synthetic harnesses and full scene flow.
 
+### Core Combat Rules Lock (Day 1, February 21, 2026)
+These values are frozen under `CombatConstants.CORE_COMBAT_RULES_LOCK_VERSION = "2026-02-21-day1"` in `godot-project/scripts/combat_constants.gd`.
+
+- Player baseline:
+  - `health=1`, `damage=35`, `speed=320`
+  - `attack_cooldown=0.14s`, `dodge_cooldown=0.32s`
+- Enemy baseline:
+  - base (`grunt`) uses `health=1`, `damage=15`, `speed=130`, `attack_cooldown=0.55s`
+  - `heavy`: health/speed/damage multipliers = `1.5 / 0.7 / 1.2`
+  - `archer`: `attack_range=200`, `attack_cooldown=5.0s`, minimum fire range guard enabled
+- Damage model:
+  - Locked to `lethal_one_hit` (all core entities remain one-hit lethal unless explicitly retuned by lock-version bump)
+  - Combo modifies stagger/damage/armor-break but does not change the one-hit baseline contract
+- Win/Lose rules:
+  - Win when `enemies_killed >= enemy_count`
+  - Lose when `player.health <= 0` or `time_remaining <= 0`
+- Cadence targets:
+  - Player attack cadence remains `0.14s`
+  - Enemy readability minimums: `grunt >= 0.16s`, `heavy >= 0.30s`, `archer >= 0.30s`
+  - Archer shot cadence remains exactly `5.0s`
+- Done-feel metrics (target windows):
+  - TTK bands by difficulty are recorded in `COMBAT_DONE_FEEL_METRICS`
+  - Readability and responsiveness targets are recorded in `COMBAT_DONE_FEEL_METRICS`
+  - Use these as regression targets during balance, not direct runtime logic
+
+Validation:
+- `flatpak run org.godotengine.Godot --headless --path godot-project --script res://scripts/combat_improvements_validation.gd`
+- The validation now includes explicit lock checks (`_test_core_combat_rules_lock`) to catch accidental drift.
+
 ### Combat Improvement Roadmap (Next)
 Prioritize combat depth and readability without regressing current control feel.
 

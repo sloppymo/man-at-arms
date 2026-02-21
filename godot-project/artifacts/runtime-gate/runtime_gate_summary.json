@@ -1,0 +1,62 @@
+{
+  "generated_at_utc": "2026-02-21T02:19:55Z",
+  "run_started_at_utc": "2026-02-21T02:19:25Z",
+  "overall_status": "pass",
+  "godot_command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project",
+  "steps": [
+    {
+      "id": "headless_smoke",
+      "description": "Headless Smoke Suite",
+      "status": "pass",
+      "duration_sec": 6,
+      "command": "bash /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/scripts/run_headless_smoke.sh",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/headless_smoke.log"
+    },
+    {
+      "id": "combat_improvements_validation",
+      "description": "Combat Improvements Validation",
+      "status": "pass",
+      "duration_sec": 6,
+      "command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/combat_improvements_validation.gd",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/combat_improvements_validation.log"
+    },
+    {
+      "id": "combat_performance_harness",
+      "description": "Combat Performance Harness",
+      "status": "pass",
+      "duration_sec": 10,
+      "command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/combat_performance_harness.gd",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/combat_performance_harness.log"
+    },
+    {
+      "id": "combat_metrics_regression_check",
+      "description": "Combat Metrics Regression Check",
+      "status": "pass",
+      "duration_sec": 1,
+      "command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/combat_metrics_regression_check.gd",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/combat_metrics_regression_check.log"
+    },
+    {
+      "id": "runtime_regression_harness",
+      "description": "Runtime Regression Harness",
+      "status": "pass",
+      "duration_sec": 6,
+      "command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/runtime_regression_harness.gd",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/runtime_regression_harness.log"
+    },
+    {
+      "id": "runtime_regression_compare",
+      "description": "Runtime Regression Baseline Compare",
+      "status": "pass",
+      "duration_sec": 1,
+      "command": "flatpak run org.godotengine.Godot --headless --path /home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project --script res://scripts/runtime_regression_compare.gd",
+      "log": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/logs/runtime_regression_compare.log"
+    }
+  ],
+  "artifacts": {
+    "combat_metrics": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/combat_metrics_latest.json",
+    "runtime_regression_metrics": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/runtime_regression_metrics_latest.json",
+    "runtime_regression_comparison": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/runtime_regression_comparison_latest.json",
+    "report_markdown": "/home/sloppymo/Documents/man-at-arms/man-at-arms/godot-project/artifacts/runtime-gate/runtime_gate_report.md"
+  }
+}
